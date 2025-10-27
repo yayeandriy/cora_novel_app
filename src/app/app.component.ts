@@ -4,10 +4,11 @@ import { CommonModule } from "@angular/common";
 import { FormsModule, ReactiveFormsModule, FormGroup, FormControl } from "@angular/forms";
 import { ProjectService } from "./services/project.service";
 import type { ProjectCreate, Project, DocForm, CharacterForm, EventForm } from "./shared/models";
+import { ProjectDashboardComponent } from "./project-dashboard.component";
 
 @Component({
   selector: "app-root",
-  imports: [RouterOutlet, CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [RouterOutlet, CommonModule, FormsModule, ReactiveFormsModule, ProjectDashboardComponent],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.css",
 })

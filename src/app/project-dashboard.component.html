@@ -1,0 +1,41 @@
+<section class="p-4 bg-white rounded shadow">
+  <h2 class="text-xl font-semibold mb-3">Project Dashboard</h2>
+
+  <form [formGroup]="form" (ngSubmit)="editingId ? save() : create()" class="mb-4 flex gap-2">
+    <input formControlName="name" placeholder="Project name" class="border p-2 rounded flex-1" />
+    <input formControlName="desc" placeholder="Description" class="border p-2 rounded flex-1" />
+    <input formControlName="path" placeholder="Path" class="border p-2 rounded w-48" />
+    <button type="submit" class="bg-blue-600 text-white px-3 rounded">{{ editingId ? 'Save' : 'Create' }}</button>
+    <button type="button" (click)="cancel()" *ngIf="editingId" class="ml-2">Cancel</button>
+  </form>
+
+  <div *ngIf="projects.length; else empty" class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-3 py-2 text-left">ID</th>
+          <th class="px-3 py-2 text-left">Name</th>
+          <th class="px-3 py-2 text-left">Desc</th>
+          <th class="px-3 py-2 text-left">Path</th>
+          <th class="px-3 py-2">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <tr *ngFor="let p of projects">
+          <td class="px-3 py-2">{{ p.id }}</td>
+          <td class="px-3 py-2">{{ p.name }}</td>
+          <td class="px-3 py-2">{{ p.desc }}</td>
+          <td class="px-3 py-2">{{ p.path }}</td>
+          <td class="px-3 py-2">
+            <button (click)="edit(p)" class="mr-2 text-sm text-blue-600">Edit</button>
+            <button (click)="remove(p.id)" class="text-sm text-red-600">Delete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #empty>
+    <div class="text-sm text-gray-500">No projects yet. Create one above.</div>
+  </ng-template>
+</section>

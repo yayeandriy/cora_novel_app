@@ -22,6 +22,7 @@
   <hr />
   <section class="admin">
     <h2>Admin — Quick DB test</h2>
+    <app-project-dashboard></app-project-dashboard>
 
     <form [formGroup]="createProjectForm" (ngSubmit)="createProject()">
       <label>Project name: <input formControlName="name" /></label>
