@@ -1,0 +1,99 @@
+<main class="container">
+  <h1>Welcome to Tauri + Angular!</h1>
+
+  <div class="row">
+    <a href="https://tauri.app" target="_blank">
+      <img src="/assets/tauri.svg" class="logo tauri" alt="Tauri logo" />
+    </a>
+    <a href="https://angular.io" target="_blank">
+      <img src="/assets/angular.svg" class="logo angular" alt="Angular logo" />
+    </a>
+  </div>
+  <p>Click on the logos to learn more about the frameworks</p>
+
+  <form class="row" (submit)="greet($event, greetInput.value)">
+    <input #greetInput id="greet-input" placeholder="Enter a name..." />
+    <button type="submit">Greet</button>
+  </form>
+  <p>{{ greetingMessage }}</p>
+
+  <router-outlet />
+  
+  <hr />
+  <section class="admin">
+    <h2>Admin — Quick DB test</h2>
+
+    <form (submit)="createProject($event, projName.value, projDesc.value, projPath.value)">
+      <label>Project name: <input #projName /></label>
+      <label>Description: <input #projDesc /></label>
+      <label>Path: <input #projPath /></label>
+      <button type="submit">Create Project</button>
+    </form>
+
+    <div *ngIf="createdProject">
+      <h3>Created</h3>
+      <pre>{{ createdProject | json }}</pre>
+    </div>
+
+    <form (submit)="getProject($event, getId.value)">
+      <label>Get project id: <input #getId /></label>
+      <button type="submit">Get</button>
+    </form>
+
+    <div *ngIf="fetchedProject">
+      <h3>Fetched</h3>
+      <pre>{{ fetchedProject | json }}</pre>
+    </div>
+    
+    <hr />
+    <div class="projects">
+      <h3>Projects</h3>
+      <button (click)="loadProjects()">Load projects</button>
+      <table *ngIf="projects.length">
+        <thead>
+          <tr><th>id</th><th>name</th><th>desc</th><th>path</th><th>actions</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of projects">
+            <td>{{ p.id }}</td>
+            <td><input [(ngModel)]="p.name" /></td>
+            <td><input [(ngModel)]="p.desc" /></td>
+            <td><input [(ngModel)]="p.path" /></td>
+            <td>
+              <button (click)="updateProject(p.id, { name: p.name, desc: p.desc, path: p.path })">Save</button>
+              <button (click)="deleteProject(p.id)">Delete</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr />
+    <div class="create-extras">
+      <h3>Create doc / character / event</h3>
+
+      <form (submit)="createDoc($event)">
+        <label>ProjectId: <input type="number" [(ngModel)]="newDoc.projectId" name="docProjectId" /></label>
+        <label>Path: <input [(ngModel)]="newDoc.path" name="docPath" /></label>
+        <label>Name: <input [(ngModel)]="newDoc.name" name="docName" /></label>
+        <label>Text: <input [(ngModel)]="newDoc.text" name="docText" /></label>
+        <button type="submit">Create Doc</button>
+      </form>
+
+      <form (submit)="createCharacter($event)">
+        <label>ProjectId: <input type="number" [(ngModel)]="newChar.projectId" name="charProjectId" /></label>
+        <label>Name: <input [(ngModel)]="newChar.name" name="charName" /></label>
+        <label>Desc: <input [(ngModel)]="newChar.desc" name="charDesc" /></label>
+        <button type="submit">Create Character</button>
+      </form>
+
+      <form (submit)="createEvent($event)">
+        <label>ProjectId: <input type="number" [(ngModel)]="newEvent.projectId" name="eventProjectId" /></label>
+        <label>Name: <input [(ngModel)]="newEvent.name" name="eventName" /></label>
+        <label>Desc: <input [(ngModel)]="newEvent.desc" name="eventDesc" /></label>
+        <label>Date: <input [(ngModel)]="newEvent.date" name="eventDate" /></label>
+        <button type="submit">Create Event</button>
+      </form>
+    </div>
+  </section>
+</main>
