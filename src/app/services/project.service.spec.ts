@@ -5,6 +5,7 @@ jest.mock("@tauri-apps/api/core", () => ({ invoke: jest.fn() }));
 
 import { invoke } from "@tauri-apps/api/core";
 import { ProjectService } from "./project.service";
+import type { Project } from "../shared/models";
 
 describe("ProjectService", () => {
   let svc: ProjectService;
@@ -15,7 +16,7 @@ describe("ProjectService", () => {
   });
 
   it("createProject calls invoke and returns project", async () => {
-    const fake = { id: 1, name: "P1", desc: null, path: null };
+    const fake: Project = { id: 1, name: "P1", desc: null, path: null };
     (invoke as jest.Mock).mockResolvedValueOnce(fake);
 
     const res = await svc.createProject({ name: "P1" });
@@ -24,7 +25,7 @@ describe("ProjectService", () => {
   });
 
   it("getProject calls invoke with id", async () => {
-    const fake = { id: 2, name: "P2" };
+    const fake: Project = { id: 2, name: "P2", desc: null, path: null };
     (invoke as jest.Mock).mockResolvedValueOnce(fake);
     const res = await svc.getProject(2);
     expect(invoke).toHaveBeenCalledWith("project_get", { id: 2 });

@@ -1,12 +1,13 @@
 import { Component } from "@angular/core";
 import { RouterOutlet } from "@angular/router";
 import { CommonModule } from "@angular/common";
-import { FormsModule } from "@angular/forms";
-import { ProjectService, ProjectCreate, Project } from "./services/project.service";
+import { FormsModule, ReactiveFormsModule, FormGroup, FormControl } from "@angular/forms";
+import { ProjectService } from "./services/project.service";
+import type { ProjectCreate, Project, DocForm, CharacterForm, EventForm } from "./shared/models";
 
 @Component({
   selector: "app-root",
-  imports: [RouterOutlet, CommonModule, FormsModule],
+  imports: [RouterOutlet, CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.css",
 })
@@ -18,12 +19,43 @@ export class AppComponent {
   fetchedProject: Project | null = null;
   projects: Project[] = [];
 
-  // Forms for doc/char/event
-  newDoc = { projectId: undefined as number | undefined, path: "", name: "", text: "" };
-  newChar = { projectId: undefined as number | undefined, name: "", desc: "" };
-  newEvent = { projectId: undefined as number | undefined, name: "", desc: "", date: "" };
+  // Reactive forms (typed shape via shared DTOs). Methods still accept legacy
+  // parameters for backward compatibility with tests.
+  createProjectForm!: FormGroup;
+  newDocForm!: FormGroup;
+  newCharForm!: FormGroup;
+  newEventForm!: FormGroup;
 
   constructor(private projectService: ProjectService) {}
+
+  ngOnInit(): void {
+    // initialize reactive forms
+    this.createProjectForm = new FormGroup({
+      name: new FormControl("") as FormControl<string | null>,
+      desc: new FormControl(null) as FormControl<string | null>,
+      path: new FormControl(null) as FormControl<string | null>,
+    });
+
+    this.newDocForm = new FormGroup({
+      projectId: new FormControl<number | null>(null),
+      path: new FormControl("") as FormControl<string | null>,
+      name: new FormControl(null) as FormControl<string | null>,
+      text: new FormControl(null) as FormControl<string | null>,
+    });
+
+    this.newCharForm = new FormGroup({
+      projectId: new FormControl<number | null>(null),
+      name: new FormControl("") as FormControl<string | null>,
+      desc: new FormControl(null) as FormControl<string | null>,
+    });
+
+    this.newEventForm = new FormGroup({
+      projectId: new FormControl<number | null>(null),
+      name: new FormControl("") as FormControl<string | null>,
+      desc: new FormControl(null) as FormControl<string | null>,
+      date: new FormControl(null) as FormControl<string | null>,
+    });
+  }
 
   greet(event: SubmitEvent, name: string): void {
     event.preventDefault();
@@ -37,13 +69,23 @@ export class AppComponent {
     });
   }
 
-  async createProject(event: SubmitEvent, name: string, desc?: string, path?: string) {
-    event.preventDefault();
-    const payload: ProjectCreate = { name, desc: desc || null, path: path || null };
+  // Backward-compatible: if name provided we use legacy param style, otherwise
+  // read from reactive form.
+  async createProject(event?: SubmitEvent, name?: string, desc?: string, path?: string) {
+    event?.preventDefault();
+    const payload: ProjectCreate = name
+      ? { name, desc: desc || null, path: path || null }
+      : {
+          name: this.createProjectForm.value.name ?? "",
+          desc: this.createProjectForm.value.desc ?? null,
+          path: this.createProjectForm.value.path ?? null,
+        };
     try {
       const p = await this.projectService.createProject(payload);
       this.createdProject = p;
       await this.loadProjects();
+      // reset form when used
+      if (!name) this.createProjectForm.reset({ name: "", desc: null, path: null });
     } catch (e) {
       console.error("createProject error", e);
     }
@@ -89,9 +131,11 @@ export class AppComponent {
 
   async createDoc(event: SubmitEvent) {
     event.preventDefault();
-    if (!this.newDoc.projectId) return;
+    const fv = this.newDocForm.value;
+    if (!fv.projectId) return;
     try {
-      await this.projectService.createDoc(this.newDoc.projectId, this.newDoc.path, this.newDoc.name, this.newDoc.text);
+      await this.projectService.createDoc(fv.projectId, fv.path, fv.name, fv.text);
+      this.newDocForm.reset({ projectId: null, path: "", name: null, text: null });
     } catch (e) {
       console.error(e);
     }
@@ -99,9 +143,11 @@ export class AppComponent {
 
   async createCharacter(event: SubmitEvent) {
     event.preventDefault();
-    if (!this.newChar.projectId) return;
+    const fv = this.newCharForm.value;
+    if (!fv.projectId) return;
     try {
-      await this.projectService.createCharacter(this.newChar.projectId, this.newChar.name, this.newChar.desc);
+      await this.projectService.createCharacter(fv.projectId, fv.name, fv.desc);
+      this.newCharForm.reset({ projectId: null, name: "", desc: null });
     } catch (e) {
       console.error(e);
     }
@@ -109,9 +155,11 @@ export class AppComponent {
 
   async createEvent(event: SubmitEvent) {
     event.preventDefault();
-    if (!this.newEvent.projectId) return;
+    const fv = this.newEventForm.value;
+    if (!fv.projectId) return;
     try {
-      await this.projectService.createEvent(this.newEvent.projectId, this.newEvent.name, this.newEvent.desc, this.newEvent.date);
+      await this.projectService.createEvent(fv.projectId, fv.name, fv.desc, fv.date);
+      this.newEventForm.reset({ projectId: null, name: "", desc: null, date: null });
     } catch (e) {
       console.error(e);
     }

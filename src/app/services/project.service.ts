@@ -1,18 +1,6 @@
 import { Injectable } from "@angular/core";
 import { invoke } from "@tauri-apps/api/core";
-
-export interface ProjectCreate {
-  name: string;
-  desc?: string | null;
-  path?: string | null;
-}
-
-export interface Project {
-  id: number;
-  name: string;
-  desc?: string | null;
-  path?: string | null;
-}
+import type { Project, ProjectCreate, Doc, Character, Event } from "../shared/models";
 
 @Injectable({ providedIn: "root" })
 export class ProjectService {
@@ -39,15 +27,18 @@ export class ProjectService {
   }
 
   // Basic stubs for docs/characters/events
-  async createDoc(projectId: number, path: string, name?: string, text?: string) {
-    return invoke("doc_create", { project_id: projectId, path, name, text });
+  async createDoc(projectId: number, path: string, name?: string | null, text?: string | null): Promise<Doc> {
+    const payload = { project_id: projectId, path, name: name ?? null, text: text ?? null };
+    return invoke<Doc>("doc_create", payload);
   }
 
-  async createCharacter(projectId: number, name: string, desc?: string) {
-    return invoke("character_create", { project_id: projectId, name, desc });
+  async createCharacter(projectId: number, name: string, desc?: string | null): Promise<Character> {
+    const payload = { project_id: projectId, name, desc: desc ?? null };
+    return invoke<Character>("character_create", payload);
   }
 
-  async createEvent(projectId: number, name: string, desc?: string, date?: string) {
-    return invoke("event_create", { project_id: projectId, name, desc, date });
+  async createEvent(projectId: number, name: string, desc?: string | null, date?: string | null): Promise<Event> {
+    const payload = { project_id: projectId, name, desc: desc ?? null, date: date ?? null };
+    return invoke<Event>("event_create", payload);
   }
 }

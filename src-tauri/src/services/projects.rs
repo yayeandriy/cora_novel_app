@@ -68,41 +68,40 @@ pub fn list(pool: &DbPool) -> anyhow::Result<Vec<Project>> {
 }
 
 pub fn update(pool: &DbPool, id: i64, name: Option<String>, desc: Option<String>, path: Option<String>) -> anyhow::Result<Project> {
-    let conn = get_conn(pool)?;
-    // Build update dynamically
-    let mut parts = Vec::new();
-    let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-    if let Some(n) = name {
-        parts.push("name = ?");
-        params.push(Box::new(n));
-    }
-    if let Some(d) = desc {
-        parts.push("desc = ?");
-        params.push(Box::new(d));
-    }
-    if let Some(p) = path {
-        parts.push("path = ?");
-        params.push(Box::new(p));
-    }
+    // Ensure project exists
+    let existing = get(pool, id)?;
+    let existing = existing.ok_or_else(|| anyhow::anyhow!("project not found"))?;
 
-    if parts.is_empty() {
-        // Nothing to do, just return current
-        return get(pool, id).and_then(|opt| opt.ok_or_else(|| anyhow::anyhow!("not found")));
+    let mut conn = get_conn(pool)?;
+    let tx = conn.transaction()?;
+
+    // Prepare updates; use current values as fallback
+    let new_name = name.unwrap_or(existing.name);
+    if new_name.trim().is_empty() {
+        return Err(anyhow::anyhow!("name cannot be empty"));
     }
+    let new_desc = desc.or(existing.desc);
+    let new_path = path.or(existing.path);
 
-    let sql = format!("UPDATE projects SET {} WHERE id = ?", parts.join(", "));
-    // push id param
-    params.push(Box::new(id));
+    tx.execute(
+        "UPDATE projects SET name = ?1, desc = ?2, path = ?3 WHERE id = ?4",
+        rusqlite::params![new_name, new_desc, new_path, id],
+    )?;
 
-    // Convert params to slice
-    let params_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|b| &**b as &dyn rusqlite::ToSql).collect();
-    conn.execute(&sql, params_refs.as_slice())?;
-
+    tx.commit()?;
+    // Return updated
     get(pool, id).and_then(|opt| opt.ok_or_else(|| anyhow::anyhow!("not found after update")))
 }
 
 pub fn delete(pool: &DbPool, id: i64) -> anyhow::Result<bool> {
-    let conn = get_conn(pool)?;
-    let affected = conn.execute("DELETE FROM projects WHERE id = ?1", rusqlite::params![id])?;
+    let mut conn = get_conn(pool)?;
+    let tx = conn.transaction()?;
+    // ensure exists
+    let exists = tx.query_row::<i64, _, _>("SELECT id FROM projects WHERE id = ?1", rusqlite::params![id], |r| r.get(0)).optional()?;
+    if exists.is_none() {
+        return Ok(false);
+    }
+    let affected = tx.execute("DELETE FROM projects WHERE id = ?1", rusqlite::params![id])?;
+    tx.commit()?;
     Ok(affected > 0)
 }

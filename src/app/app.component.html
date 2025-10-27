@@ -23,10 +23,10 @@
   <section class="admin">
     <h2>Admin — Quick DB test</h2>
 
-    <form (submit)="createProject($event, projName.value, projDesc.value, projPath.value)">
-      <label>Project name: <input #projName /></label>
-      <label>Description: <input #projDesc /></label>
-      <label>Path: <input #projPath /></label>
+    <form [formGroup]="createProjectForm" (ngSubmit)="createProject()">
+      <label>Project name: <input formControlName="name" /></label>
+      <label>Description: <input formControlName="desc" /></label>
+      <label>Path: <input formControlName="path" /></label>
       <button type="submit">Create Project</button>
     </form>
 
@@ -72,26 +72,26 @@
     <div class="create-extras">
       <h3>Create doc / character / event</h3>
 
-      <form (submit)="createDoc($event)">
-        <label>ProjectId: <input type="number" [(ngModel)]="newDoc.projectId" name="docProjectId" /></label>
-        <label>Path: <input [(ngModel)]="newDoc.path" name="docPath" /></label>
-        <label>Name: <input [(ngModel)]="newDoc.name" name="docName" /></label>
-        <label>Text: <input [(ngModel)]="newDoc.text" name="docText" /></label>
-        <button type="submit">Create Doc</button>
-      </form>
+        <form [formGroup]="newDocForm" (ngSubmit)="createDoc($event)">
+          <label>ProjectId: <input type="number" formControlName="projectId" /></label>
+          <label>Path: <input formControlName="path" /></label>
+          <label>Name: <input formControlName="name" /></label>
+          <label>Text: <input formControlName="text" /></label>
+          <button type="submit">Create Doc</button>
+        </form>
 
-      <form (submit)="createCharacter($event)">
-        <label>ProjectId: <input type="number" [(ngModel)]="newChar.projectId" name="charProjectId" /></label>
-        <label>Name: <input [(ngModel)]="newChar.name" name="charName" /></label>
-        <label>Desc: <input [(ngModel)]="newChar.desc" name="charDesc" /></label>
+      <form [formGroup]="newCharForm" (ngSubmit)="createCharacter($event)">
+        <label>ProjectId: <input type="number" formControlName="projectId" /></label>
+        <label>Name: <input formControlName="name" /></label>
+        <label>Desc: <input formControlName="desc" /></label>
         <button type="submit">Create Character</button>
       </form>
 
-      <form (submit)="createEvent($event)">
-        <label>ProjectId: <input type="number" [(ngModel)]="newEvent.projectId" name="eventProjectId" /></label>
-        <label>Name: <input [(ngModel)]="newEvent.name" name="eventName" /></label>
-        <label>Desc: <input [(ngModel)]="newEvent.desc" name="eventDesc" /></label>
-        <label>Date: <input [(ngModel)]="newEvent.date" name="eventDate" /></label>
+      <form [formGroup]="newEventForm" (ngSubmit)="createEvent($event)">
+        <label>ProjectId: <input type="number" formControlName="projectId" /></label>
+        <label>Name: <input formControlName="name" /></label>
+        <label>Desc: <input formControlName="desc" /></label>
+        <label>Date: <input formControlName="date" /></label>
         <button type="submit">Create Event</button>
       </form>
     </div>

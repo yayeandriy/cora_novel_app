@@ -28,4 +28,21 @@ pub struct Doc {
     pub text: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Character {
+    pub id: i64,
+    pub project_id: i64,
+    pub name: String,
+    pub desc: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Event {
+    pub id: i64,
+    pub project_id: i64,
+    pub name: String,
+    pub desc: Option<String>,
+    pub date: Option<String>,
+}
+
 // Add more models (Character, Event, Draft, Note) as needed

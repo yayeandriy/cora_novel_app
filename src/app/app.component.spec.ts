@@ -8,12 +8,13 @@ jest.mock('@angular/router', () => ({ RouterOutlet: {} }));
 // We instantiate the class directly and supply a mocked ProjectService.
 import { AppComponent } from './app.component';
 import { ProjectService } from './services/project.service';
+import type { Project } from './shared/models';
 
 const mockProjectService: Partial<ProjectService> = {
-  createProject: jest.fn().mockResolvedValue({ id: 1, name: 'P1' }),
+  createProject: jest.fn().mockResolvedValue({ id: 1, name: 'P1' } as Project),
   listProjects: jest.fn().mockResolvedValue([]),
   deleteProject: jest.fn().mockResolvedValue(true),
-  updateProject: jest.fn().mockResolvedValue({ id: 1, name: 'P1-updated' }),
+  updateProject: jest.fn().mockResolvedValue({ id: 1, name: 'P1-updated' } as Project),
 };
 
 describe('AppComponent (shallow)', () => {

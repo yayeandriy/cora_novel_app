@@ -1,21 +1,46 @@
 use crate::db::{DbPool, get_conn};
+use crate::models::Event;
 use anyhow::Context;
 use rusqlite::OptionalExtension;
 
-pub fn create(pool: &DbPool, project_id: i64, name: &str, desc: Option<String>, date: Option<String>) -> anyhow::Result<i64> {
-    let conn = get_conn(pool)?;
-    conn.execute(
+pub fn create(pool: &DbPool, project_id: i64, name: &str, desc: Option<String>, date: Option<String>) -> anyhow::Result<Event> {
+    let mut conn = get_conn(pool)?;
+
+    if name.trim().is_empty() {
+        return Err(anyhow::anyhow!("name cannot be empty"));
+    }
+
+    let tx = conn.transaction()?;
+    tx.execute(
         "INSERT INTO events (project_id, name, desc, date) VALUES (?1, ?2, ?3, ?4)",
         rusqlite::params![project_id, name, desc, date],
     ).context("inserting event")?;
-    Ok(conn.last_insert_rowid())
+
+    let id = tx.last_insert_rowid();
+    let event = tx.query_row("SELECT id, project_id, name, desc, date FROM events WHERE id = ?1", rusqlite::params![id], |row| {
+        Ok(Event {
+            id: row.get(0)?,
+            project_id: row.get(1)?,
+            name: row.get(2)?,
+            desc: row.get(3)?,
+            date: row.get(4)?,
+        })
+    })?;
+
+    tx.commit()?;
+    Ok(event)
 }
 
-pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<(i64, i64, Option<String>, Option<String>)>> {
+pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<Event>> {
     let conn = get_conn(pool)?;
-    let mut stmt = conn.prepare("SELECT id, project_id, name, desc FROM events WHERE id = ?1")?;
-    let res = stmt.query_row(rusqlite::params![id], |row| {
-        Ok((row.get(0)?, row.get(1)?, row.get::<_, Option<String>>(2)?, row.get::<_, Option<String>>(3)?))
+    let res = conn.query_row::<Event, _, _>("SELECT id, project_id, name, desc, date FROM events WHERE id = ?1", rusqlite::params![id], |row| {
+        Ok(Event {
+            id: row.get(0)?,
+            project_id: row.get(1)?,
+            name: row.get(2)?,
+            desc: row.get(3)?,
+            date: row.get(4)?,
+        })
     }).optional()?;
     Ok(res)
 }
@@ -40,8 +65,8 @@ mod tests {
         conn.execute("INSERT INTO projects (name) VALUES (?1)", rusqlite::params!["P"]).unwrap();
         let project_id = conn.last_insert_rowid();
 
-        let id = create(&pool, project_id, "Battle", Some("Big battle".into()), Some("2025-01-01".into())).unwrap();
-        let got = get(&pool, id).unwrap().unwrap();
-        assert_eq!(got.1, project_id);
+        let event = create(&pool, project_id, "Battle", Some("Big battle".into()), Some("2025-01-01".into())).unwrap();
+        let got = get(&pool, event.id).unwrap().unwrap();
+        assert_eq!(got.project_id, project_id);
     }
 }

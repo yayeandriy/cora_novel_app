@@ -1,5 +1,5 @@
 use crate::db::DbPool;
-use crate::models::{ProjectCreate, Project};
+use crate::models::{ProjectCreate, Project, Character, Event};
 use crate::services::projects as project_service;
 use tauri::State;
 
@@ -50,13 +50,13 @@ pub async fn doc_create(state: State<'_, AppState>, project_id: i64, path: Strin
 }
 
 #[tauri::command]
-pub async fn character_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>) -> Result<i64, String> {
+pub async fn character_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>) -> Result<Character, String> {
     let pool = &state.pool;
     crate::services::characters::create(pool, project_id, &name, desc).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub async fn event_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>, date: Option<String>) -> Result<i64, String> {
+pub async fn event_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>, date: Option<String>) -> Result<Event, String> {
     let pool = &state.pool;
     crate::services::events::create(pool, project_id, &name, desc, date).map_err(|e| e.to_string())
 }
