@@ -52,7 +52,24 @@ export class ProjectDashboardComponent {
   async create() {
     const v = this.form.value;
     if (!v.name) return;
-    await this.svc.createProject({ name: v.name, desc: v.desc ?? null, path: v.path ?? null });
+    
+    if (this.editingId) {
+      // Update existing project
+      await this.svc.updateProject(this.editingId, { 
+        name: v.name, 
+        desc: v.desc ?? null, 
+        path: v.path ?? null 
+      });
+      this.editingId = null;
+    } else {
+      // Create new project
+      await this.svc.createProject({ 
+        name: v.name, 
+        desc: v.desc ?? null, 
+        path: v.path ?? null 
+      });
+    }
+    
     this.form.reset({ name: "", desc: null, path: null });
     await this.reload();
     this.showCreate = false;
@@ -60,9 +77,38 @@ export class ProjectDashboardComponent {
 
   toggleCreate() {
     this.showCreate = !this.showCreate;
+    this.editingId = null;
     if (this.showCreate) {
       this.form.reset({ name: '', desc: null, path: null });
     }
+  }
+
+  editProject(p: Project, event: Event) {
+    event.stopPropagation();
+    this.editingId = p.id;
+    this.showCreate = true;
+    this.form.setValue({ 
+      name: p.name, 
+      desc: p.desc ?? null, 
+      path: p.path ?? null 
+    });
+  }
+
+  async deleteProject(id: number, event: Event) {
+    event.stopPropagation();
+    
+    if (!confirm('Are you sure you want to delete this project?')) {
+      return;
+    }
+    
+    await this.svc.deleteProject(id);
+    await this.reload();
+  }
+
+  cancelEdit() {
+    this.editingId = null;
+    this.showCreate = false;
+    this.form.reset({ name: '', desc: null, path: null });
   }
 
   openProject(p: Project) {
@@ -84,29 +130,5 @@ export class ProjectDashboardComponent {
     } catch {
       return '1 day ago';
     }
-  }
-
-  edit(p: Project) {
-    this.editingId = p.id;
-    this.form.setValue({ name: p.name, desc: p.desc ?? null, path: p.path ?? null });
-  }
-
-  async save() {
-    if (!this.editingId) return;
-    const v = this.form.value;
-    await this.svc.updateProject(this.editingId, { name: v.name, desc: v.desc ?? null, path: v.path ?? null });
-    this.editingId = null;
-    this.form.reset({ name: "", desc: null, path: null });
-    await this.reload();
-  }
-
-  cancel() {
-    this.editingId = null;
-    this.form.reset({ name: "", desc: null, path: null });
-  }
-
-  async remove(id: number) {
-    await this.svc.deleteProject(id);
-    await this.reload();
   }
 }

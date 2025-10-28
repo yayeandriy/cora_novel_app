@@ -126,3 +126,23 @@ button, input, select, textarea {
 .font-light { font-weight: 300; }
 .font-normal { font-weight: 400; }
 .font-regular { font-weight: 400; }
+
+/* Additional utilities for project cards */
+.relative { position: relative; }
+.absolute { position: absolute; }
+.top-4 { top: 1rem; }
+.right-4 { right: 1rem; }
+.opacity-0 { opacity: 0; }
+.opacity-100 { opacity: 1; }
+.transition-opacity { transition-property: opacity; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
+.p-1\.5 { padding: 0.375rem; }
+.border-red-200 { border-color: #fecaca; }
+.text-red-600 { color: #dc2626; }
+.hover\:bg-red-50:hover { background-color: #fef2f2; }
+.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+
+/* Backdrop and transparency utilities */
+.bg-white\/90 { background-color: rgba(255, 255, 255, 0.9); }
+.backdrop-blur-sm { backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.top-3 { top: 0.75rem; }
+.right-3 { right: 0.75rem; }
