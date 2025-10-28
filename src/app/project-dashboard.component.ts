@@ -4,6 +4,7 @@ import { ReactiveFormsModule, FormGroup, FormControl } from "@angular/forms";
 import { ProjectService } from "./services/project.service";
 import type { Project } from "./shared/models";
 import { open } from "@tauri-apps/plugin-dialog";
+import { Router } from "@angular/router";
 
 @Component({
   selector: "app-project-dashboard",
@@ -17,7 +18,10 @@ export class ProjectDashboardComponent {
   editingId: number | null = null;
   showCreate = false;
 
-  constructor(private svc: ProjectService) {
+  constructor(
+    private svc: ProjectService,
+    private router: Router
+  ) {
     this.form = new FormGroup({
       name: new FormControl("") as FormControl<string | null>,
       desc: new FormControl(null) as FormControl<string | null>,
@@ -112,8 +116,7 @@ export class ProjectDashboardComponent {
   }
 
   openProject(p: Project) {
-    // placeholder: later this will navigate or open the project in the app
-    console.log('open project', p.id, p.name);
+    this.router.navigate(['/project', p.id]);
   }
 
   timeAgo(p: Project) {
