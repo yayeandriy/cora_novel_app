@@ -93,15 +93,12 @@ body {
 .font-semibold { font-weight: 600; }
 .font-medium { font-weight: 500; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.shadow-sm { box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
-.shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
 .cursor-pointer { cursor: pointer; }
 .text-center { text-align: center; }
 .transition { transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1); }
 .transition-all { transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1); }
 .hover\:bg-gray-800:hover { background-color: #1f2937; }
 .hover\:bg-gray-100:hover { background-color: #f3f4f6; }
-.hover\:shadow-lg:hover { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
 .hover\:border-gray-300:hover { border-color: #d1d5db; }
 .group:hover .group-hover\:text-black { color: #000000; }
 .focus\:outline-none:focus { outline: 2px solid transparent; outline-offset: 2px; }
