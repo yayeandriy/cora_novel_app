@@ -5,6 +5,7 @@ mod services {
     pub mod docs;
     pub mod characters;
     pub mod events;
+    pub mod doc_groups;
 }
 mod commands;
 
@@ -28,6 +29,19 @@ pub fn run() {
             commands::project_update,
             commands::project_delete,
             commands::doc_create,
+            commands::doc_list,
+            commands::doc_get,
+            commands::doc_create_new,
+            commands::doc_update_text,
+            commands::doc_delete,
+            commands::doc_reorder,
+            commands::doc_move_to_group,
+            commands::doc_rename,
+            commands::doc_group_list,
+            commands::doc_group_create,
+            commands::doc_group_delete,
+            commands::doc_group_reorder,
+            commands::doc_group_rename,
             commands::character_create,
             commands::event_create,
         ])

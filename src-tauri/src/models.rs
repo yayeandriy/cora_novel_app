@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Project {
@@ -19,6 +18,15 @@ pub struct ProjectCreate {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct DocGroup {
+    pub id: i64,
+    pub project_id: i64,
+    pub name: String,
+    pub parent_id: Option<i64>,
+    pub sort_order: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Doc {
     pub id: i64,
     pub project_id: i64,
@@ -26,6 +34,8 @@ pub struct Doc {
     pub name: Option<String>,
     pub timeline_id: Option<i64>,
     pub text: Option<String>,
+    pub doc_group_id: Option<i64>,
+    pub sort_order: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

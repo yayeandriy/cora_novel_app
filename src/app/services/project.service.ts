@@ -26,6 +26,60 @@ export class ProjectService {
     return invoke<Project>("project_update", { id, changes });
   }
 
+  // Doc Groups
+  async listDocGroups(projectId: number): Promise<any[]> {
+    return invoke<any[]>("doc_group_list", { projectId });
+  }
+
+  async createDocGroup(projectId: number, name: string, parentId?: number | null): Promise<any> {
+    return invoke<any>("doc_group_create", { projectId, name, parentId: parentId ?? null });
+  }
+
+  async deleteDocGroup(id: number): Promise<void> {
+    return invoke<void>("doc_group_delete", { id });
+  }
+
+  async reorderDocGroup(id: number, direction: 'up' | 'down'): Promise<void> {
+    return invoke<void>("doc_group_reorder", { id, direction });
+  }
+
+  async renameDocGroup(id: number, newName: string): Promise<void> {
+    return invoke<void>("doc_group_rename", { id, newName });
+  }
+
+  // Docs
+  async listDocs(projectId: number): Promise<Doc[]> {
+    return invoke<Doc[]>("doc_list", { projectId });
+  }
+
+  async getDoc(id: number): Promise<Doc | null> {
+    return invoke<Doc | null>("doc_get", { id });
+  }
+
+  async createDocNew(projectId: number, name: string, docGroupId?: number | null): Promise<Doc> {
+    return invoke<Doc>("doc_create_new", { projectId, name, docGroupId: docGroupId ?? null });
+  }
+
+  async updateDocText(id: number, text: string): Promise<void> {
+    return invoke<void>("doc_update_text", { id, text });
+  }
+
+  async deleteDoc(id: number): Promise<void> {
+    return invoke<void>("doc_delete", { id });
+  }
+
+  async reorderDoc(id: number, direction: 'up' | 'down'): Promise<void> {
+    return invoke<void>("doc_reorder", { id, direction });
+  }
+
+  async moveDocToGroup(docId: number, newGroupId?: number | null): Promise<void> {
+    return invoke<void>("doc_move_to_group", { docId, newGroupId: newGroupId ?? null });
+  }
+
+  async renameDoc(id: number, newName: string): Promise<void> {
+    return invoke<void>("doc_rename", { id, newName });
+  }
+
   // Basic stubs for docs/characters/events
   async createDoc(projectId: number, path: string, name?: string | null, text?: string | null): Promise<Doc> {
     const payload = { project_id: projectId, path, name: name ?? null, text: text ?? null };

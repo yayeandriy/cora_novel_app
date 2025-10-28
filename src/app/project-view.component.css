@@ -83,6 +83,51 @@
   flex-direction: column;
 }
 
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sidebar-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+}
+
+.sidebar-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.icon-button-small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: transparent;
+  border: none;
+  border-radius: 0.25rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.icon-button-small:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.icon-button-small svg {
+  width: 1rem;
+  height: 1rem;
+}
+
 .sidebar-content {
   flex: 1;
   overflow-y: auto;
@@ -91,6 +136,24 @@
 
 .doc-tree {
   font-size: 0.875rem;
+}
+
+.empty-state {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #9ca3af;
+}
+
+.empty-message {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.empty-hint {
+  font-size: 0.75rem;
+  color: #9ca3af;
 }
 
 .tree-item {
@@ -203,6 +266,34 @@
   overflow: hidden;
 }
 
+.editor-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #9ca3af;
+}
+
+.editor-empty-state .empty-icon {
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.3;
+}
+
+.editor-empty-state .empty-message {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.editor-empty-state .empty-hint {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
 .editor-container {
   display: flex;
   flex-direction: column;
@@ -215,6 +306,27 @@
   justify-content: space-between;
   padding: 0.75rem 1.5rem;
   border-bottom: 1px solid #e5e7eb;
+}
+
+.doc-title-input {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  transition: background-color 150ms;
+}
+
+.doc-title-input:hover {
+  background: #f9fafb;
+}
+
+.doc-title-input:focus {
+  background: #f3f4f6;
 }
 
 .doc-title {

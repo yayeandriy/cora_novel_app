@@ -1,0 +1,4 @@
+-- Migration 002: Add order and hierarchy support to doc_groups and docs
+-- NOTE: These changes have been merged into migration 001_create_schema.sql
+-- This migration is kept for versioning purposes but does nothing.
+-- If you have an existing database, delete it and let it recreate with the updated schema.

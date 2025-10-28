@@ -27,8 +27,31 @@
   <div class="content-wrapper">
     <!-- Left Sidebar -->
     <aside *ngIf="!leftCollapsed" class="left-sidebar" [style.width.px]="leftWidth">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Documents</span>
+        <div class="sidebar-actions">
+          <button class="icon-button-small" title="New folder" (click)="createGroup()">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+            </svg>
+          </button>
+          <button class="icon-button-small" title="New document" (click)="createDoc()">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      
       <div class="sidebar-content">
         <div class="doc-tree">
+          <!-- Empty state -->
+          <div *ngIf="docGroups.length === 0" class="empty-state">
+            <p class="empty-message">No documents yet</p>
+            <p class="empty-hint">Create your first document or folder</p>
+          </div>
+          
+          <!-- Tree -->
           <ng-container *ngFor="let group of docGroups">
             <div class="tree-item">
               <div class="tree-item-header" (click)="toggleGroup(group)">
@@ -97,9 +120,14 @@
     <main class="editor-area">
       <div *ngIf="selectedDoc" class="editor-container">
         <div class="editor-toolbar">
-          <span class="doc-title">{{ selectedDoc.name }}</span>
+          <input 
+            type="text" 
+            class="doc-title-input" 
+            [(ngModel)]="selectedDoc.name"
+            (blur)="renameDoc(selectedDoc)"
+            placeholder="Untitled">
           <div class="toolbar-actions">
-            <button class="toolbar-button">
+            <button class="toolbar-button" (click)="saveDoc()">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
               </svg>
@@ -111,6 +139,7 @@
         <textarea 
           [(ngModel)]="selectedDoc.text" 
           class="editor-textarea"
+          (blur)="saveDoc()"
           placeholder="Start writing...">
         </textarea>
         
@@ -119,11 +148,12 @@
         </div>
       </div>
       
-      <div *ngIf="!selectedDoc" class="empty-state">
-        <svg xmlns="http://www.w3.org/2000/svg" class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+      <div *ngIf="!selectedDoc" class="editor-empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        <p>Select a document to start editing</p>
+        <p class="empty-message">No document selected</p>
+        <p class="empty-hint">Select a document from the tree to start editing</p>
       </div>
     </main>
 

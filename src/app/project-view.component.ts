@@ -2,10 +2,15 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ProjectService } from './services/project.service';
+import { ask } from '@tauri-apps/plugin-dialog';
 
 interface DocGroup {
   id: number;
   name: string;
+  project_id: number;
+  parent_id?: number | null;
+  sort_order?: number | null;
   expanded: boolean;
   docs: Doc[];
   groups?: DocGroup[];
@@ -13,10 +18,13 @@ interface DocGroup {
 
 interface Doc {
   id: number;
-  name: string;
-  text: string;
-  draft?: string;
-  notes?: string;
+  name?: string | null;
+  project_id: number;
+  doc_group_id?: number | null;
+  sort_order?: number | null;
+  text?: string | null;
+  path?: string;
+  timeline_id?: number | null;
 }
 
 interface Character {
@@ -67,7 +75,8 @@ export class ProjectViewComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private projectService: ProjectService
   ) {}
 
   ngOnInit() {
@@ -79,69 +88,116 @@ export class ProjectViewComponent implements OnInit {
     this.loadLayoutState();
   }
 
-  loadProject() {
-    // Mock data - will be replaced with actual DB calls
-    this.projectName = 'Мультифільми';
-    
-    this.docGroups = [
-      {
-        id: 1,
-        name: '2 візди',
-        expanded: true,
-        docs: [],
-        groups: [
-          {
-            id: 2,
-            name: 'Мультифільми',
-            expanded: true,
-            docs: [
-              { id: 1, name: '2', text: 'Content for document 2...' }
-            ]
-          },
-          {
-            id: 3,
-            name: 'уривки',
-            expanded: false,
-            docs: []
-          },
-          {
-            id: 4,
-            name: '22222',
-            expanded: false,
-            docs: []
-          }
-        ]
-      },
-      {
-        id: 5,
-        name: '1111',
-        expanded: false,
-        docs: []
-      },
-      {
-        id: 6,
-        name: '4343',
-        expanded: false,
-        docs: []
+  async loadProject() {
+    try {
+      // Load project details
+      const project = await this.projectService.getProject(this.projectId);
+      if (project) {
+        this.projectName = project.name;
       }
-    ];
-    
-    this.characters = [
-      { id: 1, name: 'Character 1', desc: 'Description' },
-      { id: 2, name: 'Character 2', desc: 'Description' }
-    ];
-    
-    this.events = [
-      { id: 1, name: "З'являються бандити", desc: 'Ввід офісу', startDate: 'Apr 23, 2018', endDate: 'Apr 23, 2018' },
-      { id: 2, name: 'Погадка до діда', desc: '', startDate: 'Oct 1, 2019', endDate: 'Oct 18, 2019' },
-      { id: 3, name: 'Костя потрапляє у студію', desc: '', startDate: 'Oct 7, 2025', endDate: 'Oct 17, 2025' },
-      { id: 4, name: 'Офіс Кості виносить з приміщень 2', desc: '' }
-    ];
-    
-    // Auto-select first doc
-    if (this.docGroups[0]?.groups?.[0]?.docs?.[0]) {
-      this.selectedDoc = this.docGroups[0].groups[0].docs[0];
+
+      // Load doc groups and docs from backend
+      const [groups, docs] = await Promise.all([
+        this.projectService.listDocGroups(this.projectId),
+        this.projectService.listDocs(this.projectId)
+      ]);
+
+      // Build hierarchical structure
+      this.docGroups = this.buildDocGroupTree(groups, docs);
+
+      // Load characters and events (using mock data for now)
+      this.characters = [];
+      this.events = [];
+
+      // Auto-select first doc if available
+      const firstDoc = this.findFirstDoc(this.docGroups);
+      if (firstDoc) {
+        this.selectedDoc = firstDoc;
+      }
+    } catch (error) {
+      console.error('Failed to load project:', error);
     }
+  }
+
+  private buildDocGroupTree(groups: any[], docs: Doc[]): DocGroup[] {
+    // Create a map of groups by ID
+    const groupMap = new Map<number, DocGroup>();
+    
+    // Initialize all groups with expanded=false and empty children
+    groups.forEach(g => {
+      groupMap.set(g.id, {
+        ...g,
+        expanded: false,
+        docs: [],
+        groups: []
+      });
+    });
+
+    // Separate root-level docs from grouped docs
+    const rootDocs: Doc[] = [];
+    
+    // Assign docs to their groups or to root
+    docs.forEach(doc => {
+      if (doc.doc_group_id) {
+        const group = groupMap.get(doc.doc_group_id);
+        if (group) {
+          group.docs.push(doc);
+        }
+      } else {
+        // Doc without a group - add to root
+        rootDocs.push(doc);
+      }
+    });
+
+    // Build hierarchy: find root groups and assign children
+    const rootGroups: DocGroup[] = [];
+    
+    groups.forEach(g => {
+      const group = groupMap.get(g.id);
+      if (!group) return;
+
+      if (g.parent_id === null || g.parent_id === undefined) {
+        // Root level group
+        rootGroups.push(group);
+      } else {
+        // Child group - add to parent's groups array
+        const parent = groupMap.get(g.parent_id);
+        if (parent) {
+          if (!parent.groups) parent.groups = [];
+          parent.groups.push(group);
+        }
+      }
+    });
+
+    // If there are root-level docs, create a virtual "Documents" group for them
+    if (rootDocs.length > 0) {
+      const virtualGroup: DocGroup = {
+        id: -1, // Virtual ID
+        name: 'Documents',
+        project_id: this.projectId,
+        parent_id: null,
+        sort_order: -1,
+        expanded: true,
+        docs: rootDocs,
+        groups: []
+      };
+      rootGroups.unshift(virtualGroup); // Add at the beginning
+    }
+
+    return rootGroups;
+  }
+
+  private findFirstDoc(groups: DocGroup[]): Doc | null {
+    for (const group of groups) {
+      if (group.docs.length > 0) {
+        return group.docs[0];
+      }
+      if (group.groups && group.groups.length > 0) {
+        const doc = this.findFirstDoc(group.groups);
+        if (doc) return doc;
+      }
+    }
+    return null;
   }
 
   toggleGroup(group: DocGroup) {
@@ -150,6 +206,65 @@ export class ProjectViewComponent implements OnInit {
 
   selectDoc(doc: Doc) {
     this.selectedDoc = doc;
+  }
+
+  async renameDoc(doc: Doc) {
+    if (!doc.name || !doc.name.trim()) {
+      doc.name = 'Untitled Document';
+    }
+    
+    try {
+      await this.projectService.renameDoc(doc.id, doc.name!);
+      console.log('Doc renamed successfully');
+    } catch (error) {
+      console.error('Failed to rename doc:', error);
+      alert('Failed to rename document: ' + error);
+    }
+  }
+
+  async saveDoc() {
+    if (!this.selectedDoc) return;
+
+    try {
+      const text = this.selectedDoc.text || '';
+      await this.projectService.updateDocText(this.selectedDoc.id, text);
+      console.log('Doc saved successfully');
+      // Optional: Show a brief "Saved" indicator
+    } catch (error) {
+      console.error('Failed to save doc:', error);
+      alert('Failed to save document: ' + error);
+    }
+  }
+
+  async createGroup() {
+    console.log('createGroup called');
+    const name = 'New Folder'; // Simple default name for now
+    console.log('Folder name:', name);
+
+    try {
+      await this.projectService.createDocGroup(this.projectId, name);
+      await this.loadProject();
+    } catch (error) {
+      console.error('Failed to create group:', error);
+      alert('Failed to create folder: ' + error);
+    }
+  }
+
+  async createDoc() {
+    console.log('createDoc called');
+    const name = 'Untitled Document'; // Simple default name for now
+    console.log('Document name:', name);
+
+    try {
+      const doc = await this.projectService.createDocNew(this.projectId, name);
+      console.log('Doc created:', doc);
+      await this.loadProject();
+      // Auto-select the newly created doc
+      this.selectedDoc = doc;
+    } catch (error) {
+      console.error('Failed to create doc:', error);
+      alert('Failed to create document: ' + error);
+    }
   }
 
   toggleLeftSidebar() {

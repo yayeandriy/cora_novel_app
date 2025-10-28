@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS docs (
   name TEXT,
   timeline_id INTEGER,
   text TEXT,
+  doc_group_id INTEGER REFERENCES doc_groups(id) ON DELETE SET NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
   FOREIGN KEY(timeline_id) REFERENCES timelines(id)
 );
@@ -68,6 +70,8 @@ CREATE TABLE IF NOT EXISTS doc_groups (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   project_id INTEGER,
   name TEXT,
+  parent_id INTEGER REFERENCES doc_groups(id) ON DELETE CASCADE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
   timeline_id INTEGER,
   desc TEXT
 );
@@ -90,5 +94,9 @@ CREATE TABLE IF NOT EXISTS notes (
 CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);
 CREATE INDEX IF NOT EXISTS idx_docs_project ON docs(project_id);
 CREATE INDEX IF NOT EXISTS idx_characters_project ON characters(project_id);
+CREATE INDEX IF NOT EXISTS idx_doc_groups_project_order ON doc_groups(project_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_doc_groups_parent ON doc_groups(parent_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_docs_group_order ON docs(doc_group_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_docs_project_order ON docs(project_id, sort_order);
 
 COMMIT;
