@@ -1,41 +1,66 @@
-<section class="p-4 bg-white rounded shadow">
-  <h2 class="text-xl font-semibold mb-3">Project Dashboard</h2>
+<section class="max-w-7xl mx-auto">
+  <header class="flex items-start justify-between mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Projects</h1>
+      <p class="text-sm text-gray-500 mt-1">Select a project to open or create a new one</p>
+    </div>
+    <button (click)="toggleCreate()" class="inline-flex items-center gap-2 bg-black text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+      </svg>
+      <span>New Project</span>
+    </button>
+  </header>
 
-  <form [formGroup]="form" (ngSubmit)="editingId ? save() : create()" class="mb-4 flex gap-2">
-    <input formControlName="name" placeholder="Project name" class="border p-2 rounded flex-1" />
-    <input formControlName="desc" placeholder="Description" class="border p-2 rounded flex-1" />
-    <input formControlName="path" placeholder="Path" class="border p-2 rounded w-48" />
-    <button type="submit" class="bg-blue-600 text-white px-3 rounded">{{ editingId ? 'Save' : 'Create' }}</button>
-    <button type="button" (click)="cancel()" *ngIf="editingId" class="ml-2">Cancel</button>
-  </form>
-
-  <div *ngIf="projects.length; else empty" class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-gray-200">
-      <thead class="bg-gray-50">
-        <tr>
-          <th class="px-3 py-2 text-left">ID</th>
-          <th class="px-3 py-2 text-left">Name</th>
-          <th class="px-3 py-2 text-left">Desc</th>
-          <th class="px-3 py-2 text-left">Path</th>
-          <th class="px-3 py-2">Actions</th>
-        </tr>
-      </thead>
-      <tbody class="bg-white divide-y divide-gray-200">
-        <tr *ngFor="let p of projects">
-          <td class="px-3 py-2">{{ p.id }}</td>
-          <td class="px-3 py-2">{{ p.name }}</td>
-          <td class="px-3 py-2">{{ p.desc }}</td>
-          <td class="px-3 py-2">{{ p.path }}</td>
-          <td class="px-3 py-2">
-            <button (click)="edit(p)" class="mr-2 text-sm text-blue-600">Edit</button>
-            <button (click)="remove(p.id)" class="text-sm text-red-600">Delete</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+  <div *ngIf="showCreate" class="mb-8">
+    <form [formGroup]="form" (ngSubmit)="create()" class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+      <div class="space-y-4">
+        <div>
+          <input formControlName="name" placeholder="Project name" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" />
+        </div>
+        <div>
+          <input formControlName="path" placeholder="Path" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" />
+        </div>
+        <div>
+          <input formControlName="desc" placeholder="Description (optional)" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" />
+        </div>
+        <div class="flex gap-3">
+          <button type="submit" class="bg-black text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition">Create</button>
+          <button type="button" (click)="toggleCreate()" class="px-6 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition">Cancel</button>
+        </div>
+      </div>
+    </form>
   </div>
 
-  <ng-template #empty>
-    <div class="text-sm text-gray-500">No projects yet. Create one above.</div>
-  </ng-template>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+    <div *ngFor="let p of projects" 
+         class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-lg hover:border-gray-300 transition-all cursor-pointer group" 
+         (click)="openProject(p)">
+      <div class="flex items-start gap-4 mb-4">
+        <div class="flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <h3 class="text-base font-semibold text-gray-900 truncate group-hover:text-black">{{ p.name }}</h3>
+          <p class="text-xs text-gray-500 truncate mt-0.5">{{ p.path || '/Users/pluton/Documents/Writer/cora_3' }}</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 text-xs text-gray-500">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>{{ timeAgo(p) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!projects.length && !showCreate" class="text-center py-16">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+    </svg>
+    <p class="text-sm text-gray-500">No projects yet. Click "New Project" to add one.</p>
+  </div>
 </section>
