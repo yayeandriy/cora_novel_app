@@ -104,3 +104,7 @@ body {
 @media (min-width: 1280px) { .xl\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 html, body, #app-root { height: 100%; }
+.block { display: block; }
+.mb-1\.5 { margin-bottom: 0.375rem; }
+.text-gray-600 { color: #4b5563; }
+.hover\:bg-gray-50:hover { background-color: #f9fafb; }

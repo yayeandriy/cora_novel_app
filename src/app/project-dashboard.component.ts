@@ -3,6 +3,7 @@ import { CommonModule } from "@angular/common";
 import { ReactiveFormsModule, FormGroup, FormControl } from "@angular/forms";
 import { ProjectService } from "./services/project.service";
 import type { Project } from "./shared/models";
+import { open } from "@tauri-apps/plugin-dialog";
 
 @Component({
   selector: "app-project-dashboard",
@@ -30,6 +31,22 @@ export class ProjectDashboardComponent {
 
   async reload() {
     this.projects = await this.svc.listProjects();
+  }
+
+  async selectFolder() {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: "Select Project Folder",
+      });
+      
+      if (selected) {
+        this.form.patchValue({ path: selected });
+      }
+    } catch (err) {
+      console.error("Failed to select folder:", err);
+    }
   }
 
   async create() {

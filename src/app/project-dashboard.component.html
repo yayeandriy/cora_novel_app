@@ -19,7 +19,16 @@
           <input formControlName="name" placeholder="Project name" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" />
         </div>
         <div>
-          <input formControlName="path" placeholder="Path" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" />
+          <label class="block text-xs text-gray-600 mb-1.5">Working Folder</label>
+          <div class="flex gap-2">
+            <input formControlName="path" placeholder="Select folder path..." class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" readonly />
+            <button type="button" (click)="selectFolder()" class="shrink-0 inline-flex items-center gap-2 border border-gray-300 bg-white px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+              </svg>
+              <span>Browse</span>
+            </button>
+          </div>
         </div>
         <div>
           <input formControlName="desc" placeholder="Description (optional)" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" />
