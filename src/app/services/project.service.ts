@@ -35,6 +35,10 @@ export class ProjectService {
     return invoke<any>("doc_group_create", { projectId, name, parentId: parentId ?? null });
   }
 
+  async createDocGroupAfter(projectId: number, name: string, parentId: number | null, afterSortOrder: number): Promise<any> {
+    return invoke<any>("doc_group_create_after", { projectId, name, parentId, afterSortOrder });
+  }
+
   async deleteDocGroup(id: number): Promise<void> {
     return invoke<void>("doc_group_delete", { id });
   }
@@ -58,6 +62,10 @@ export class ProjectService {
 
   async createDocNew(projectId: number, name: string, docGroupId?: number | null): Promise<Doc> {
     return invoke<Doc>("doc_create_new", { projectId, name, docGroupId: docGroupId ?? null });
+  }
+
+  async createDocAfter(projectId: number, name: string, docGroupId: number | null, afterSortOrder: number): Promise<Doc> {
+    return invoke<Doc>("doc_create_after", { projectId, name, docGroupId, afterSortOrder });
   }
 
   async updateDocText(id: number, text: string): Promise<void> {

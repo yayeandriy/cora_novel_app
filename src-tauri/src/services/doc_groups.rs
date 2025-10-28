@@ -51,6 +51,35 @@ pub fn create_doc_group(pool: &DbPool, project_id: i64, name: &str, parent_id: O
     })
 }
 
+pub fn create_doc_group_after(pool: &DbPool, project_id: i64, name: &str, parent_id: Option<i64>, after_sort_order: i64) -> Result<DocGroup> {
+    let conn = get_conn(pool)?;
+    
+    // Insert after the specified position
+    // First, increment all items with sort_order > after
+    conn.execute(
+        "UPDATE doc_groups SET sort_order = sort_order + 1 
+         WHERE project_id = ?1 AND parent_id IS ?2 AND sort_order > ?3",
+        rusqlite::params![project_id, parent_id, after_sort_order]
+    )?;
+    
+    let next_order = after_sort_order + 1;
+    
+    conn.execute(
+        "INSERT INTO doc_groups (project_id, name, parent_id, sort_order) VALUES (?1, ?2, ?3, ?4)",
+        rusqlite::params![project_id, name, parent_id, next_order]
+    )?;
+    
+    let id = conn.last_insert_rowid();
+    
+    Ok(DocGroup {
+        id,
+        project_id,
+        name: name.to_string(),
+        parent_id,
+        sort_order: Some(next_order),
+    })
+}
+
 pub fn delete_doc_group(pool: &DbPool, id: i64) -> Result<()> {
     let conn = get_conn(pool)?;
     

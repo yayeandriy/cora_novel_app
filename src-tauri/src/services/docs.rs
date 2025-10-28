@@ -58,6 +58,43 @@ pub fn create_doc(pool: &DbPool, project_id: i64, name: &str, doc_group_id: Opti
             doc_group_id: row.get(6)?,
             sort_order: row.get(7)?,
         })
+    })?;
+
+    Ok(doc)
+}
+
+/// Create a new doc after a specific position
+pub fn create_doc_after(pool: &DbPool, project_id: i64, name: &str, doc_group_id: Option<i64>, after_sort_order: i64) -> anyhow::Result<Doc> {
+    let conn = get_conn(pool)?;
+    
+    // Insert after the specified position
+    // First, increment all items with sort_order > after
+    conn.execute(
+        "UPDATE docs SET sort_order = sort_order + 1 
+         WHERE project_id = ?1 AND doc_group_id IS ?2 AND sort_order > ?3",
+        rusqlite::params![project_id, doc_group_id, after_sort_order]
+    )?;
+    
+    let next_order = after_sort_order + 1;
+    
+    conn.execute(
+        "INSERT INTO docs (project_id, name, doc_group_id, sort_order, path, text) VALUES (?1, ?2, ?3, ?4, '', '')",
+        rusqlite::params![project_id, name, doc_group_id, next_order],
+    ).context("inserting doc")?;
+
+    let id = conn.last_insert_rowid();
+    let mut stmt = conn.prepare("SELECT id, project_id, path, name, timeline_id, text, doc_group_id, sort_order FROM docs WHERE id = ?1")?;
+    let doc = stmt.query_row(rusqlite::params![id], |row| {
+        Ok(Doc {
+            id: row.get(0)?,
+            project_id: row.get(1)?,
+            path: row.get(2)?,
+            name: row.get(3)?,
+            timeline_id: row.get(4)?,
+            text: row.get(5)?,
+            doc_group_id: row.get(6)?,
+            sort_order: row.get(7)?,
+        })
     }).context("querying created doc")?;
 
     Ok(doc)

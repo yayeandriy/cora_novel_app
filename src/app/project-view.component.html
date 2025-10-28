@@ -35,47 +35,82 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
             </svg>
           </button>
-          <button class="icon-button-small" title="New document" (click)="createDoc()">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
         </div>
       </div>
       
       <div class="sidebar-content">
-        <div class="doc-tree">
+        <div class="doc-tree" #docTree tabindex="0" (keydown)="handleTreeKeyDown($event)">
           <!-- Empty state -->
           <div *ngIf="docGroups.length === 0" class="empty-state">
-            <p class="empty-message">No documents yet</p>
-            <p class="empty-hint">Create your first document or folder</p>
+            <p class="empty-message">No folders yet</p>
+            <p class="empty-hint">Create your first folder</p>
           </div>
           
           <!-- Tree -->
           <ng-container *ngFor="let group of docGroups">
-            <div class="tree-item">
-              <div class="tree-item-header" (click)="toggleGroup(group)">
-                <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="group.expanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <div class="tree-item" [class.selected]="selectedGroup?.id === group.id">
+              <div class="tree-item-header" (click)="selectGroup(group, $event)">
+                <svg xmlns="http://www.w3.org/2000/svg" 
+                     class="toggle-icon" 
+                     [class.expanded]="group.expanded" 
+                     fill="none" 
+                     viewBox="0 0 24 24" 
+                     stroke="currentColor" 
+                     stroke-width="2"
+                     (click)="toggleGroup(group); $event.stopPropagation()">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
                 <svg xmlns="http://www.w3.org/2000/svg" class="folder-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                 </svg>
                 <span class="tree-item-name">{{ group.name }}</span>
+                <button class="add-doc-button" 
+                        title="Add document to this folder" 
+                        (click)="createDocInGroup(group); $event.stopPropagation()">
+                  <svg xmlns="http://www.w3.org/2000/svg" 
+                       width="14" 
+                       height="14" 
+                       fill="none" 
+                       viewBox="0 0 24 24" 
+                       stroke="currentColor" 
+                       stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
               </div>
               
               <div *ngIf="group.expanded" class="tree-children">
                 <!-- Nested groups -->
                 <ng-container *ngFor="let subGroup of group.groups">
-                  <div class="tree-item nested">
-                    <div class="tree-item-header" (click)="toggleGroup(subGroup)">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="subGroup.expanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <div class="tree-item nested" [class.selected]="selectedGroup?.id === subGroup.id">
+                    <div class="tree-item-header" (click)="selectGroup(subGroup, $event)">
+                      <svg xmlns="http://www.w3.org/2000/svg" 
+                           class="toggle-icon" 
+                           [class.expanded]="subGroup.expanded" 
+                           fill="none" 
+                           viewBox="0 0 24 24" 
+                           stroke="currentColor" 
+                           stroke-width="2"
+                           (click)="toggleGroup(subGroup); $event.stopPropagation()">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
                       <svg xmlns="http://www.w3.org/2000/svg" class="folder-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                       </svg>
                       <span class="tree-item-name">{{ subGroup.name }}</span>
+                      <button class="add-doc-button" 
+                              title="Add document to this folder" 
+                              (click)="createDocInGroup(subGroup); $event.stopPropagation()">
+                        <svg xmlns="http://www.w3.org/2000/svg" 
+                             width="14" 
+                             height="14" 
+                             fill="none" 
+                             viewBox="0 0 24 24" 
+                             stroke="currentColor" 
+                             stroke-width="2.5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                        </svg>
+                      </button>
                     </div>
                     
                     <div *ngIf="subGroup.expanded" class="tree-children">
@@ -118,13 +153,16 @@
 
     <!-- Editor -->
     <main class="editor-area">
-      <div *ngIf="selectedDoc" class="editor-container">
+      <!-- Document editor -->
+      <div *ngIf="selectedDoc && !selectedGroup" class="editor-container">
         <div class="editor-toolbar">
           <input 
+            #docTitleInput
             type="text" 
             class="doc-title-input" 
             [(ngModel)]="selectedDoc.name"
             (blur)="renameDoc(selectedDoc)"
+            (keydown.enter)="focusEditor()"
             placeholder="Untitled">
           <div class="toolbar-actions">
             <button class="toolbar-button" (click)="saveDoc()">
@@ -137,6 +175,7 @@
         </div>
         
         <textarea 
+          #editorTextarea
           [(ngModel)]="selectedDoc.text" 
           class="editor-textarea"
           (blur)="saveDoc()"
@@ -147,13 +186,40 @@
           <span class="word-count">{{ getWordCount() }} words</span>
         </div>
       </div>
+
+      <!-- Group view -->
+      <div *ngIf="selectedGroup && !selectedDoc" class="editor-container">
+        <div class="editor-toolbar">
+          <input 
+            #groupNameInput
+            type="text" 
+            class="doc-title-input" 
+            [(ngModel)]="selectedGroup.name"
+            (blur)="renameGroup(selectedGroup)"
+            (keydown.enter)="focusTree()"
+            placeholder="Folder name">
+          <div class="toolbar-actions">
+            <button class="toolbar-button" (click)="createDoc()">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>New Document</span>
+            </button>
+          </div>
+        </div>
+        
+        <div class="group-content">
+          <p class="group-empty-message">Select a document to start editing or create a new one</p>
+        </div>
+      </div>
       
-      <div *ngIf="!selectedDoc" class="editor-empty-state">
+      <!-- Empty state -->
+      <div *ngIf="!selectedDoc && !selectedGroup" class="editor-empty-state">
         <svg xmlns="http://www.w3.org/2000/svg" class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
         <p class="empty-message">No document selected</p>
-        <p class="empty-hint">Select a document from the tree to start editing</p>
+        <p class="empty-hint">Create a folder and add documents to start writing</p>
       </div>
     </main>
 

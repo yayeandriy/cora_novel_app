@@ -58,6 +58,13 @@ pub async fn doc_group_create(state: State<'_, AppState>, project_id: i64, name:
 }
 
 #[tauri::command]
+pub async fn doc_group_create_after(state: State<'_, AppState>, project_id: i64, name: String, parent_id: Option<i64>, after_sort_order: i64) -> Result<serde_json::Value, String> {
+    let pool = &state.pool;
+    let group = crate::services::doc_groups::create_doc_group_after(pool, project_id, &name, parent_id, after_sort_order).map_err(|e| e.to_string())?;
+    serde_json::to_value(group).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn doc_group_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let pool = &state.pool;
     crate::services::doc_groups::delete_doc_group(pool, id).map_err(|e| e.to_string())
@@ -94,6 +101,13 @@ pub async fn doc_get(state: State<'_, AppState>, id: i64) -> Result<serde_json::
 pub async fn doc_create_new(state: State<'_, AppState>, project_id: i64, name: String, doc_group_id: Option<i64>) -> Result<serde_json::Value, String> {
     let pool = &state.pool;
     let doc = crate::services::docs::create_doc(pool, project_id, &name, doc_group_id).map_err(|e| e.to_string())?;
+    serde_json::to_value(doc).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_create_after(state: State<'_, AppState>, project_id: i64, name: String, doc_group_id: Option<i64>, after_sort_order: i64) -> Result<serde_json::Value, String> {
+    let pool = &state.pool;
+    let doc = crate::services::docs::create_doc_after(pool, project_id, &name, doc_group_id, after_sort_order).map_err(|e| e.to_string())?;
     serde_json::to_value(doc).map_err(|e| e.to_string())
 }
 
