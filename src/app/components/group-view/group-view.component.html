@@ -1,0 +1,24 @@
+<div *ngIf="selectedGroup" class="editor-container">
+  <div class="editor-toolbar">
+    <input 
+      #groupNameInput
+      type="text" 
+      class="doc-title-input" 
+      [(ngModel)]="selectedGroup.name"
+      (blur)="onNameChange(selectedGroup!)"
+      (keydown.enter)="onCreateDoc()"
+      placeholder="Folder name">
+    <div class="toolbar-actions">
+      <button class="toolbar-button" (click)="onCreateDoc()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+        <span>New Document</span>
+      </button>
+    </div>
+  </div>
+  
+  <div class="group-content">
+    <p class="group-empty-message">Select a document to start editing or create a new one</p>
+  </div>
+</div>

@@ -2,9 +2,13 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ProjectService } from './services/project.service';
+import { ProjectService } from '../../services/project.service';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { ask } from '@tauri-apps/plugin-dialog';
+import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
+import { DocumentEditorComponent } from '../../components/document-editor/document-editor.component';
+import { GroupViewComponent } from '../../components/group-view/group-view.component';
+import { RightSidebarComponent } from '../../components/right-sidebar/right-sidebar.component';
 
 interface DocGroup {
   id: number;
@@ -46,7 +50,14 @@ interface Event {
 @Component({
   selector: 'app-project-view',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule, 
+    FormsModule,
+    DocTreeComponent,
+    DocumentEditorComponent,
+    GroupViewComponent,
+    RightSidebarComponent
+  ],
   templateUrl: './project-view.component.html',
   styleUrls: ['./project-view.component.css'],
   host: {
@@ -54,10 +65,9 @@ interface Event {
   }
 })
 export class ProjectViewComponent implements OnInit, OnDestroy {
-  @ViewChild('docTitleInput') docTitleInput?: ElementRef<HTMLInputElement>;
-  @ViewChild('editorTextarea') editorTextarea?: ElementRef<HTMLTextAreaElement>;
   @ViewChild('docTree') docTree?: ElementRef<HTMLDivElement>;
-  @ViewChild('groupNameInput') groupNameInput?: ElementRef<HTMLInputElement>;
+  @ViewChild(DocTreeComponent) docTreeComponent?: DocTreeComponent;
+  @ViewChild(DocumentEditorComponent) documentEditorComponent?: DocumentEditorComponent;
   
   projectId: number = 0;
   projectName: string = '';
@@ -67,8 +77,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   rightCollapsed = false;
   leftWidth = 250;
   rightWidth = 300;
-  isResizingLeft = false;
-  isResizingRight = false;
   
   // Deletion state
   isDeletingItem = false;
@@ -81,15 +89,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private autoSaveTimeout: any;
   private autoSaveNotesTimeout: any;
   
-  // Local doc state cache - persists changes in memory immediately
-  // This maps doc ID to {text, notes} so we never lose data even if DB sync fails
+  // Local doc state cache
   private docStateCache: Map<number, {text?: string | null, notes?: string | null}> = new Map();
   
   // Content
   docGroups: DocGroup[] = [];
   selectedDoc: Doc | null = null;
   selectedGroup: DocGroup | null = null;
-  currentGroup: DocGroup | null = null; // Track current group context for create button
+  currentGroup: DocGroup | null = null;
   expandedGroupIds: Set<number> = new Set();
   
   // Right sidebar
@@ -683,11 +690,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   focusEditor() {
-    this.editorTextarea?.nativeElement.focus();
+    this.documentEditorComponent?.focusEditor();
   }
 
   focusTree() {
-    this.docTree?.nativeElement.focus();
+    this.docTreeComponent?.focusTree();
   }
 
   handleTreeKeyDown(event: KeyboardEvent) {
@@ -717,17 +724,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Shift+R: Focus the name input for renaming
       if (this.selectedDoc) {
         setTimeout(() => {
-          if (this.docTitleInput) {
-            this.docTitleInput.nativeElement.focus();
-            this.docTitleInput.nativeElement.select();
-          }
+          // Focus on the document editor's input (handled in child component)
+          this.focusEditor();
         }, 0);
       } else if (this.selectedGroup) {
+        // Focus on the group view's input
         setTimeout(() => {
-          if (this.groupNameInput) {
-            this.groupNameInput.nativeElement.focus();
-            this.groupNameInput.nativeElement.select();
-          }
+          // Will be handled in child component
         }, 0);
       }
     }
@@ -947,10 +950,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       
       // Focus and select the text in the group name input
       setTimeout(() => {
-        if (this.groupNameInput) {
-          this.groupNameInput.nativeElement.focus();
-          this.groupNameInput.nativeElement.select();
-        }
+        // Will be handled in child component
       }, 0);
     } catch (error) {
       console.error('Failed to create group:', error);
@@ -1178,46 +1178,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.saveLayoutState();
   }
 
-  startResizeLeft(event: MouseEvent) {
-    this.isResizingLeft = true;
-    event.preventDefault();
-    
-    const onMouseMove = (e: MouseEvent) => {
-      if (this.isResizingLeft) {
-        this.leftWidth = Math.max(200, Math.min(600, e.clientX));
-        this.saveLayoutState();
-      }
-    };
-    
-    const onMouseUp = () => {
-      this.isResizingLeft = false;
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-    
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
+  startResizeLeft(width: number) {
+    this.leftWidth = width;
+    this.saveLayoutState();
   }
 
-  startResizeRight(event: MouseEvent) {
-    this.isResizingRight = true;
-    event.preventDefault();
-    
-    const onMouseMove = (e: MouseEvent) => {
-      if (this.isResizingRight) {
-        this.rightWidth = Math.max(250, Math.min(600, window.innerWidth - e.clientX));
-        this.saveLayoutState();
-      }
-    };
-    
-    const onMouseUp = () => {
-      this.isResizingRight = false;
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-    
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
+  startResizeRight(width: number) {
+    this.rightWidth = width;
+    this.saveLayoutState();
   }
 
   saveLayoutState() {
@@ -1276,13 +1244,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     return this.draftLocalContent.get(draftId) || '';
   }
 
-  onDraftChange(draftId: number, event: any): void {
-    const content = event.target.value;
-    const cursorPosition = event.target.selectionStart;
-    
-    // Track which draft is being edited
-    this.focusedDraftId = draftId;
-    
+  onDraftChange(draftId: number, content: string, cursorPosition: number): void {
     // Update local memory cache immediately
     this.draftLocalContent.set(draftId, content);
     
@@ -1387,4 +1349,3 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 }
-

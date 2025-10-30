@@ -1,0 +1,101 @@
+<div class="project-view">
+  <!-- Header -->
+  <header class="header">
+    <button (click)="goBack()" class="back-button">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+      </svg>
+      <span>{{ projectName }}</span>
+    </button>
+    
+    <div class="header-actions">
+      <button class="icon-button" title="Toggle left sidebar" (click)="toggleLeftSidebar()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+      
+      <button class="icon-button" title="Toggle right sidebar" (click)="toggleRightSidebar()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main content area -->
+  <div class="content-wrapper">
+    <!-- Left Sidebar -->
+    <app-doc-tree 
+      *ngIf="!leftCollapsed"
+      [docGroups]="docGroups"
+      [selectedDoc]="selectedDoc"
+      [selectedGroup]="selectedGroup"
+      [style.width.px]="leftWidth"
+      (groupSelected)="selectGroup($event.group, $event.event)"
+      (docSelected)="selectDoc($event)"
+      (groupToggled)="toggleGroup($event)"
+      (groupCreated)="createGroup()"
+      (docCreatedInGroup)="createDocInGroup($event)"
+      (treeKeyDown)="handleTreeKeyDown($event)"
+      (widthChanged)="startResizeLeft($event)">
+    </app-doc-tree>
+
+    <!-- Editor -->
+    <main class="editor-area">
+      <!-- Document editor -->
+      <app-document-editor 
+        *ngIf="selectedDoc && !selectedGroup"
+        [selectedDoc]="selectedDoc"
+        [showSaveStatus]="showSaveStatus"
+        [hasUnsavedChanges]="hasUnsavedChanges"
+        (docNameChange)="renameDoc($event)"
+        (docTextChange)="onDocumentTextChange()"
+        (docSaved)="saveDoc()">
+      </app-document-editor>
+
+      <!-- Group view -->
+      <app-group-view 
+        *ngIf="selectedGroup && !selectedDoc"
+        [selectedGroup]="selectedGroup"
+        (groupNameChange)="renameGroup($event)"
+        (createDocRequested)="createDoc()">
+      </app-group-view>
+      
+      <!-- Empty state -->
+      <div *ngIf="!selectedDoc && !selectedGroup" class="editor-empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <p class="empty-message">No document selected</p>
+        <p class="empty-hint">Create a folder and add documents to start writing</p>
+      </div>
+    </main>
+
+    <!-- Right Sidebar -->
+    <app-right-sidebar
+      *ngIf="!rightCollapsed"
+      [selectedDoc]="selectedDoc"
+      [characters]="characters"
+      [events]="events"
+      [drafts]="drafts"
+      [draftSyncStatus]="draftSyncStatus"
+      [charactersExpanded]="charactersExpanded"
+      [eventsExpanded]="eventsExpanded"
+      [notesExpanded]="notesExpanded"
+      [draftsExpanded]="draftsExpanded"
+      [style.width.px]="rightWidth"
+      (charactersExpandedChange)="charactersExpanded = $event"
+      (eventsExpandedChange)="eventsExpanded = $event"
+      (notesExpandedChange)="notesExpanded = $event"
+      (draftsExpandedChange)="draftsExpanded = $event"
+      (notesChanged)="onDocumentNotesChange()"
+      (draftCreated)="createDraft()"
+      (draftChanged)="onDraftChange($event.draftId, $event.content, $event.cursorPosition)"
+      (draftBlurred)="onDraftBlur($event)"
+      (draftDeleted)="deleteDraft($event)"
+      (draftContentRequested)="getDraftLocalContent($event)"
+      (widthChanged)="startResizeRight($event)">
+    </app-right-sidebar>
+  </div>
+</div>

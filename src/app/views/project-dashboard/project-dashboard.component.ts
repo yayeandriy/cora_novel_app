@@ -1,8 +1,8 @@
 import { Component } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { ReactiveFormsModule, FormGroup, FormControl } from "@angular/forms";
-import { ProjectService } from "./services/project.service";
-import type { Project } from "./shared/models";
+import { ProjectService } from "../../services/project.service";
+import type { Project } from "../../shared/models";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Router } from "@angular/router";
 
@@ -11,6 +11,7 @@ import { Router } from "@angular/router";
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: "./project-dashboard.component.html",
+  styleUrls: ["./project-dashboard.component.css"],
 })
 export class ProjectDashboardComponent {
   projects: Project[] = [];

@@ -1,0 +1,89 @@
+<aside class="right-sidebar">
+  <div class="resize-handle right" (mousedown)="startResize($event)"></div>
+  
+  <div class="sidebar-content">
+    <!-- Characters Section -->
+    <div class="sidebar-section">
+      <div class="section-header" (click)="onCharactersToggle()">
+        <div class="section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="charactersExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+          <span>Characters</span>
+        </div>
+        <button class="add-button">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      </div>
+      
+      <div *ngIf="charactersExpanded" class="section-content">
+        <div *ngFor="let char of characters" class="list-item">
+          {{ char.name }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Events Section -->
+    <div class="sidebar-section">
+      <div class="section-header" (click)="onEventsToggle()">
+        <div class="section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="eventsExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+          <span>Events ({{ events.length }}/4)</span>
+        </div>
+        <button class="add-button">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      </div>
+      
+      <div *ngIf="eventsExpanded" class="section-content">
+        <div *ngFor="let event of events" class="event-item">
+          <div class="event-name">{{ event.name }}</div>
+          <div *ngIf="event.desc" class="event-desc">{{ event.desc }}</div>
+          <div *ngIf="event.startDate" class="event-date">
+            {{ event.startDate }}{{ event.endDate && event.endDate !== event.startDate ? ' - ' + event.endDate : '' }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes Section -->
+    <div class="sidebar-section">
+      <div class="section-header" (click)="onNotesToggle()">
+        <div class="section-title">
+          <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="notesExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+          <span>Notes</span>
+        </div>
+      </div>
+      
+      <div *ngIf="notesExpanded" class="section-content">
+        <textarea 
+          *ngIf="selectedDoc"
+          class="notes-textarea" 
+          [(ngModel)]="selectedDoc.notes"
+          (input)="onNotesChange()"
+          placeholder="Add notes..."></textarea>
+      </div>
+    </div>
+
+    <!-- Drafts Section -->
+    <app-drafts-panel
+      [drafts]="drafts"
+      [draftSyncStatus]="draftSyncStatus"
+      [expanded]="draftsExpanded"
+      (expandedChange)="onDraftsToggle($event)"
+      (draftCreated)="onDraftCreated()"
+      (draftChanged)="onDraftChanged($event)"
+      (draftBlurred)="onDraftBlurred($event)"
+      (draftDeleted)="onDraftDeleted($event)"
+      (draftContentRequested)="onDraftContentRequested($event)">
+    </app-drafts-panel>
+  </div>
+</aside>

@@ -1,0 +1,6 @@
+/* Project Dashboard Component Styles */
+/* Tailwind classes handle most of the styling, this file is reserved for component-specific styles */
+
+:host {
+  display: block;
+}
