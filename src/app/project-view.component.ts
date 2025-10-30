@@ -1364,5 +1364,27 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.draftSyncStatus[draftId] = 'pending';
     }
   }
+
+  async deleteDraft(draftId: number): Promise<void> {
+    try {
+      await this.projectService.deleteDraft(draftId);
+      
+      // Remove from local cache
+      this.draftLocalContent.delete(draftId);
+      delete this.draftSyncStatus[draftId];
+      
+      // Clear any pending timeouts
+      const timeout = this.draftAutoSaveTimeouts.get(draftId);
+      if (timeout) {
+        clearTimeout(timeout);
+        this.draftAutoSaveTimeouts.delete(draftId);
+      }
+      
+      // Remove from drafts array
+      this.drafts = this.drafts.filter(d => d.id !== draftId);
+    } catch (error) {
+      console.error('Failed to delete draft:', error);
+    }
+  }
 }
 

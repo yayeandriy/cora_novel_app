@@ -664,12 +664,40 @@
   flex: 1;
 }
 
+.draft-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .draft-status {
   font-size: 0.75rem;
-  margin-left: 0.5rem;
   width: 1rem;
   text-align: center;
   transition: color 150ms;
+}
+
+.delete-draft-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: color 150ms;
+  padding: 0;
+}
+
+.delete-draft-button:hover {
+  color: #ef4444;
+}
+
+.delete-draft-button svg {
+  width: 100%;
+  height: 100%;
 }
 
 .draft-status.syncing {
