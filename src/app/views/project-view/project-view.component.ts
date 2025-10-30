@@ -109,6 +109,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   characters: Character[] = [];
   events: Event[] = [];
   drafts: any[] = [];
+  // Characters per-doc selection
+  docCharacterIds: Set<number> = new Set();
+  // Editing state for character cards
+  editingCharacterId: number | null = null;
   
   // Draft local caching and syncing
   private draftLocalContent: Map<number, string> = new Map();
@@ -169,9 +173,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Build hierarchical structure
       this.docGroups = this.buildDocGroupTree(groups, docs);
 
-      // Load characters and events (using mock data for now)
-      this.characters = [];
-      this.events = [];
+  // Load characters and events
+  await this.loadCharacters();
+  this.events = [];
 
       // Skip restoration if requested (e.g., when creating new doc and managing selection manually)
       if (skipRestore) {
@@ -322,6 +326,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     
     // Load drafts for this document
     await this.loadDrafts(this.selectedDoc.id);
+  // Load characters attached to this doc
+  await this.loadDocCharacters(this.selectedDoc.id);
     
     // Save selection to localStorage
     this.saveSelection();
@@ -360,6 +366,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     
     // Save selection to localStorage
     this.saveSelection();
+    // Clear doc-specific character selection when no doc is selected
+    this.docCharacterIds = new Set();
   }
 
   private saveSelection() {
@@ -1147,6 +1155,119 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error('Failed to load drafts:', error);
+    }
+  }
+
+  private async loadCharacters(): Promise<void> {
+    try {
+  const chars = await this.projectService.listCharacters(this.projectId);
+  this.characters = chars.map(c => ({ id: c.id, name: c.name, desc: c.desc ?? '' }));
+    } catch (error) {
+      console.error('Failed to load characters:', error);
+      this.characters = [];
+    }
+  }
+
+  private async loadDocCharacters(docId: number): Promise<void> {
+    try {
+      const ids = await this.projectService.listDocCharacters(docId);
+      this.docCharacterIds = new Set(ids);
+    } catch (error) {
+      console.error('Failed to load doc characters:', error);
+      this.docCharacterIds = new Set();
+    }
+  }
+
+  // ===== Characters sidebar handlers =====
+  async onSidebarCharacterAdd(): Promise<void> {
+    try {
+      // Ensure panel is opened
+      this.charactersExpanded = true;
+      const created = await this.projectService.createCharacter(this.projectId, 'New Character', '');
+  this.characters = [...this.characters, { id: created.id, name: created.name, desc: created.desc ?? '' }];
+      // Enter edit mode on the newly created card
+      this.editingCharacterId = created.id;
+    } catch (error) {
+      console.error('Failed to create character:', error);
+      alert('Failed to create character: ' + error);
+    }
+  }
+
+  async onSidebarCharacterNameChange(payload: { id: number; name: string }): Promise<void> {
+    try {
+      await this.projectService.updateCharacter(payload.id, { name: payload.name });
+      const idx = this.characters.findIndex(c => c.id === payload.id);
+      if (idx !== -1) {
+        this.characters[idx] = { ...this.characters[idx], name: payload.name } as any;
+        this.characters = [...this.characters];
+      }
+    } catch (error) {
+      console.error('Failed to update character name:', error);
+    }
+  }
+
+  async onSidebarCharacterDescChange(payload: { id: number; desc: string }): Promise<void> {
+    try {
+      await this.projectService.updateCharacter(payload.id, { desc: payload.desc });
+      const idx = this.characters.findIndex(c => c.id === payload.id);
+      if (idx !== -1) {
+        this.characters[idx] = { ...this.characters[idx], desc: payload.desc } as any;
+        this.characters = [...this.characters];
+      }
+    } catch (error) {
+      console.error('Failed to update character description:', error);
+    }
+  }
+
+  async onSidebarCharacterUpdate(payload: { id: number; name: string; desc: string }): Promise<void> {
+    try {
+      await this.projectService.updateCharacter(payload.id, { name: payload.name, desc: payload.desc });
+      const idx = this.characters.findIndex(c => c.id === payload.id);
+      if (idx !== -1) {
+        this.characters[idx] = { ...this.characters[idx], name: payload.name, desc: payload.desc } as any;
+        this.characters = [...this.characters];
+      }
+      // Exit edit mode after successful save
+      if (this.editingCharacterId === payload.id) {
+        this.editingCharacterId = null;
+      }
+    } catch (error) {
+      console.error('Failed to update character:', error);
+    }
+  }
+
+  async onSidebarCharacterDelete(id: number): Promise<void> {
+    const confirmed = await confirm('Delete this character?', { title: 'Confirm Delete', kind: 'warning' });
+    if (!confirmed) return;
+    try {
+      await this.projectService.deleteCharacter(id);
+      this.characters = this.characters.filter(c => c.id !== id);
+      // Ensure it is also removed from current doc selection
+      if (this.docCharacterIds.has(id)) {
+        this.docCharacterIds.delete(id);
+        this.docCharacterIds = new Set(this.docCharacterIds);
+      }
+    } catch (error) {
+      console.error('Failed to delete character:', error);
+      alert('Failed to delete character: ' + error);
+    }
+  }
+
+  async onSidebarCharacterToggle(payload: { characterId: number; checked: boolean }): Promise<void> {
+    if (!this.selectedDoc) return;
+    const { characterId, checked } = payload;
+    try {
+      if (checked) {
+        await this.projectService.attachCharacterToDoc(this.selectedDoc.id, characterId);
+        this.docCharacterIds.add(characterId);
+      } else {
+        await this.projectService.detachCharacterFromDoc(this.selectedDoc.id, characterId);
+        this.docCharacterIds.delete(characterId);
+      }
+      // Reassign to trigger OnPush consumers
+      this.docCharacterIds = new Set(this.docCharacterIds);
+    } catch (error) {
+      console.error('Failed to update character relation:', error);
     }
   }
 

@@ -99,8 +99,33 @@ export class ProjectService {
   }
 
   async createCharacter(projectId: number, name: string, desc?: string | null): Promise<Character> {
-    const payload = { project_id: projectId, name, desc: desc ?? null };
+    // Commands expect camelCase arg names (projectId) on the JS side
+    const payload = { projectId, name, desc: desc ?? null };
     return invoke<Character>("character_create", payload);
+  }
+
+  async listCharacters(projectId: number): Promise<Character[]> {
+    return invoke<Character[]>("character_list", { projectId });
+  }
+
+  async updateCharacter(id: number, changes: Partial<{ name: string; desc: string }>): Promise<Character> {
+    return invoke<Character>("character_update", { id, changes });
+  }
+
+  async deleteCharacter(id: number): Promise<void> {
+    return invoke<void>("character_delete", { id });
+  }
+
+  async listDocCharacters(docId: number): Promise<number[]> {
+    return invoke<number[]>("doc_character_list", { docId });
+  }
+
+  async attachCharacterToDoc(docId: number, characterId: number): Promise<void> {
+    return invoke<void>("doc_character_attach", { docId, characterId });
+  }
+
+  async detachCharacterFromDoc(docId: number, characterId: number): Promise<void> {
+    return invoke<void>("doc_character_detach", { docId, characterId });
   }
 
   async createEvent(projectId: number, name: string, desc?: string | null, date?: string | null): Promise<Event> {

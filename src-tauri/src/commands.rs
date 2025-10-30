@@ -162,6 +162,44 @@ pub async fn character_create(state: State<'_, AppState>, project_id: i64, name:
 }
 
 #[tauri::command]
+pub async fn character_list(state: State<'_, AppState>, project_id: i64) -> Result<Vec<Character>, String> {
+    let pool = &state.pool;
+    crate::services::characters::list(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn character_update(state: State<'_, AppState>, id: i64, changes: Option<serde_json::Value>) -> Result<Character, String> {
+    let pool = &state.pool;
+    let name = changes.as_ref().and_then(|c| c.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()));
+    let desc = changes.as_ref().and_then(|c| c.get("desc").and_then(|v| v.as_str()).map(|s| s.to_string()));
+    crate::services::characters::update(pool, id, name, desc).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn character_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::characters::delete_(pool, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_character_list(state: State<'_, AppState>, doc_id: i64) -> Result<Vec<i64>, String> {
+    let pool = &state.pool;
+    crate::services::characters::list_for_doc(pool, doc_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_character_attach(state: State<'_, AppState>, doc_id: i64, character_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::characters::attach_to_doc(pool, doc_id, character_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_character_detach(state: State<'_, AppState>, doc_id: i64, character_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::characters::detach_from_doc(pool, doc_id, character_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn event_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>, date: Option<String>) -> Result<Event, String> {
     let pool = &state.pool;
     crate::services::events::create(pool, project_id, &name, desc, date).map_err(|e| e.to_string())

@@ -1,0 +1,29 @@
+<div class="character-card">
+  <div class="card-row">
+    <input type="checkbox" [disabled]="!canToggle" [checked]="checked ?? false" (change)="onToggleChange($event)" />
+
+    <div class="content" *ngIf="!isEditing; else editTpl">
+      <div class="name">{{ character.name }}</div>
+      <div class="desc" *ngIf="character.desc">{{ character.desc }}</div>
+    </div>
+
+    <ng-template #editTpl>
+      <div class="edit-form">
+        <input class="name-input" [(ngModel)]="localName" placeholder="Name" />
+        <textarea class="desc-input" [(ngModel)]="localDesc" placeholder="Description..."></textarea>
+      </div>
+    </ng-template>
+  </div>
+
+  <div class="actions" *ngIf="!isEditing; else editActions">
+    <button class="btn" (click)="startEdit()">Edit</button>
+    <button class="btn btn-danger" (click)="onDelete()">Delete</button>
+  </div>
+
+  <ng-template #editActions>
+    <div class="actions">
+      <button class="btn" (click)="saveEdit()">Save</button>
+      <button class="btn" (click)="cancelEdit()">Cancel</button>
+    </div>
+  </ng-template>
+</div>

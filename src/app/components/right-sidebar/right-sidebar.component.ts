@@ -2,6 +2,8 @@ import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DraftsPanelComponent } from '../drafts-panel/drafts-panel.component';
+import { CharacterCardComponent } from '../character-card/character-card.component';
+import { CharactersPanelComponent } from '../characters-panel/characters-panel.component';
 
 export interface Character {
   id: number;
@@ -39,7 +41,7 @@ export interface Doc {
 @Component({
   selector: 'app-right-sidebar',
   standalone: true,
-  imports: [CommonModule, FormsModule, DraftsPanelComponent],
+  imports: [CommonModule, FormsModule, DraftsPanelComponent, CharacterCardComponent, CharactersPanelComponent],
   templateUrl: './right-sidebar.component.html',
   styleUrls: ['./right-sidebar.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -50,6 +52,8 @@ export class RightSidebarComponent {
   @Input() events: Event[] = [];
   @Input() drafts: Draft[] = [];
   @Input() draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
+  @Input() docCharacterIds: Set<number> | null = null;
+  @Input() editingCharacterId: number | null = null;
   
   @Input() charactersExpanded: boolean = true;
   @Input() eventsExpanded: boolean = true;
@@ -68,6 +72,13 @@ export class RightSidebarComponent {
   @Output() draftDeleted = new EventEmitter<number>();
   @Output() draftContentRequested = new EventEmitter<number>();
   @Output() widthChanged = new EventEmitter<number>();
+  // Character events
+  @Output() characterAdd = new EventEmitter<void>();
+  @Output() characterNameChange = new EventEmitter<{ id: number; name: string }>();
+  @Output() characterDescChange = new EventEmitter<{ id: number; desc: string }>();
+  @Output() characterUpdate = new EventEmitter<{ id: number; name: string; desc: string }>();
+  @Output() characterDelete = new EventEmitter<number>();
+  @Output() characterToggle = new EventEmitter<{ characterId: number; checked: boolean }>();
   
   rightWidth = 300; // internal tracker for live drag; host width comes from parent binding
   isResizing = false;
@@ -132,5 +143,32 @@ export class RightSidebarComponent {
     
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+  }
+
+  // ===== Characters UI handlers =====
+  onCharacterAdd() {
+    this.characterAdd.emit();
+  }
+
+  onCharacterNameChange(char: Character, name: string) {
+    this.characterNameChange.emit({ id: char.id, name });
+  }
+
+  onCharacterDescChange(char: Character, desc: string) {
+    this.characterDescChange.emit({ id: char.id, desc });
+  }
+
+  onCharacterUpdate(payload: { id: number; name: string; desc: string }) {
+    this.characterUpdate.emit(payload);
+  }
+
+  onCharacterDelete(id: number) {
+    this.characterDelete.emit(id);
+  }
+
+  onCharacterToggle(id: number, event: any) {
+    const input = event?.target as HTMLInputElement;
+    const checked = !!input?.checked;
+    this.characterToggle.emit({ characterId: id, checked });
   }
 }
