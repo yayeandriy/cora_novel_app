@@ -286,9 +286,14 @@ mod tests {
     use super::*;
     use r2d2_sqlite::SqliteConnectionManager;
     use r2d2::Pool;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static TEST_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
     fn make_pool() -> DbPool {
-        let manager = SqliteConnectionManager::file("file:memdocs?mode=memory&cache=shared");
+        let id = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
+        let db_name = format!("file:memdocs{}?mode=memory&cache=shared", id);
+        let manager = SqliteConnectionManager::file(&db_name);
         Pool::new(manager).unwrap()
     }
 
@@ -306,5 +311,155 @@ mod tests {
         assert_eq!(doc.project_id, project_id);
         let got = get(&pool, doc.id).unwrap().unwrap();
         assert_eq!(got.path, "notes/ch1.md");
+    }
+
+    #[test]
+    fn test_update_doc_notes() {
+        let pool = make_pool();
+        let conn = pool.get().unwrap();
+        
+        // Initialize schema
+        conn.execute_batch(include_str!("../../migrations/001_create_schema.sql")).unwrap();
+
+        conn.execute("INSERT INTO projects (name) VALUES (?1)", rusqlite::params!["P"]).unwrap();
+        let project_id = conn.last_insert_rowid();
+
+        let doc = create(&pool, project_id, "test.md", Some("Test".into()), None, None).unwrap();
+
+        // Update notes
+        update_doc_notes(&pool, doc.id, "Important notes").unwrap();
+
+        let updated = get(&pool, doc.id).unwrap().unwrap();
+        assert_eq!(updated.notes, Some("Important notes".to_string()));
+    }
+
+    #[test]
+    fn test_update_doc_notes_multiple_times() {
+        let pool = make_pool();
+        let conn = pool.get().unwrap();
+        
+        // Initialize schema
+        conn.execute_batch(include_str!("../../migrations/001_create_schema.sql")).unwrap();
+
+        conn.execute("INSERT INTO projects (name) VALUES (?1)", rusqlite::params!["P"]).unwrap();
+        let project_id = conn.last_insert_rowid();
+
+        let doc = create(&pool, project_id, "test.md", Some("Test".into()), None, None).unwrap();
+
+        update_doc_notes(&pool, doc.id, "First notes").unwrap();
+        let after_first = get(&pool, doc.id).unwrap().unwrap();
+        assert_eq!(after_first.notes, Some("First notes".to_string()));
+
+        update_doc_notes(&pool, doc.id, "Second notes").unwrap();
+        let after_second = get(&pool, doc.id).unwrap().unwrap();
+        assert_eq!(after_second.notes, Some("Second notes".to_string()));
+    }
+
+    #[test]
+    fn test_notes_with_special_characters() {
+        let pool = make_pool();
+        let conn = pool.get().unwrap();
+        
+        // Initialize schema
+        conn.execute_batch(include_str!("../../migrations/001_create_schema.sql")).unwrap();
+
+        conn.execute("INSERT INTO projects (name) VALUES (?1)", rusqlite::params!["P"]).unwrap();
+        let project_id = conn.last_insert_rowid();
+
+        let doc = create(&pool, project_id, "test.md", Some("Test".into()), None, None).unwrap();
+
+        let special_notes = "Notes with 'quotes' and \"double\" and \n newlines \t tabs";
+        update_doc_notes(&pool, doc.id, special_notes).unwrap();
+
+        let updated = get(&pool, doc.id).unwrap().unwrap();
+        assert_eq!(updated.notes, Some(special_notes.to_string()));
+    }
+
+    #[test]
+    fn test_list_docs_includes_notes() {
+        let pool = make_pool();
+        let conn = pool.get().unwrap();
+        
+        // Initialize schema
+        conn.execute_batch(include_str!("../../migrations/001_create_schema.sql")).unwrap();
+
+        conn.execute("INSERT INTO projects (name) VALUES (?1)", rusqlite::params!["P"]).unwrap();
+        let project_id = conn.last_insert_rowid();
+
+        let doc1 = create(&pool, project_id, "doc1.md", Some("Doc1".into()), None, None).unwrap();
+        let doc2 = create(&pool, project_id, "doc2.md", Some("Doc2".into()), None, None).unwrap();
+
+        update_doc_notes(&pool, doc1.id, "Notes for doc 1").unwrap();
+        update_doc_notes(&pool, doc2.id, "Notes for doc 2").unwrap();
+
+        let all_docs = list_docs(&pool, project_id).unwrap();
+        assert_eq!(all_docs.len(), 2);
+
+        let doc1_from_list = all_docs.iter().find(|d| d.id == doc1.id).unwrap();
+        assert_eq!(doc1_from_list.notes, Some("Notes for doc 1".to_string()));
+
+        let doc2_from_list = all_docs.iter().find(|d| d.id == doc2.id).unwrap();
+        assert_eq!(doc2_from_list.notes, Some("Notes for doc 2".to_string()));
+    }
+
+    #[test]
+    fn test_empty_notes() {
+        let pool = make_pool();
+        let conn = pool.get().unwrap();
+        
+        // Initialize schema
+        conn.execute_batch(include_str!("../../migrations/001_create_schema.sql")).unwrap();
+
+        conn.execute("INSERT INTO projects (name) VALUES (?1)", rusqlite::params!["P"]).unwrap();
+        let project_id = conn.last_insert_rowid();
+
+        let doc = create(&pool, project_id, "test.md", Some("Test".into()), None, None).unwrap();
+
+        update_doc_notes(&pool, doc.id, "").unwrap();
+
+        let updated = get(&pool, doc.id).unwrap().unwrap();
+        assert_eq!(updated.notes, Some("".to_string()));
+    }
+
+    #[test]
+    fn test_very_long_notes() {
+        let pool = make_pool();
+        let conn = pool.get().unwrap();
+        
+        // Initialize schema
+        conn.execute_batch(include_str!("../../migrations/001_create_schema.sql")).unwrap();
+
+        conn.execute("INSERT INTO projects (name) VALUES (?1)", rusqlite::params!["P"]).unwrap();
+        let project_id = conn.last_insert_rowid();
+
+        let doc = create(&pool, project_id, "test.md", Some("Test".into()), None, None).unwrap();
+
+        // Create a 10KB note
+        let long_notes = "x".repeat(10240);
+        update_doc_notes(&pool, doc.id, &long_notes).unwrap();
+
+        let updated = get(&pool, doc.id).unwrap().unwrap();
+        assert_eq!(updated.notes.unwrap().len(), 10240);
+    }
+
+    #[test]
+    fn test_notes_persist_across_other_updates() {
+        let pool = make_pool();
+        let conn = pool.get().unwrap();
+        
+        // Initialize schema
+        conn.execute_batch(include_str!("../../migrations/001_create_schema.sql")).unwrap();
+
+        conn.execute("INSERT INTO projects (name) VALUES (?1)", rusqlite::params!["P"]).unwrap();
+        let project_id = conn.last_insert_rowid();
+
+        let doc = create(&pool, project_id, "test.md", Some("Test".into()), None, None).unwrap();
+
+        update_doc_notes(&pool, doc.id, "Preserved notes").unwrap();
+        update_doc(&pool, doc.id, "Updated text").unwrap();
+
+        let updated = get(&pool, doc.id).unwrap().unwrap();
+        assert_eq!(updated.notes, Some("Preserved notes".to_string()));
+        assert_eq!(updated.text, Some("Updated text".to_string()));
     }
 }
