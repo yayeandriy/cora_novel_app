@@ -6,7 +6,7 @@
       class="doc-title-input" 
       [(ngModel)]="selectedGroup.name"
       (blur)="onNameChange(selectedGroup!)"
-      (keydown.enter)="onCreateDoc()"
+      (keydown.enter)="onNameEnter($event)"
       placeholder="Folder name">
     <div class="toolbar-actions">
       <button class="toolbar-button" (click)="onCreateDoc()">

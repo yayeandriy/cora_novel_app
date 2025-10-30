@@ -68,6 +68,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   @ViewChild('docTree') docTree?: ElementRef<HTMLDivElement>;
   @ViewChild(DocTreeComponent) docTreeComponent?: DocTreeComponent;
   @ViewChild(DocumentEditorComponent) documentEditorComponent?: DocumentEditorComponent;
+  @ViewChild(GroupViewComponent) groupViewComponent?: GroupViewComponent;
   
   projectId: number = 0;
   projectName: string = '';
@@ -728,9 +729,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
           this.documentEditorComponent?.focusTitle();
         }, 0);
       } else if (this.selectedGroup) {
-        // Focus on the group view's input
+        // Focus the group name input for renaming
         setTimeout(() => {
-          // Will be handled in child component
+          this.groupViewComponent?.focusName();
         }, 0);
       }
     }

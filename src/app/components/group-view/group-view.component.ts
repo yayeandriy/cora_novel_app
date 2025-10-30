@@ -36,4 +36,20 @@ export class GroupViewComponent {
   onCreateDoc() {
     this.createDocRequested.emit();
   }
+
+  focusName() {
+    const el = this.groupNameInput?.nativeElement;
+    if (el) {
+      el.focus();
+      el.select();
+    }
+  }
+
+  onNameEnter(event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.selectedGroup) {
+      this.groupNameChange.emit(this.selectedGroup);
+    }
+  }
 }
