@@ -1,5 +1,5 @@
 use crate::db::DbPool;
-use crate::models::{ProjectCreate, Project, Character, Event};
+use crate::models::{ProjectCreate, Project, Character, Event, DraftCreate, DraftUpdate, Draft};
 use crate::services::projects as project_service;
 use tauri::State;
 
@@ -165,4 +165,47 @@ pub async fn character_create(state: State<'_, AppState>, project_id: i64, name:
 pub async fn event_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>, date: Option<String>) -> Result<Event, String> {
     let pool = &state.pool;
     crate::services::events::create(pool, project_id, &name, desc, date).map_err(|e| e.to_string())
+}
+
+// Draft Commands
+#[tauri::command]
+pub async fn draft_create(state: State<'_, AppState>, doc_id: i64, payload: DraftCreate) -> Result<Draft, String> {
+    let pool = &state.pool;
+    crate::services::drafts::create_draft(pool, doc_id, payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn draft_get(state: State<'_, AppState>, id: i64) -> Result<Option<Draft>, String> {
+    let pool = &state.pool;
+    crate::services::drafts::get_draft(pool, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn draft_list(state: State<'_, AppState>, doc_id: i64) -> Result<Vec<Draft>, String> {
+    let pool = &state.pool;
+    crate::services::drafts::list_drafts(pool, doc_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn draft_update(state: State<'_, AppState>, id: i64, payload: DraftUpdate) -> Result<Draft, String> {
+    let pool = &state.pool;
+    crate::services::drafts::update_draft(pool, id, payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn draft_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::drafts::delete_draft(pool, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn draft_restore(state: State<'_, AppState>, draft_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::drafts::restore_draft_to_doc(pool, draft_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn draft_delete_all(state: State<'_, AppState>, doc_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::drafts::delete_all_drafts_for_doc(pool, doc_id).map_err(|e| e.to_string())
 }

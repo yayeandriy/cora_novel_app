@@ -59,3 +59,22 @@ export interface EventForm {
   desc?: string | null;
   date?: string | null;
 }
+
+export interface Draft {
+  id: number;
+  doc_id: number;
+  name: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DraftCreate {
+  name: string;
+  content: string;
+}
+
+export interface DraftUpdate {
+  name?: string | null;
+  content?: string | null;
+}

@@ -100,6 +100,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   
   characters: Character[] = [];
   events: Event[] = [];
+  drafts: any[] = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -298,6 +299,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     } else {
       this.currentGroup = null;
     }
+    
+    // Load drafts for this document
+    await this.loadDrafts(this.selectedDoc.id);
     
     // Save selection to localStorage
     this.saveSelection();
@@ -1030,6 +1034,41 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
     // Save tree state when expanding a group
     this.saveTreeState();
+  }
+
+  async createDraft() {
+    if (!this.selectedDoc) {
+      alert('Please select a document first');
+      return;
+    }
+
+    const draftName = `Draft ${new Date().toLocaleTimeString()}`;
+    const draftContent = this.selectedDoc.text || '';
+    
+    try {
+      console.log('Creating draft for doc:', this.selectedDoc.id);
+      const draft = await this.projectService.createDraft(
+        this.selectedDoc.id,
+        draftName,
+        draftContent
+      );
+      console.log('Draft created:', draft);
+      
+      // Reload drafts for the current document
+      await this.loadDrafts(this.selectedDoc.id);
+    } catch (error) {
+      console.error('Failed to create draft:', error);
+      alert('Failed to create draft: ' + error);
+    }
+  }
+
+  private async loadDrafts(docId: number) {
+    try {
+      this.drafts = await this.projectService.listDrafts(docId);
+      console.log('Loaded drafts:', this.drafts);
+    } catch (error) {
+      console.error('Failed to load drafts:', error);
+    }
   }
 
   toggleLeftSidebar() {

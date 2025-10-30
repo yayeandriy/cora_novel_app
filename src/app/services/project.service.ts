@@ -1,6 +1,6 @@
 import { Injectable } from "@angular/core";
 import { invoke } from "@tauri-apps/api/core";
-import type { Project, ProjectCreate, Doc, Character, Event } from "../shared/models";
+import type { Project, ProjectCreate, Doc, Character, Event, Draft, DraftCreate } from "../shared/models";
 
 @Injectable({ providedIn: "root" })
 export class ProjectService {
@@ -106,5 +106,34 @@ export class ProjectService {
   async createEvent(projectId: number, name: string, desc?: string | null, date?: string | null): Promise<Event> {
     const payload = { project_id: projectId, name, desc: desc ?? null, date: date ?? null };
     return invoke<Event>("event_create", payload);
+  }
+
+  // Drafts
+  async createDraft(docId: number, name: string, content: string): Promise<Draft> {
+    return invoke<Draft>("draft_create", { docId, payload: { name, content } });
+  }
+
+  async getDraft(id: number): Promise<Draft | null> {
+    return invoke<Draft | null>("draft_get", { id });
+  }
+
+  async listDrafts(docId: number): Promise<Draft[]> {
+    return invoke<Draft[]>("draft_list", { docId });
+  }
+
+  async updateDraft(id: number, name?: string, content?: string): Promise<Draft> {
+    return invoke<Draft>("draft_update", { id, payload: { name: name ?? null, content: content ?? null } });
+  }
+
+  async deleteDraft(id: number): Promise<void> {
+    return invoke<void>("draft_delete", { id });
+  }
+
+  async restoreDraftToDoc(draftId: number): Promise<void> {
+    return invoke<void>("draft_restore", { draftId });
+  }
+
+  async deleteAllDrafts(docId: number): Promise<void> {
+    return invoke<void>("draft_delete_all", { docId });
   }
 }

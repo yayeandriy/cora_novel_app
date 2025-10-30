@@ -56,4 +56,24 @@ pub struct Event {
     pub date: Option<String>,
 }
 
-// Add more models (Character, Event, Draft, Note) as needed
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Draft {
+    pub id: i64,
+    pub doc_id: i64,
+    pub name: String,
+    pub content: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DraftCreate {
+    pub name: String,
+    pub content: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DraftUpdate {
+    pub name: Option<String>,
+    pub content: Option<String>,
+}

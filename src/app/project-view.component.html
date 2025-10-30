@@ -310,10 +310,27 @@
               </svg>
               <span>Drafts</span>
             </div>
+            <button class="icon-button-small" 
+                    title="Add new draft" 
+                    (click)="createDraft(); $event.stopPropagation()">
+              <svg xmlns="http://www.w3.org/2000/svg" 
+                   width="14" 
+                   height="14" 
+                   fill="none" 
+                   viewBox="0 0 24 24" 
+                   stroke="currentColor" 
+                   stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
           </div>
           
           <div *ngIf="draftsExpanded" class="section-content">
-            <p class="empty-text">No drafts</p>
+            <div *ngIf="drafts.length === 0" class="empty-text">No drafts</div>
+            <div *ngFor="let draft of drafts" class="draft-item">
+              <div class="draft-name">{{ draft.name }}</div>
+              <div class="draft-time">{{ draft.updated_at | date:'short' }}</div>
+            </div>
           </div>
         </div>
       </div>

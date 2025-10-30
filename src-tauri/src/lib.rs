@@ -6,6 +6,7 @@ mod services {
     pub mod characters;
     pub mod events;
     pub mod doc_groups;
+    pub mod drafts;
 }
 mod commands;
 
@@ -47,6 +48,13 @@ pub fn run() {
             commands::doc_group_rename,
             commands::character_create,
             commands::event_create,
+            commands::draft_create,
+            commands::draft_get,
+            commands::draft_list,
+            commands::draft_update,
+            commands::draft_delete,
+            commands::draft_restore,
+            commands::draft_delete_all,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

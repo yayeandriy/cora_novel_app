@@ -33,6 +33,7 @@ pub fn init_pool() -> anyhow::Result<DbPool> {
     conn.execute_batch(include_str!("../migrations/001_create_schema.sql")).context("running migrations 001")?;
     conn.execute_batch(include_str!("../migrations/002_add_tree_order.sql")).context("running migrations 002")?;
     conn.execute_batch(include_str!("../migrations/003_add_doc_notes.sql")).context("running migrations 003")?;
+    conn.execute_batch(include_str!("../migrations/004_add_doc_drafts.sql")).context("running migrations 004")?;
 
     Ok(pool)
 }
