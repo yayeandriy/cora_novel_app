@@ -327,8 +327,20 @@
           
           <div *ngIf="draftsExpanded" class="section-content">
             <div *ngIf="drafts.length === 0" class="empty-text">No drafts</div>
-            <div *ngFor="let draft of drafts" class="draft-item">
-              <div class="draft-name">{{ draft.name }}</div>
+            <div *ngFor="let draft of drafts; let i = index" class="draft-container">
+              <div class="draft-header">
+                <div class="draft-name">{{ draft.name }}</div>
+                <div class="draft-status" [class.synced]="draftSyncStatus[draft.id] === 'synced'" [class.syncing]="draftSyncStatus[draft.id] === 'syncing'">
+                  {{ draftSyncStatus[draft.id] === 'syncing' ? '⟳' : (draftSyncStatus[draft.id] === 'synced' ? '✓' : '●') }}
+                </div>
+              </div>
+              <textarea
+                class="draft-textarea"
+                [value]="getDraftLocalContent(draft.id)"
+                (input)="onDraftChange(draft.id, $event)"
+                (blur)="onDraftBlur(draft.id)"
+                [placeholder]="'Draft: ' + draft.name">
+              </textarea>
               <div class="draft-time">{{ draft.updated_at | date:'short' }}</div>
             </div>
           </div>

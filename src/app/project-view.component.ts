@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -101,11 +101,17 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   characters: Character[] = [];
   events: Event[] = [];
   drafts: any[] = [];
+  
+  // Draft local caching and syncing
+  private draftLocalContent: Map<number, string> = new Map();
+  private draftAutoSaveTimeouts: Map<number, any> = new Map();
+  draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private projectService: ProjectService
+    private projectService: ProjectService,
+    private changeDetector: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -130,7 +136,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  async loadProject(preserveSelection: boolean = false) {
+  async loadProject(preserveSelection: boolean = false, skipRestore: boolean = false) {
     try {
       // Save current selection if we want to preserve it
       const currentDocId = preserveSelection ? this.selectedDoc?.id : null;
@@ -157,6 +163,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Load characters and events (using mock data for now)
       this.characters = [];
       this.events = [];
+
+      // Skip restoration if requested (e.g., when creating new doc and managing selection manually)
+      if (skipRestore) {
+        return;
+      }
 
       // Restore selection
       if (preserveSelection && (currentDocId || currentGroupId)) {
@@ -962,27 +973,55 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       
       console.log('Doc created:', doc);
       
-      // Expand the group before reloading
+      // Reload the project - SKIP automatic restore so we can manually set selection
+      await this.loadProject(false, true);
+      
+      // NOW expand the group in the NEW tree
       await this.expandGroup(groupId);
-      await this.loadProject();
       
-      // Auto-select the newly created doc ONLY
-      this.selectedDoc = doc;
-      this.selectedGroup = null; // Clear group selection
-      this.currentGroup = this.findGroupById(this.docGroups, groupId) || null;
+      // Find the newly created doc from the freshly loaded tree
+      const newDoc = this.findDocById(doc.id);
+      console.log('Looking for doc with id:', doc.id);
+      console.log('Current docGroups:', this.docGroups);
+      if (newDoc) {
+        this.selectedDoc = newDoc; // Use the doc from the reloaded tree
+        this.selectedGroup = null; // Clear group selection
+        this.currentGroup = this.findGroupById(this.docGroups, groupId) || null;
+        console.log('Doc selected from reloaded tree:', this.selectedDoc.id, this.selectedDoc.name);
+        
+        // Save the new selection to localStorage
+        this.saveSelection();
+      } else {
+        console.warn('Could not find newly created doc in reloaded tree');
+        console.warn('Backend returned doc:', doc);
+        console.warn('Available docs in groups:', JSON.stringify(this.docGroups.map(g => ({ id: g.id, docs: g.docs.map(d => ({ id: d.id, name: d.name })) }))));
+      }
       
-      // Focus the title input after a short delay to allow rendering
+      // Force Angular to detect changes and render the updated tree
+      this.changeDetector.detectChanges();
+      
+      // Focus the title input immediately after changes are detected
+      // Query directly from the DOM since ViewChild may not be updated yet
       setTimeout(() => {
-        this.docTitleInput?.nativeElement.focus();
-        this.docTitleInput?.nativeElement.select();
-      }, 100);
+        const docTreeEl = this.docTree?.nativeElement;
+        if (docTreeEl) {
+          // The doc title input is in the editor toolbar, find it by class
+          const editors = document.querySelectorAll('.editor-toolbar input.doc-title-input');
+          if (editors.length > 0) {
+            const input = editors[0] as HTMLInputElement;
+            console.log('createDoc: Found and focusing doc title input');
+            input.focus();
+            input.select();
+          }
+        }
+      }, 10);
     } catch (error) {
       console.error('Failed to create doc:', error);
       alert('Failed to create document: ' + error);
     }
   }
 
-  async createDocInGroup(group: DocGroup) {
+    async createDocInGroup(group: DocGroup) {
     console.log('createDocInGroup called for group:', group.id);
     const name = 'Untitled Document';
     const groupId = group.id;
@@ -1006,20 +1045,48 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       
       console.log('Doc created:', doc);
       
-      // Expand the group before reloading
+      // Reload the project - SKIP automatic restore so we can manually set selection
+      await this.loadProject(false, true);
+      
+      // NOW expand the group in the NEW tree
       await this.expandGroup(groupId);
-      await this.loadProject();
       
-      // Auto-select the newly created doc ONLY
-      this.selectedDoc = doc;
-      this.selectedGroup = null; // Clear group selection
-      this.currentGroup = this.findGroupById(this.docGroups, groupId) || null;
+      // Find the newly created doc from the freshly loaded tree
+      const newDoc = this.findDocById(doc.id);
+      console.log('Looking for doc with id:', doc.id);
+      console.log('Current docGroups:', this.docGroups);
+      if (newDoc) {
+        this.selectedDoc = newDoc; // Use the doc from the reloaded tree
+        this.selectedGroup = null; // Clear group selection
+        this.currentGroup = this.findGroupById(this.docGroups, groupId) || null;
+        console.log('Doc selected from reloaded tree:', this.selectedDoc.id, this.selectedDoc.name);
+        
+        // Save the new selection to localStorage
+        this.saveSelection();
+      } else {
+        console.warn('Could not find newly created doc in reloaded tree');
+        console.warn('Backend returned doc:', doc);
+        console.warn('Available docs in groups:', JSON.stringify(this.docGroups.map(g => ({ id: g.id, docs: g.docs.map(d => ({ id: d.id, name: d.name })) }))));
+      }
       
-      // Focus the title input after a short delay to allow rendering
+      // Force Angular to detect changes and render the updated tree
+      this.changeDetector.detectChanges();
+      
+      // Focus the title input immediately after changes are detected
+      // Query directly from the DOM since ViewChild may not be updated yet
       setTimeout(() => {
-        this.docTitleInput?.nativeElement.focus();
-        this.docTitleInput?.nativeElement.select();
-      }, 100);
+        const docTreeEl = this.docTree?.nativeElement;
+        if (docTreeEl) {
+          // The doc title input is in the editor toolbar, find it by class
+          const editors = document.querySelectorAll('.editor-toolbar input.doc-title-input');
+          if (editors.length > 0) {
+            const input = editors[0] as HTMLInputElement;
+            console.log('createDocInGroup: Found and focusing doc title input');
+            input.focus();
+            input.select();
+          }
+        }
+      }, 10);
     } catch (error) {
       console.error('Failed to create doc:', error);
       alert('Failed to create document: ' + error);
@@ -1066,6 +1133,19 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     try {
       this.drafts = await this.projectService.listDrafts(docId);
       console.log('Loaded drafts:', this.drafts);
+      
+      // Load local cached content for each draft
+      for (const draft of this.drafts) {
+        const cached = this.getLocalDraftContent(draft.id);
+        if (cached !== null) {
+          this.draftLocalContent.set(draft.id, cached);
+        } else {
+          // Initialize local cache with backend content
+          this.draftLocalContent.set(draft.id, draft.content || '');
+        }
+        // Initialize sync status
+        this.draftSyncStatus[draft.id] = 'synced';
+      }
     } catch (error) {
       console.error('Failed to load drafts:', error);
     }
@@ -1152,4 +1232,99 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     const words = this.selectedDoc.text.split(/\s+/).filter(w => w.trim().length > 0);
     return words.length;
   }
+
+  // ==================== DRAFT LOCAL STORAGE & AUTO-SYNC ====================
+
+  private getLocalDraftKey(draftId: number): string {
+    return `cora-draft-${draftId}`;
+  }
+
+  private getLocalDraftContent(draftId: number): string | null {
+    try {
+      return localStorage.getItem(this.getLocalDraftKey(draftId));
+    } catch {
+      return null;
+    }
+  }
+
+  private setLocalDraftContent(draftId: number, content: string): void {
+    try {
+      localStorage.setItem(this.getLocalDraftKey(draftId), content);
+    } catch {
+      console.error('Failed to save draft to localStorage');
+    }
+  }
+
+  getDraftLocalContent(draftId: number): string {
+    return this.draftLocalContent.get(draftId) || '';
+  }
+
+  onDraftChange(draftId: number, event: any): void {
+    const content = event.target.value;
+    
+    // Update local memory cache immediately
+    this.draftLocalContent.set(draftId, content);
+    
+    // Save to localStorage immediately
+    this.setLocalDraftContent(draftId, content);
+    
+    // Set status to pending
+    this.draftSyncStatus[draftId] = 'pending';
+    
+    // Clear existing timeout
+    const existingTimeout = this.draftAutoSaveTimeouts.get(draftId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+    
+    // Debounce auto-save to backend (500ms)
+    const timeout = setTimeout(() => {
+      this.syncDraftToBackend(draftId);
+    }, 500);
+    
+    this.draftAutoSaveTimeouts.set(draftId, timeout);
+  }
+
+  onDraftBlur(draftId: number): void {
+    // Force immediate sync on blur
+    const timeout = this.draftAutoSaveTimeouts.get(draftId);
+    if (timeout) {
+      clearTimeout(timeout);
+      this.draftAutoSaveTimeouts.delete(draftId);
+    }
+    
+    const status = this.draftSyncStatus[draftId];
+    if (status === 'pending') {
+      this.syncDraftToBackend(draftId);
+    }
+  }
+
+  private async syncDraftToBackend(draftId: number): Promise<void> {
+    const content = this.draftLocalContent.get(draftId);
+    if (content === undefined) return;
+    
+    this.draftSyncStatus[draftId] = 'syncing';
+    
+    try {
+      const draft = this.drafts.find(d => d.id === draftId);
+      if (!draft) return;
+      
+      await this.projectService.updateDraft(draftId, draft.name, content);
+      
+      // Update the draft timestamp from backend
+      const updated = await this.projectService.getDraft(draftId);
+      if (updated) {
+        const index = this.drafts.findIndex(d => d.id === draftId);
+        if (index !== -1) {
+          this.drafts[index] = updated;
+        }
+      }
+      
+      this.draftSyncStatus[draftId] = 'synced';
+    } catch (error) {
+      console.error('Failed to sync draft:', error);
+      this.draftSyncStatus[draftId] = 'pending';
+    }
+  }
 }
+
