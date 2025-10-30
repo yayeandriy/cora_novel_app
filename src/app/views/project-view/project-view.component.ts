@@ -723,9 +723,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       event.preventDefault();
       // Shift+R: Focus the name input for renaming
       if (this.selectedDoc) {
+        // Focus the title input in the document editor (rename)
         setTimeout(() => {
-          // Focus on the document editor's input (handled in child component)
-          this.focusEditor();
+          this.documentEditorComponent?.focusTitle();
         }, 0);
       } else if (this.selectedGroup) {
         // Focus on the group view's input
