@@ -1,0 +1,28 @@
+<div class="sidebar-section">
+  <div class="section-header" (click)="onHeaderClick()">
+    <div class="section-title">
+      <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="expanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
+      <span>Events</span>
+    </div>
+    <button class="add-button" (click)="onAddClick($event)">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+      </svg>
+    </button>
+  </div>
+
+  <div *ngIf="expanded" class="section-content">
+    <app-event-card
+      *ngFor="let ev of events"
+      [event]="ev"
+      [checked]="docEventIds?.has(ev.id) || false"
+      [canToggle]="!!selectedDoc"
+      [editing]="editingEventId === ev.id"
+      (toggle)="toggle.emit({ eventId: $event.id, checked: $event.checked })"
+      (update)="update.emit($event)"
+      (remove)="remove.emit($event)">
+    </app-event-card>
+  </div>
+</div>

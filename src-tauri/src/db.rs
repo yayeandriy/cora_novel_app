@@ -35,6 +35,16 @@ pub fn init_pool() -> anyhow::Result<DbPool> {
     conn.execute_batch(include_str!("../migrations/003_add_doc_notes.sql")).context("running migrations 003")?;
     conn.execute_batch(include_str!("../migrations/004_add_doc_drafts.sql")).context("running migrations 004")?;
 
+    // Conditionally run 005: add start_date/end_date to events if missing
+    let mut stmt = conn.prepare("PRAGMA table_info(events)")?;
+    let cols = stmt.query_map([], |row| Ok::<String, rusqlite::Error>(row.get(1)?))?;
+    let mut has_start = false;
+    let mut has_end = false;
+    for c in cols { let name = c?; if name == "start_date" { has_start = true; } if name == "end_date" { has_end = true; } }
+    if !(has_start && has_end) {
+        conn.execute_batch(include_str!("../migrations/005_add_event_start_end.sql")).context("running migrations 005")?;
+    }
+
     Ok(pool)
 }
 

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { DraftsPanelComponent } from '../drafts-panel/drafts-panel.component';
 import { CharacterCardComponent } from '../character-card/character-card.component';
 import { CharactersPanelComponent } from '../characters-panel/characters-panel.component';
+import { EventsPanelComponent } from '../events-panel/events-panel.component';
 
 export interface Character {
   id: number;
@@ -15,8 +16,8 @@ export interface Event {
   id: number;
   name: string;
   desc: string;
-  startDate?: string;
-  endDate?: string;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 export interface Draft {
@@ -41,7 +42,7 @@ export interface Doc {
 @Component({
   selector: 'app-right-sidebar',
   standalone: true,
-  imports: [CommonModule, FormsModule, DraftsPanelComponent, CharacterCardComponent, CharactersPanelComponent],
+  imports: [CommonModule, FormsModule, DraftsPanelComponent, CharacterCardComponent, CharactersPanelComponent, EventsPanelComponent],
   templateUrl: './right-sidebar.component.html',
   styleUrls: ['./right-sidebar.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -54,6 +55,8 @@ export class RightSidebarComponent {
   @Input() draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
   @Input() docCharacterIds: Set<number> | null = null;
   @Input() editingCharacterId: number | null = null;
+  @Input() docEventIds: Set<number> | null = null;
+  @Input() editingEventId: number | null = null;
   
   @Input() charactersExpanded: boolean = true;
   @Input() eventsExpanded: boolean = true;
@@ -79,6 +82,11 @@ export class RightSidebarComponent {
   @Output() characterUpdate = new EventEmitter<{ id: number; name: string; desc: string }>();
   @Output() characterDelete = new EventEmitter<number>();
   @Output() characterToggle = new EventEmitter<{ characterId: number; checked: boolean }>();
+  // Event outputs
+  @Output() eventAdd = new EventEmitter<void>();
+  @Output() eventUpdate = new EventEmitter<{ id: number; name: string; desc: string; start_date: string | null; end_date: string | null }>();
+  @Output() eventDelete = new EventEmitter<number>();
+  @Output() eventToggle = new EventEmitter<{ eventId: number; checked: boolean }>();
   
   rightWidth = 300; // internal tracker for live drag; host width comes from parent binding
   isResizing = false;

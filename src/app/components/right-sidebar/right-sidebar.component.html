@@ -16,32 +16,19 @@
       (toggle)="characterToggle.emit($event)">
     </app-characters-panel>
 
-    <!-- Events Section -->
-    <div class="sidebar-section">
-      <div class="section-header" (click)="onEventsToggle()">
-        <div class="section-title">
-          <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="eventsExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-          <span>Events ({{ events.length }}/4)</span>
-        </div>
-        <button class="add-button">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-      </div>
-      
-      <div *ngIf="eventsExpanded" class="section-content">
-        <div *ngFor="let event of events" class="event-item">
-          <div class="event-name">{{ event.name }}</div>
-          <div *ngIf="event.desc" class="event-desc">{{ event.desc }}</div>
-          <div *ngIf="event.startDate" class="event-date">
-            {{ event.startDate }}{{ event.endDate && event.endDate !== event.startDate ? ' - ' + event.endDate : '' }}
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Events Section (separate component) -->
+    <app-events-panel
+      [events]="events"
+      [docEventIds]="docEventIds"
+      [selectedDoc]="selectedDoc"
+      [expanded]="eventsExpanded"
+      [editingEventId]="editingEventId"
+      (expandedChange)="onEventsToggle()"
+      (add)="eventAdd.emit()"
+      (update)="eventUpdate.emit($event)"
+      (remove)="eventDelete.emit($event)"
+      (toggle)="eventToggle.emit($event)">
+    </app-events-panel>
 
     <!-- Notes Section -->
     <div class="sidebar-section">

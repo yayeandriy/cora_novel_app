@@ -25,7 +25,9 @@ export interface Event {
   project_id: number;
   name: string;
   desc?: string | null;
-  date?: string | null;
+  date?: string | null; // legacy
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 export interface Doc {
@@ -57,7 +59,8 @@ export interface EventForm {
   projectId?: number;
   name: string;
   desc?: string | null;
-  date?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 export interface Draft {

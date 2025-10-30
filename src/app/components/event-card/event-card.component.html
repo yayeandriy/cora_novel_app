@@ -1,0 +1,36 @@
+<div class="event-card">
+  <div class="row">
+    <input type="checkbox" [disabled]="!canToggle" [checked]="checked ?? false" (change)="onToggleChange($event)" />
+
+    <div class="content" *ngIf="!isEditing; else editTpl">
+      <div class="name">{{ event.name }}</div>
+      <div class="desc" *ngIf="event.desc">{{ event.desc }}</div>
+      <div class="date" *ngIf="event.start_date || event.end_date">
+        {{ event.start_date || '—' }}<span *ngIf="event.end_date && event.end_date !== event.start_date"> — {{ event.end_date }}</span>
+      </div>
+    </div>
+
+    <ng-template #editTpl>
+      <div class="edit-form">
+        <input class="name-input" [(ngModel)]="name" placeholder="Name" />
+        <textarea class="desc-input" [(ngModel)]="desc" placeholder="Description..."></textarea>
+        <div class="dates">
+          <input class="date-input" type="datetime-local" [(ngModel)]="start_date" placeholder="Start" />
+          <input class="date-input" type="datetime-local" [(ngModel)]="end_date" placeholder="End" />
+        </div>
+      </div>
+    </ng-template>
+  </div>
+
+  <div class="actions" *ngIf="!isEditing; else editActions">
+    <button class="btn" (click)="startEdit()">Edit</button>
+    <button class="btn btn-danger" (click)="onDelete()">Delete</button>
+  </div>
+
+  <ng-template #editActions>
+    <div class="actions">
+      <button class="btn" (click)="saveEdit()">Save</button>
+      <button class="btn" (click)="cancelEdit()">Cancel</button>
+    </div>
+  </ng-template>
+</div>

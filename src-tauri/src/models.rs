@@ -53,7 +53,11 @@ pub struct Event {
     pub project_id: i64,
     pub name: String,
     pub desc: Option<String>,
+    // Legacy single date field (kept for backward compatibility)
     pub date: Option<String>,
+    // New fields for range
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

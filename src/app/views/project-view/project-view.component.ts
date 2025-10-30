@@ -43,8 +43,8 @@ interface Event {
   id: number;
   name: string;
   desc: string;
-  startDate?: string;
-  endDate?: string;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 @Component({
@@ -113,6 +113,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   docCharacterIds: Set<number> = new Set();
   // Editing state for character cards
   editingCharacterId: number | null = null;
+  // Events per-doc selection and editing
+  docEventIds: Set<number> = new Set();
+  editingEventId: number | null = null;
   
   // Draft local caching and syncing
   private draftLocalContent: Map<number, string> = new Map();
@@ -174,8 +177,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.docGroups = this.buildDocGroupTree(groups, docs);
 
   // Load characters and events
-  await this.loadCharacters();
-  this.events = [];
+  await Promise.all([this.loadCharacters(), this.loadEvents()]);
 
       // Skip restoration if requested (e.g., when creating new doc and managing selection manually)
       if (skipRestore) {
@@ -328,6 +330,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     await this.loadDrafts(this.selectedDoc.id);
   // Load characters attached to this doc
   await this.loadDocCharacters(this.selectedDoc.id);
+  // Load events attached to this doc
+  await this.loadDocEvents(this.selectedDoc.id);
     
     // Save selection to localStorage
     this.saveSelection();
@@ -368,6 +372,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.saveSelection();
     // Clear doc-specific character selection when no doc is selected
     this.docCharacterIds = new Set();
+    this.docEventIds = new Set();
   }
 
   private saveSelection() {
@@ -1168,6 +1173,17 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  private async loadEvents(): Promise<void> {
+    try {
+      const evs = await this.projectService.listEvents(this.projectId);
+      // Normalize to local interface (desc empty string default)
+      this.events = evs.map(e => ({ id: e.id, name: e.name, desc: e.desc ?? '', start_date: e.start_date ?? null, end_date: e.end_date ?? null } as any));
+    } catch (error) {
+      console.error('Failed to load events:', error);
+      this.events = [];
+    }
+  }
+
   private async loadDocCharacters(docId: number): Promise<void> {
     try {
       const ids = await this.projectService.listDocCharacters(docId);
@@ -1175,6 +1191,16 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Failed to load doc characters:', error);
       this.docCharacterIds = new Set();
+    }
+  }
+
+  private async loadDocEvents(docId: number): Promise<void> {
+    try {
+      const ids = await this.projectService.listDocEvents(docId);
+      this.docEventIds = new Set(ids);
+    } catch (error) {
+      console.error('Failed to load doc events:', error);
+      this.docEventIds = new Set();
     }
   }
 
@@ -1233,6 +1259,69 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error('Failed to update character:', error);
+    }
+  }
+
+  // ===== Events handlers =====
+  async onSidebarEventAdd(): Promise<void> {
+    try {
+      // Ensure panel is opened
+      this.eventsExpanded = true;
+      const created = await this.projectService.createEvent(this.projectId, 'New Event', '', null, null);
+      this.events = [...this.events, { id: created.id, name: created.name, desc: created.desc ?? '', start_date: created.start_date ?? null, end_date: created.end_date ?? null } as any];
+      this.editingEventId = created.id;
+    } catch (error) {
+      console.error('Failed to create event:', error);
+      alert('Failed to create event: ' + error);
+    }
+  }
+
+  async onSidebarEventUpdate(payload: { id: number; name: string; desc: string; start_date: string | null; end_date: string | null }): Promise<void> {
+    try {
+      await this.projectService.updateEvent(payload.id, { name: payload.name, desc: payload.desc, start_date: payload.start_date, end_date: payload.end_date });
+      const idx = this.events.findIndex(e => e.id === payload.id);
+      if (idx !== -1) {
+        this.events[idx] = { ...this.events[idx], name: payload.name, desc: payload.desc, start_date: payload.start_date, end_date: payload.end_date } as any;
+        this.events = [...this.events];
+      }
+      if (this.editingEventId === payload.id) {
+        this.editingEventId = null;
+      }
+    } catch (error) {
+      console.error('Failed to update event:', error);
+    }
+  }
+
+  async onSidebarEventDelete(id: number): Promise<void> {
+    const confirmed = await confirm('Delete this event?', { title: 'Confirm Delete', kind: 'warning' });
+    if (!confirmed) return;
+    try {
+      await this.projectService.deleteEvent(id);
+      this.events = this.events.filter(e => e.id !== id);
+      if (this.docEventIds.has(id)) {
+        this.docEventIds.delete(id);
+        this.docEventIds = new Set(this.docEventIds);
+      }
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+      alert('Failed to delete event: ' + error);
+    }
+  }
+
+  async onSidebarEventToggle(payload: { eventId: number; checked: boolean }): Promise<void> {
+    if (!this.selectedDoc) return;
+    const { eventId, checked } = payload;
+    try {
+      if (checked) {
+        await this.projectService.attachEventToDoc(this.selectedDoc.id, eventId);
+        this.docEventIds.add(eventId);
+      } else {
+        await this.projectService.detachEventFromDoc(this.selectedDoc.id, eventId);
+        this.docEventIds.delete(eventId);
+      }
+      this.docEventIds = new Set(this.docEventIds);
+    } catch (error) {
+      console.error('Failed to update event relation:', error);
     }
   }
 

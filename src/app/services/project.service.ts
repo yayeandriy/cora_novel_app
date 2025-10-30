@@ -128,9 +128,35 @@ export class ProjectService {
     return invoke<void>("doc_character_detach", { docId, characterId });
   }
 
-  async createEvent(projectId: number, name: string, desc?: string | null, date?: string | null): Promise<Event> {
-    const payload = { project_id: projectId, name, desc: desc ?? null, date: date ?? null };
-    return invoke<Event>("event_create", payload);
+  // Events
+  async createEvent(projectId: number, name: string, desc?: string | null, startDate?: string | null, endDate?: string | null): Promise<Event> {
+    // Backend command accepts (project_id camelCase: projectId), name, desc, start_date, end_date, and a legacy 'date'
+    const payload = { projectId, name, desc: desc ?? null, startDate: startDate ?? null, endDate: endDate ?? null, date: null as string | null };
+    return invoke<Event>("event_create", payload as any);
+  }
+
+  async listEvents(projectId: number): Promise<Event[]> {
+    return invoke<Event[]>("event_list", { projectId });
+  }
+
+  async updateEvent(id: number, changes: Partial<{ name: string; desc: string; start_date: string | null; end_date: string | null }>): Promise<Event> {
+    return invoke<Event>("event_update", { id, changes });
+  }
+
+  async deleteEvent(id: number): Promise<void> {
+    return invoke<void>("event_delete", { id });
+  }
+
+  async listDocEvents(docId: number): Promise<number[]> {
+    return invoke<number[]>("doc_event_list", { docId });
+  }
+
+  async attachEventToDoc(docId: number, eventId: number): Promise<void> {
+    return invoke<void>("doc_event_attach", { docId, eventId });
+  }
+
+  async detachEventFromDoc(docId: number, eventId: number): Promise<void> {
+    return invoke<void>("doc_event_detach", { docId, eventId });
   }
 
   // Drafts

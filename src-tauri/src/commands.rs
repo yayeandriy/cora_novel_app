@@ -200,9 +200,49 @@ pub async fn doc_character_detach(state: State<'_, AppState>, doc_id: i64, chara
 }
 
 #[tauri::command]
-pub async fn event_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>, date: Option<String>) -> Result<Event, String> {
+pub async fn event_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>, start_date: Option<String>, end_date: Option<String>, date: Option<String>) -> Result<Event, String> {
     let pool = &state.pool;
-    crate::services::events::create(pool, project_id, &name, desc, date).map_err(|e| e.to_string())
+    crate::services::events::create(pool, project_id, &name, desc, start_date, end_date, date).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn event_list(state: State<'_, AppState>, project_id: i64) -> Result<Vec<Event>, String> {
+    let pool = &state.pool;
+    crate::services::events::list(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn event_update(state: State<'_, AppState>, id: i64, changes: Option<serde_json::Value>) -> Result<Event, String> {
+    let pool = &state.pool;
+    let name = changes.as_ref().and_then(|c| c.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()));
+    let desc = changes.as_ref().and_then(|c| c.get("desc").and_then(|v| v.as_str()).map(|s| s.to_string()));
+    let start_date = changes.as_ref().and_then(|c| c.get("start_date").and_then(|v| v.as_str()).map(|s| s.to_string()));
+    let end_date = changes.as_ref().and_then(|c| c.get("end_date").and_then(|v| v.as_str()).map(|s| s.to_string()));
+    crate::services::events::update(pool, id, name, desc, start_date, end_date).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn event_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::events::delete_(pool, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_event_list(state: State<'_, AppState>, doc_id: i64) -> Result<Vec<i64>, String> {
+    let pool = &state.pool;
+    crate::services::events::list_for_doc(pool, doc_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_event_attach(state: State<'_, AppState>, doc_id: i64, event_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::events::attach_to_doc(pool, doc_id, event_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_event_detach(state: State<'_, AppState>, doc_id: i64, event_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::events::detach_from_doc(pool, doc_id, event_id).map_err(|e| e.to_string())
 }
 
 // Draft Commands
