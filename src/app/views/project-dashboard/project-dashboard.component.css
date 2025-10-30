@@ -2,5 +2,22 @@
 /* Tailwind classes handle most of the styling, this file is reserved for component-specific styles */
 
 :host {
-  display: block;
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+/* Ensure the inner container spans full width/height without a max constraint */
+section {
+  width: 100%;
+  height: 100%;
+  max-width: none !important;
+  margin: 0 !important;
 }
