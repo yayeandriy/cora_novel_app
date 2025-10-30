@@ -106,6 +106,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private draftLocalContent: Map<number, string> = new Map();
   private draftAutoSaveTimeouts: Map<number, any> = new Map();
   draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
+  private focusedDraftId: number | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -1277,6 +1278,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   onDraftChange(draftId: number, event: any): void {
     const content = event.target.value;
+    const cursorPosition = event.target.selectionStart;
+    
+    // Track which draft is being edited
+    this.focusedDraftId = draftId;
     
     // Update local memory cache immediately
     this.draftLocalContent.set(draftId, content);
@@ -1295,7 +1300,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     
     // Debounce auto-save to backend (500ms)
     const timeout = setTimeout(() => {
-      this.syncDraftToBackend(draftId);
+      this.syncDraftToBackend(draftId, cursorPosition);
     }, 500);
     
     this.draftAutoSaveTimeouts.set(draftId, timeout);
@@ -1315,9 +1320,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async syncDraftToBackend(draftId: number): Promise<void> {
+  private async syncDraftToBackend(draftId: number, cursorPosition?: number): Promise<void> {
     const content = this.draftLocalContent.get(draftId);
     if (content === undefined) return;
+    
+    // Check if this is the currently focused draft
+    const wasFocused = this.focusedDraftId === draftId;
     
     this.draftSyncStatus[draftId] = 'syncing';
     
@@ -1333,6 +1341,20 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         const index = this.drafts.findIndex(d => d.id === draftId);
         if (index !== -1) {
           this.drafts[index] = updated;
+          this.changeDetector.detectChanges();
+          
+          // Restore focus and cursor position after change detection
+          if (wasFocused && cursorPosition !== undefined) {
+            const textareas = document.querySelectorAll('.draft-textarea');
+            const draftIndex = this.drafts.findIndex(d => d.id === draftId);
+            if (draftIndex !== -1 && textareas[draftIndex]) {
+              const textarea = textareas[draftIndex] as HTMLTextAreaElement;
+              setTimeout(() => {
+                textarea.focus();
+                textarea.setSelectionRange(cursorPosition, cursorPosition);
+              }, 0);
+            }
+          }
         }
       }
       
