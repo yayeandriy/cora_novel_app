@@ -38,6 +38,14 @@ export class DocumentEditorComponent {
     this.editorTextarea?.nativeElement.focus();
   }
 
+  focusTitle() {
+    const el = this.docTitleInput?.nativeElement;
+    if (el) {
+      el.focus();
+      el.select();
+    }
+  }
+
   onTitleChange(doc: Doc) {
     this.docNameChange.emit(doc);
   }

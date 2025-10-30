@@ -1017,21 +1017,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Force Angular to detect changes and render the updated tree
       this.changeDetector.detectChanges();
       
-      // Focus the title input immediately after changes are detected
-      // Query directly from the DOM since ViewChild may not be updated yet
+      // Focus the document title input in the editor once it's rendered
       setTimeout(() => {
-        const docTreeEl = this.docTree?.nativeElement;
-        if (docTreeEl) {
-          // The doc title input is in the editor toolbar, find it by class
-          const editors = document.querySelectorAll('.editor-toolbar input.doc-title-input');
-          if (editors.length > 0) {
-            const input = editors[0] as HTMLInputElement;
-            console.log('createDoc: Found and focusing doc title input');
-            input.focus();
-            input.select();
-          }
-        }
-      }, 10);
+        this.documentEditorComponent?.focusTitle();
+      }, 0);
     } catch (error) {
       console.error('Failed to create doc:', error);
       alert('Failed to create document: ' + error);
@@ -1089,21 +1078,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Force Angular to detect changes and render the updated tree
       this.changeDetector.detectChanges();
       
-      // Focus the title input immediately after changes are detected
-      // Query directly from the DOM since ViewChild may not be updated yet
+      // Focus the document title input in the editor once it's rendered
       setTimeout(() => {
-        const docTreeEl = this.docTree?.nativeElement;
-        if (docTreeEl) {
-          // The doc title input is in the editor toolbar, find it by class
-          const editors = document.querySelectorAll('.editor-toolbar input.doc-title-input');
-          if (editors.length > 0) {
-            const input = editors[0] as HTMLInputElement;
-            console.log('createDocInGroup: Found and focusing doc title input');
-            input.focus();
-            input.select();
-          }
-        }
-      }, 10);
+        this.documentEditorComponent?.focusTitle();
+      }, 0);
     } catch (error) {
       console.error('Failed to create doc:', error);
       alert('Failed to create document: ' + error);
