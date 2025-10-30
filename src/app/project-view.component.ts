@@ -921,12 +921,28 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         group = await this.projectService.createDocGroup(this.projectId, name);
       }
       
-      await this.loadProject();
+      console.log('Group created:', group);
       
-      // Auto-select the newly created folder ONLY
-      this.selectedGroup = group;
-      this.selectedDoc = null; // Clear doc selection
-      this.currentGroup = group;
+      // Reload the project - SKIP automatic restore so we can manually set selection
+      await this.loadProject(false, true);
+      
+      // Find the newly created group from the freshly loaded tree
+      const newGroup = this.findGroupById(this.docGroups, group.id);
+      if (newGroup) {
+        // Auto-select the newly created folder ONLY
+        this.selectedGroup = newGroup; // Use the group from the reloaded tree
+        this.selectedDoc = null; // Clear doc selection
+        this.currentGroup = newGroup;
+        console.log('Group selected from reloaded tree:', this.selectedGroup.id, this.selectedGroup.name);
+        
+        // Save the new selection to localStorage
+        this.saveSelection();
+      } else {
+        console.warn('Could not find newly created group in reloaded tree');
+      }
+      
+      // Force Angular to detect changes
+      this.changeDetector.detectChanges();
       
       // Focus and select the text in the group name input
       setTimeout(() => {
