@@ -24,6 +24,7 @@ interface Doc {
   doc_group_id?: number | null;
   sort_order?: number | null;
   text?: string | null;
+  notes?: string | null;
   path?: string;
   timeline_id?: number | null;
 }
@@ -78,6 +79,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   hasUnsavedChanges = false;
   private saveStatusTimeout: any;
   private autoSaveTimeout: any;
+  private autoSaveNotesTimeout: any;
+  
+  // Local doc state cache - persists changes in memory immediately
+  // This maps doc ID to {text, notes} so we never lose data even if DB sync fails
+  private docStateCache: Map<number, {text?: string | null, notes?: string | null}> = new Map();
   
   // Content
   docGroups: DocGroup[] = [];
@@ -117,6 +123,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
     if (this.autoSaveTimeout) {
       clearTimeout(this.autoSaveTimeout);
+    }
+    if (this.autoSaveNotesTimeout) {
+      clearTimeout(this.autoSaveNotesTimeout);
     }
   }
 
@@ -246,13 +255,46 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.saveTreeState();
   }
 
-  selectDoc(doc: Doc) {
-    this.selectedDoc = doc;
+  async selectDoc(doc: Doc) {
+    // First, save any unsaved changes from the previous doc to cache
+    if (this.selectedDoc) {
+      this.docStateCache.set(this.selectedDoc.id, {
+        text: this.selectedDoc.text,
+        notes: this.selectedDoc.notes
+      });
+    }
+
+    // Fetch fresh doc data to ensure we have the latest notes
+    try {
+      const freshDoc = await this.projectService.getDoc(doc.id);
+      if (freshDoc) {
+        this.selectedDoc = freshDoc;
+        // Also update the doc in the docGroups tree so it stays in sync
+        this.updateDocInTree(freshDoc);
+      } else {
+        this.selectedDoc = doc;
+      }
+    } catch (error) {
+      console.error('Failed to fetch fresh doc data:', error);
+      this.selectedDoc = doc;
+    }
+
+    // Restore any cached state for this doc (in case it was edited but not saved yet)
+    const cachedState = this.docStateCache.get(this.selectedDoc.id);
+    if (cachedState) {
+      if (cachedState.text !== undefined) {
+        this.selectedDoc.text = cachedState.text;
+      }
+      if (cachedState.notes !== undefined) {
+        this.selectedDoc.notes = cachedState.notes;
+      }
+    }
+    
     this.selectedGroup = null; // Clear group selection - only ONE selection at a time
     
     // Track parent group for create button context
-    if (doc.doc_group_id) {
-      this.currentGroup = this.findGroupById(this.docGroups, doc.doc_group_id) || null;
+    if (this.selectedDoc.doc_group_id) {
+      this.currentGroup = this.findGroupById(this.docGroups, this.selectedDoc.doc_group_id) || null;
     } else {
       this.currentGroup = null;
     }
@@ -260,6 +302,29 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // Save selection to localStorage
     this.saveSelection();
   }
+
+  private updateDocInTree(updatedDoc: Doc) {
+    // Find and update the doc in the docGroups tree
+    const updateInGroups = (groups: DocGroup[]): boolean => {
+      for (const group of groups) {
+        const docIndex = group.docs.findIndex(d => d.id === updatedDoc.id);
+        if (docIndex !== -1) {
+          console.log('Found doc in group, updating:', updatedDoc.id);
+          group.docs[docIndex] = { ...group.docs[docIndex], ...updatedDoc };
+          return true;
+        }
+        if (group.groups && updateInGroups(group.groups)) {
+          return true;
+        }
+      }
+      return false;
+    };
+    const found = updateInGroups(this.docGroups);
+    if (!found) {
+      console.warn('Doc not found in tree for update:', updatedDoc.id);
+    }
+  }
+
 
   selectGroup(group: DocGroup, event?: MouseEvent) {
     if (event) {
@@ -739,6 +804,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.projectService.updateDocText(this.selectedDoc.id, text);
       console.log('Doc saved successfully');
       
+      // Clear cache for this doc since it's now synced
+      this.docStateCache.delete(this.selectedDoc.id);
+      
       // Update save state
       this.lastSaveTime = new Date();
       this.showSaveStatus = true;
@@ -758,6 +826,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   onDocumentTextChange() {
+    // Cache text immediately so we never lose it
+    if (this.selectedDoc) {
+      const cached = this.docStateCache.get(this.selectedDoc.id) || {};
+      cached.text = this.selectedDoc.text;
+      this.docStateCache.set(this.selectedDoc.id, cached);
+    }
+
     // Mark as having unsaved changes
     this.hasUnsavedChanges = true;
     
@@ -770,6 +845,44 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.autoSaveTimeout = setTimeout(() => {
       this.saveDoc();
     }, 2000);
+  }
+
+  onDocumentNotesChange() {
+    // Cache notes immediately so we never lose them
+    if (this.selectedDoc) {
+      const cached = this.docStateCache.get(this.selectedDoc.id) || {};
+      cached.notes = this.selectedDoc.notes;
+      this.docStateCache.set(this.selectedDoc.id, cached);
+    }
+
+    // Clear existing auto-save timer for notes
+    if (this.autoSaveNotesTimeout) {
+      clearTimeout(this.autoSaveNotesTimeout);
+    }
+    
+    // Set new auto-save timer (save after 2 seconds of inactivity)
+    this.autoSaveNotesTimeout = setTimeout(() => {
+      this.saveDocNotes();
+    }, 2000);
+  }
+
+  async saveDocNotes() {
+    if (!this.selectedDoc) return;
+
+    try {
+      const notes = this.selectedDoc.notes || '';
+      await this.projectService.updateDocNotes(this.selectedDoc.id, notes);
+      console.log('Doc notes saved successfully');
+      
+      // Clear cache for this doc since it's now synced
+      this.docStateCache.delete(this.selectedDoc.id);
+      
+      // Reload the entire doc tree to ensure everything stays in sync
+      // This preserves the current selection
+      await this.loadProject(true);
+    } catch (error) {
+      console.error('Failed to save doc notes:', error);
+    }
   }
 
   async createGroup() {

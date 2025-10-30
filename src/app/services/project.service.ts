@@ -72,6 +72,10 @@ export class ProjectService {
     return invoke<void>("doc_update_text", { id, text });
   }
 
+  async updateDocNotes(id: number, notes: string): Promise<void> {
+    return invoke<void>("doc_update_notes", { id, notes });
+  }
+
   async deleteDoc(id: number): Promise<void> {
     return invoke<void>("doc_delete", { id });
   }

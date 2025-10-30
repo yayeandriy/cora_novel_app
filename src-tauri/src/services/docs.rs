@@ -7,7 +7,7 @@ use anyhow::Context;
 pub fn list_docs(pool: &DbPool, project_id: i64) -> anyhow::Result<Vec<Doc>> {
     let conn = get_conn(pool)?;
     let mut stmt = conn.prepare(
-        "SELECT id, project_id, path, name, timeline_id, text, doc_group_id, sort_order 
+        "SELECT id, project_id, path, name, timeline_id, text, notes, doc_group_id, sort_order 
          FROM docs 
          WHERE project_id = ?1 
          ORDER BY doc_group_id, sort_order"
@@ -21,8 +21,9 @@ pub fn list_docs(pool: &DbPool, project_id: i64) -> anyhow::Result<Vec<Doc>> {
             name: row.get(3)?,
             timeline_id: row.get(4)?,
             text: row.get(5)?,
-            doc_group_id: row.get(6)?,
-            sort_order: row.get(7)?,
+            notes: row.get(6)?,
+            doc_group_id: row.get(7)?,
+            sort_order: row.get(8)?,
         })
     })?.collect::<Result<Vec<_>, _>>()?;
     
@@ -46,7 +47,7 @@ pub fn create_doc(pool: &DbPool, project_id: i64, name: &str, doc_group_id: Opti
     ).context("inserting doc")?;
 
     let id = conn.last_insert_rowid();
-    let mut stmt = conn.prepare("SELECT id, project_id, path, name, timeline_id, text, doc_group_id, sort_order FROM docs WHERE id = ?1")?;
+    let mut stmt = conn.prepare("SELECT id, project_id, path, name, timeline_id, text, notes, doc_group_id, sort_order FROM docs WHERE id = ?1")?;
     let doc = stmt.query_row(rusqlite::params![id], |row| {
         Ok(Doc {
             id: row.get(0)?,
@@ -55,8 +56,9 @@ pub fn create_doc(pool: &DbPool, project_id: i64, name: &str, doc_group_id: Opti
             name: row.get(3)?,
             timeline_id: row.get(4)?,
             text: row.get(5)?,
-            doc_group_id: row.get(6)?,
-            sort_order: row.get(7)?,
+            notes: row.get(6)?,
+            doc_group_id: row.get(7)?,
+            sort_order: row.get(8)?,
         })
     })?;
 
@@ -83,7 +85,7 @@ pub fn create_doc_after(pool: &DbPool, project_id: i64, name: &str, doc_group_id
     ).context("inserting doc")?;
 
     let id = conn.last_insert_rowid();
-    let mut stmt = conn.prepare("SELECT id, project_id, path, name, timeline_id, text, doc_group_id, sort_order FROM docs WHERE id = ?1")?;
+    let mut stmt = conn.prepare("SELECT id, project_id, path, name, timeline_id, text, notes, doc_group_id, sort_order FROM docs WHERE id = ?1")?;
     let doc = stmt.query_row(rusqlite::params![id], |row| {
         Ok(Doc {
             id: row.get(0)?,
@@ -92,8 +94,9 @@ pub fn create_doc_after(pool: &DbPool, project_id: i64, name: &str, doc_group_id
             name: row.get(3)?,
             timeline_id: row.get(4)?,
             text: row.get(5)?,
-            doc_group_id: row.get(6)?,
-            sort_order: row.get(7)?,
+            notes: row.get(6)?,
+            doc_group_id: row.get(7)?,
+            sort_order: row.get(8)?,
         })
     }).context("querying created doc")?;
 
@@ -103,7 +106,7 @@ pub fn create_doc_after(pool: &DbPool, project_id: i64, name: &str, doc_group_id
 /// Get a single doc by ID
 pub fn get_doc(pool: &DbPool, id: i64) -> anyhow::Result<Option<Doc>> {
     let conn = get_conn(pool)?;
-    let mut stmt = conn.prepare("SELECT id, project_id, path, name, timeline_id, text, doc_group_id, sort_order FROM docs WHERE id = ?1")?;
+    let mut stmt = conn.prepare("SELECT id, project_id, path, name, timeline_id, text, notes, doc_group_id, sort_order FROM docs WHERE id = ?1")?;
     let res = stmt.query_row(rusqlite::params![id], |row| {
         Ok(Doc {
             id: row.get(0)?,
@@ -112,8 +115,9 @@ pub fn get_doc(pool: &DbPool, id: i64) -> anyhow::Result<Option<Doc>> {
             name: row.get(3)?,
             timeline_id: row.get(4)?,
             text: row.get(5)?,
-            doc_group_id: row.get(6)?,
-            sort_order: row.get(7)?,
+            notes: row.get(6)?,
+            doc_group_id: row.get(7)?,
+            sort_order: row.get(8)?,
         })
     }).optional()?;
 
@@ -127,6 +131,24 @@ pub fn update_doc(pool: &DbPool, id: i64, text: &str) -> anyhow::Result<()> {
         "UPDATE docs SET text = ?1 WHERE id = ?2",
         rusqlite::params![text, id],
     ).context("updating doc text")?;
+    Ok(())
+}
+
+/// Update doc notes content
+pub fn update_doc_notes(pool: &DbPool, id: i64, notes: &str) -> anyhow::Result<()> {
+    let conn = get_conn(pool)?;
+    
+    // Ensure notes column exists (silently ignored if already exists)
+    conn.execute(
+        "ALTER TABLE docs ADD COLUMN notes TEXT",
+        [],
+    ).ok();
+    
+    // Update the notes
+    conn.execute(
+        "UPDATE docs SET notes = ?1 WHERE id = ?2",
+        rusqlite::params![notes, id],
+    ).context("updating doc notes")?;
     Ok(())
 }
 
@@ -235,7 +257,7 @@ pub fn create(pool: &DbPool, project_id: i64, path: &str, name: Option<String>, 
     ).context("inserting doc")?;
 
     let id = conn.last_insert_rowid();
-    let mut stmt = conn.prepare("SELECT id, project_id, path, name, timeline_id, text, doc_group_id, sort_order FROM docs WHERE id = ?1")?;
+    let mut stmt = conn.prepare("SELECT id, project_id, path, name, timeline_id, text, notes, doc_group_id, sort_order FROM docs WHERE id = ?1")?;
     let doc = stmt.query_row(rusqlite::params![id], |row| {
         Ok(Doc {
             id: row.get(0)?,
@@ -244,8 +266,9 @@ pub fn create(pool: &DbPool, project_id: i64, path: &str, name: Option<String>, 
             name: row.get(3)?,
             timeline_id: row.get(4)?,
             text: row.get(5)?,
-            doc_group_id: row.get(6)?,
-            sort_order: row.get(7)?,
+            notes: row.get(6)?,
+            doc_group_id: row.get(7)?,
+            sort_order: row.get(8)?,
         })
     }).context("querying created doc")?;
 
@@ -253,6 +276,7 @@ pub fn create(pool: &DbPool, project_id: i64, path: &str, name: Option<String>, 
 }
 
 // Legacy get function for backward compatibility
+#[allow(dead_code)]
 pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<Doc>> {
     get_doc(pool, id)
 }

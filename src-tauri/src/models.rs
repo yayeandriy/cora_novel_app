@@ -34,6 +34,7 @@ pub struct Doc {
     pub name: Option<String>,
     pub timeline_id: Option<i64>,
     pub text: Option<String>,
+    pub notes: Option<String>,
     pub doc_group_id: Option<i64>,
     pub sort_order: Option<i64>,
 }

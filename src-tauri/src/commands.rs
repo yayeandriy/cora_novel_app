@@ -118,6 +118,12 @@ pub async fn doc_update_text(state: State<'_, AppState>, id: i64, text: String) 
 }
 
 #[tauri::command]
+pub async fn doc_update_notes(state: State<'_, AppState>, id: i64, notes: String) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::docs::update_doc_notes(pool, id, &notes).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn doc_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let pool = &state.pool;
     crate::services::docs::delete_doc(pool, id).map_err(|e| e.to_string())

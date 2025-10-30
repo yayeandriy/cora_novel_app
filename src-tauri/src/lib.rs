@@ -34,6 +34,7 @@ pub fn run() {
             commands::doc_create_new,
             commands::doc_create_after,
             commands::doc_update_text,
+            commands::doc_update_notes,
             commands::doc_delete,
             commands::doc_reorder,
             commands::doc_move_to_group,

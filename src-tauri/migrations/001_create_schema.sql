@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS docs (
   name TEXT,
   timeline_id INTEGER,
   text TEXT,
+  notes TEXT,
   doc_group_id INTEGER REFERENCES doc_groups(id) ON DELETE SET NULL,
   sort_order INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,

@@ -292,7 +292,12 @@
           </div>
           
           <div *ngIf="notesExpanded" class="section-content">
-            <textarea class="notes-textarea" placeholder="Add notes..."></textarea>
+            <textarea 
+              *ngIf="selectedDoc"
+              class="notes-textarea" 
+              [(ngModel)]="selectedDoc.notes"
+              (input)="onDocumentNotesChange()"
+              placeholder="Add notes..."></textarea>
           </div>
         </div>
 
