@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -52,7 +52,7 @@ interface Event {
     '(document:keydown)': 'handleKeyDown($event)'
   }
 })
-export class ProjectViewComponent implements OnInit {
+export class ProjectViewComponent implements OnInit, OnDestroy {
   @ViewChild('docTitleInput') docTitleInput?: ElementRef<HTMLInputElement>;
   @ViewChild('editorTextarea') editorTextarea?: ElementRef<HTMLTextAreaElement>;
   @ViewChild('docTree') docTree?: ElementRef<HTMLDivElement>;
@@ -71,6 +71,13 @@ export class ProjectViewComponent implements OnInit {
   
   // Deletion state
   isDeletingItem = false;
+  
+  // Save state
+  lastSaveTime: Date | null = null;
+  showSaveStatus = false;
+  hasUnsavedChanges = false;
+  private saveStatusTimeout: any;
+  private autoSaveTimeout: any;
   
   // Content
   docGroups: DocGroup[] = [];
@@ -101,6 +108,16 @@ export class ProjectViewComponent implements OnInit {
     });
     
     this.loadLayoutState();
+  }
+
+  ngOnDestroy() {
+    // Clean up timers
+    if (this.saveStatusTimeout) {
+      clearTimeout(this.saveStatusTimeout);
+    }
+    if (this.autoSaveTimeout) {
+      clearTimeout(this.autoSaveTimeout);
+    }
   }
 
   async loadProject(preserveSelection: boolean = false) {
@@ -376,6 +393,13 @@ export class ProjectViewComponent implements OnInit {
     if (event.key === 'Escape') {
       event.preventDefault();
       this.focusTree();
+      return;
+    }
+
+    // Cmd+S to save (works in textarea or anywhere)
+    if ((event.key === 'S' || event.key === 's') && event.metaKey) {
+      event.preventDefault();
+      this.saveDoc();
       return;
     }
 
@@ -714,11 +738,38 @@ export class ProjectViewComponent implements OnInit {
       const text = this.selectedDoc.text || '';
       await this.projectService.updateDocText(this.selectedDoc.id, text);
       console.log('Doc saved successfully');
-      // Optional: Show a brief "Saved" indicator
+      
+      // Update save state
+      this.lastSaveTime = new Date();
+      this.showSaveStatus = true;
+      this.hasUnsavedChanges = false;
+      
+      // Hide the save status after 3 seconds
+      if (this.saveStatusTimeout) {
+        clearTimeout(this.saveStatusTimeout);
+      }
+      this.saveStatusTimeout = setTimeout(() => {
+        this.showSaveStatus = false;
+      }, 3000);
     } catch (error) {
       console.error('Failed to save doc:', error);
       alert('Failed to save document: ' + error);
     }
+  }
+
+  onDocumentTextChange() {
+    // Mark as having unsaved changes
+    this.hasUnsavedChanges = true;
+    
+    // Clear existing auto-save timer
+    if (this.autoSaveTimeout) {
+      clearTimeout(this.autoSaveTimeout);
+    }
+    
+    // Set new auto-save timer (save after 2 seconds of inactivity)
+    this.autoSaveTimeout = setTimeout(() => {
+      this.saveDoc();
+    }, 2000);
   }
 
   async createGroup() {
