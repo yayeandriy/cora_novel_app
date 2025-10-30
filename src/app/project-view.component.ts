@@ -1126,7 +1126,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
 
     const draftName = `Draft ${new Date().toLocaleTimeString()}`;
-    const draftContent = this.selectedDoc.text || '';
+    const draftContent = ''; // Start with empty content, not the doc's current text
     
     try {
       console.log('Creating draft for doc:', this.selectedDoc.id);
