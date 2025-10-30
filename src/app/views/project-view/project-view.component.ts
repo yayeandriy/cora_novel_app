@@ -1135,9 +1135,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         const cached = this.getLocalDraftContent(draft.id);
         if (cached !== null) {
           this.draftLocalContent.set(draft.id, cached);
+          draft.content = cached; // reflect into UI model
         } else {
           // Initialize local cache with backend content
-          this.draftLocalContent.set(draft.id, draft.content || '');
+          const backendContent = draft.content || '';
+          this.draftLocalContent.set(draft.id, backendContent);
+          draft.content = backendContent; // reflect into UI model
         }
         // Initialize sync status
         this.draftSyncStatus[draft.id] = 'synced';
@@ -1224,6 +1227,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   onDraftChange(draftId: number, content: string, cursorPosition: number): void {
+    // Track which draft is actively being edited for focus restoration
+    this.focusedDraftId = draftId;
     // Update local memory cache immediately
     this.draftLocalContent.set(draftId, content);
     
@@ -1248,6 +1253,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   onDraftBlur(draftId: number): void {
+    // Clear focused state when leaving the textarea
+    if (this.focusedDraftId === draftId) {
+      this.focusedDraftId = null;
+    }
     // Force immediate sync on blur
     const timeout = this.draftAutoSaveTimeouts.get(draftId);
     if (timeout) {
@@ -1276,14 +1285,16 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       
       await this.projectService.updateDraft(draftId, draft.name, content);
       
-      // Update the draft timestamp from backend
+      // Update the draft metadata from backend without overwriting content being edited
       const updated = await this.projectService.getDraft(draftId);
       if (updated) {
         const index = this.drafts.findIndex(d => d.id === draftId);
         if (index !== -1) {
-          this.drafts[index] = updated;
+          // Preserve current content from UI/local cache; update only metadata
+          this.drafts[index].name = updated.name;
+          this.drafts[index].updated_at = updated.updated_at;
           this.changeDetector.detectChanges();
-          
+
           // Restore focus and cursor position after change detection
           if (wasFocused && cursorPosition !== undefined) {
             const textareas = document.querySelectorAll('.draft-textarea');

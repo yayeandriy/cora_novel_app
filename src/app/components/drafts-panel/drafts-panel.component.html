@@ -23,7 +23,7 @@
   
   <div *ngIf="expanded" class="section-content">
     <div *ngIf="drafts.length === 0" class="empty-text">No drafts</div>
-    <div *ngFor="let draft of drafts; let i = index" class="draft-container">
+  <div *ngFor="let draft of drafts; let i = index; trackBy: trackByDraftId" class="draft-container">
       <div class="draft-header">
         <div class="draft-name">{{ draft.name }}</div>
         <div class="draft-actions">
@@ -47,7 +47,7 @@
       </div>
       <textarea
         class="draft-textarea"
-        [value]="getDraftContent(draft.id)"
+        [(ngModel)]="draft.content"
         (input)="onDraftChange(draft.id, $event)"
         (blur)="onDraftBlur(draft.id)"
         [placeholder]="'Draft: ' + draft.name">

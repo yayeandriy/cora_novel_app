@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 export interface Draft {
   id: number;
@@ -11,7 +12,7 @@ export interface Draft {
 @Component({
   selector: 'app-drafts-panel',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './drafts-panel.component.html',
   styleUrls: ['./drafts-panel.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -54,5 +55,9 @@ export class DraftsPanelComponent {
   deleteDraft(draftId: number, event: MouseEvent) {
     event.stopPropagation();
     this.draftDeleted.emit(draftId);
+  }
+
+  trackByDraftId(index: number, draft: Draft) {
+    return draft.id;
   }
 }
