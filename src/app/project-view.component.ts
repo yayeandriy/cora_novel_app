@@ -121,6 +121,9 @@ export class ProjectViewComponent implements OnInit {
         this.projectService.listDocs(this.projectId)
       ]);
 
+      // Restore tree expansion state before building the tree
+      this.restoreTreeState();
+
       // Build hierarchical structure
       this.docGroups = this.buildDocGroupTree(groups, docs);
 
@@ -222,6 +225,8 @@ export class ProjectViewComponent implements OnInit {
     } else {
       this.expandedGroupIds.delete(group.id);
     }
+    // Save tree state when toggling
+    this.saveTreeState();
   }
 
   selectDoc(doc: Doc) {
@@ -258,6 +263,27 @@ export class ProjectViewComponent implements OnInit {
       groupId: this.selectedGroup?.id || null
     };
     localStorage.setItem(`project_${this.projectId}_selection`, JSON.stringify(selection));
+  }
+
+  private saveTreeState() {
+    const treeState = {
+      projectId: this.projectId,
+      expandedGroupIds: Array.from(this.expandedGroupIds)
+    };
+    localStorage.setItem(`project_${this.projectId}_tree_state`, JSON.stringify(treeState));
+  }
+
+  private restoreTreeState() {
+    try {
+      const saved = localStorage.getItem(`project_${this.projectId}_tree_state`);
+      if (saved) {
+        const treeState = JSON.parse(saved);
+        this.expandedGroupIds = new Set(treeState.expandedGroupIds);
+      }
+    } catch (error) {
+      console.error('Failed to restore tree state:', error);
+      this.expandedGroupIds = new Set();
+    }
   }
 
   private restoreSelection() {
@@ -838,6 +864,8 @@ export class ProjectViewComponent implements OnInit {
     if (group) {
       group.expanded = true;
     }
+    // Save tree state when expanding a group
+    this.saveTreeState();
   }
 
   toggleLeftSidebar() {
