@@ -5,7 +5,7 @@
 .desc{font-size:.8rem;color:#6b7280;margin-top:.125rem;white-space:pre-wrap}
 .edit-form{display:flex;flex-direction:column;gap:.375rem;flex:1}
 .name-input{width:100%;border:1px solid #d1d5db;border-radius:.375rem;padding:.25rem .5rem;font-size:.85rem}
-.desc-input{width:100%;min-height:5rem;border:1px solid #d1d5db;border-radius:.375rem;padding:.5rem;font-size:.8rem;resize:vertical}
+.desc-input{width:100%;min-height:5rem;border:1px solid #d1d5db;border-radius:.375rem;padding:.5rem;font-size:.8rem;font-family:"PT Mono","Courier New",Courier,monospace;resize:vertical}
 .actions{display:flex;justify-content:flex-end;gap:.5rem;margin-top:.375rem}
 .btn{background:#f3f4f6;border:1px solid #e5e7eb;color:#374151;border-radius:.375rem;padding:.25rem .5rem;cursor:pointer}
 .btn:hover{background:#e5e7eb}
