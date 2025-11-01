@@ -65,6 +65,7 @@
       <app-document-editor 
         *ngIf="selectedDoc && !selectedGroup"
         [selectedDoc]="selectedDoc"
+        [allProjectDocs]="getAllDocs()"
         [showSaveStatus]="showSaveStatus"
         [hasUnsavedChanges]="hasUnsavedChanges"
         (docNameChange)="renameDoc($event)"

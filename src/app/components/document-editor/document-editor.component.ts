@@ -26,6 +26,7 @@ export class DocumentEditorComponent {
   @Input() selectedDoc: Doc | null = null;
   @Input() showSaveStatus: boolean = false;
   @Input() hasUnsavedChanges: boolean = false;
+  @Input() allProjectDocs: Doc[] = [];
   
   @Output() docNameChange = new EventEmitter<Doc>();
   @Output() docTextChange = new EventEmitter<void>();
@@ -58,9 +59,49 @@ export class DocumentEditorComponent {
     this.docSaved.emit();
   }
 
-  getWordCount(): number {
+  // Document statistics
+  getDocCharCount(): number {
+    if (!this.selectedDoc?.text) return 0;
+    return this.selectedDoc.text.length;
+  }
+
+  getDocWordCount(): number {
     if (!this.selectedDoc?.text) return 0;
     const words = this.selectedDoc.text.split(/\s+/).filter(w => w.trim().length > 0);
     return words.length;
+  }
+
+  getDocPageCount(): number {
+    // Standard: 1 page = 1800 characters (including spaces)
+    const chars = this.getDocCharCount();
+    return Math.ceil(chars / 1800);
+  }
+
+  // Project statistics
+  getProjectCharCount(): number {
+    return this.allProjectDocs.reduce((total, doc) => {
+      return total + (doc.text?.length || 0);
+    }, 0);
+  }
+
+  getProjectWordCount(): number {
+    return this.allProjectDocs.reduce((total, doc) => {
+      if (!doc.text) return total;
+      const words = doc.text.split(/\s+/).filter(w => w.trim().length > 0);
+      return total + words.length;
+    }, 0);
+  }
+
+  getProjectPageCount(): number {
+    const chars = this.getProjectCharCount();
+    return Math.ceil(chars / 1800);
+  }
+
+  // Format large numbers with K suffix
+  formatNumber(num: number): string {
+    if (num >= 1000) {
+      return Math.floor(num / 1000) + 'K';
+    }
+    return num.toString();
   }
 }

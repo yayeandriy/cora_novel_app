@@ -492,6 +492,20 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     return searchInGroups(this.docGroups);
   }
 
+  getAllDocs(): Doc[] {
+    const allDocs: Doc[] = [];
+    const collectDocs = (groups: DocGroup[]): void => {
+      for (const group of groups) {
+        allDocs.push(...group.docs);
+        if (group.groups) {
+          collectDocs(group.groups);
+        }
+      }
+    };
+    collectDocs(this.docGroups);
+    return allDocs;
+  }
+
   private findGroupById(groups: DocGroup[], id: number): DocGroup | null {
     for (const group of groups) {
       if (group.id === id) return group;

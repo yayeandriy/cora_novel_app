@@ -93,7 +93,39 @@
   background: white;
 }
 
-.word-count {
+.stats-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.25rem;
   font-size: 0.75rem;
   color: #6b7280;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.stat-label {
+  font-weight: 600;
+  color: #374151;
+}
+
+.stat-value {
+  color: #111827;
+  font-weight: 500;
+}
+
+.stat-project {
+  color: #9ca3af;
+  font-size: 0.7rem;
+}
+
+.page-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: #374151;
+  flex-shrink: 0;
 }
