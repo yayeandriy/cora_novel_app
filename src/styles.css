@@ -141,9 +141,18 @@ button, input, select {
   font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* PT Mono for all textareas */
+/* PT Mono for all textareas with wider blue cursor */
 textarea {
   font-family: "PT Mono", "Courier New", Courier, monospace;
+  caret-color: #3b82f6;
+  /* Simulate wider cursor by adding shadow to the caret */
+  caret-shape: bar;
+}
+
+/* Add visual thickness to cursor using letter-spacing trick */
+textarea::selection {
+  background-color: #3b82f6;
+  color: white;
 }
 
 .font-light { font-weight: 300; }
