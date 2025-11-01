@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ProjectService } from '../../services/project.service';
+import { TimelineService } from '../../services/timeline.service';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import { ask } from '@tauri-apps/plugin-dialog';
 import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
@@ -72,6 +73,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   @ViewChild(DocTreeComponent) docTreeComponent?: DocTreeComponent;
   @ViewChild(DocumentEditorComponent) documentEditorComponent?: DocumentEditorComponent;
   @ViewChild(GroupViewComponent) groupViewComponent?: GroupViewComponent;
+  @ViewChild(ProjectTimelineComponent) projectTimelineComponent?: ProjectTimelineComponent;
   
   projectId: number = 0;
   projectName: string = '';
@@ -132,6 +134,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private projectService: ProjectService,
+    private timelineService: TimelineService,
     private changeDetector: ChangeDetectorRef
   ) {}
 
@@ -167,9 +170,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       const project = await this.projectService.getProject(this.projectId);
       if (project) {
         this.projectName = project.name;
-        // Timeline dates are loaded by the timeline component itself
-        // this.timelineStart = project.timeline_start ?? null;
-        // this.timelineEnd = project.timeline_end ?? null;
+      }
+      
+      // Load project timeline for parent component (needed for doc timeline click calculations)
+      const projectTimeline = await this.timelineService.getTimelineByEntity('project', this.projectId);
+      if (projectTimeline) {
+        this.timelineStart = projectTimeline.start_date ?? null;
+        this.timelineEnd = projectTimeline.end_date ?? null;
       }
 
       // Load doc groups and docs from backend
@@ -1417,6 +1424,72 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.timelineStart = timeline.start_date ?? null;
     this.timelineEnd = timeline.end_date ?? null;
     this.changeDetector.markForCheck();
+  }
+
+  async onDocTimelineClick(event: { docId: number; clickPosition: number }) {
+    if (!this.timelineStart || !this.timelineEnd) {
+      return;
+    }
+
+    // Calculate the date from click position
+    const startMs = new Date(this.timelineStart).getTime();
+    const endMs = new Date(this.timelineEnd).getTime();
+    const duration = endMs - startMs;
+    const clickMs = startMs + (duration * event.clickPosition / 100);
+    const clickedDate = new Date(clickMs);
+    const clickedDateStr = clickedDate.toISOString().split('T')[0];
+
+    try {
+      // Get existing timeline if any
+      const existingTimeline = await this.timelineService.getTimelineByEntity('doc', event.docId);
+
+      let startDate: string | null;
+      let endDate: string | null;
+
+      if (!existingTimeline || !existingTimeline.start_date || !existingTimeline.end_date) {
+        // First click: set both start and end to the same date (creates a point)
+        startDate = clickedDateStr;
+        endDate = clickedDateStr;
+      } else {
+        // Timeline exists: extend it based on click position
+        const existingStartMs = new Date(existingTimeline.start_date).getTime();
+        const existingEndMs = new Date(existingTimeline.end_date).getTime();
+        
+        if (clickMs < existingStartMs) {
+          // Click is before start: move start date
+          startDate = clickedDateStr;
+          endDate = existingTimeline.end_date;
+        } else if (clickMs > existingEndMs) {
+          // Click is after end: move end date
+          startDate = existingTimeline.start_date;
+          endDate = clickedDateStr;
+        } else {
+          // Click is in the middle: do nothing
+          return;
+        }
+      }
+
+      // Create or update timeline
+      await this.timelineService.upsertTimeline('doc', event.docId, startDate, endDate);
+
+      // Reload timelines in the timeline component
+      if (this.projectTimelineComponent) {
+        await this.projectTimelineComponent.loadDocTimelines();
+        this.changeDetector.markForCheck();
+      }
+    } catch (error) {
+      console.error('Error setting doc timeline:', error);
+      await confirm(`Failed to set timeline: ${error}`, {
+        title: 'Error',
+        kind: 'error',
+        okLabel: 'OK'
+      });
+    }
+  }
+
+  async onDocIntervalClick(event: { docId: number }) {
+    // Clicking on existing interval does nothing - prevents accidental changes
+    // User can extend the timeline by clicking before/after the interval
   }
 
   getWordCount(): number {

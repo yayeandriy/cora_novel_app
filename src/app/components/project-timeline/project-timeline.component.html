@@ -25,7 +25,7 @@
     <input #inlineStartInput type="date" class="inline-date-input" [value]="formattedStartDate" (change)="onStartDateChange($any($event.target).value)" />
   }
 
-    <div class="timeline-track">
+    <div class="timeline-track" (click)="onTimelineClick($event)">
       <div class="ticks">
         @for (tick of getTicks().slice(1); track tick.position + tick.label) {
           <div class="tick" [style.left.%]="tick.position" [class.major]="tick.type === 'year' || tick.type === 'month'" [class.year]="tick.type === 'year'"
@@ -33,6 +33,28 @@
           >
             <div class="tick-line"></div>
             <div class="tick-label">{{ tick.label }}</div>
+          </div>
+        }
+      </div>
+      
+      <!-- Doc timeline intervals -->
+      <div class="doc-timelines">
+        @for (docTimeline of getDocTimelineIntervals(); track docTimeline.docId) {
+          <div class="doc-timeline-interval" 
+               [style.left.%]="docTimeline.startPosition" 
+               [style.width.%]="docTimeline.width"
+               [class.selected]="docTimeline.docId === selectedDocId"
+               [title]="docTimeline.docName"
+               (click)="onDocIntervalClick($event, docTimeline.docId)">
+            <!-- Draggable handles on edges - only for selected doc -->
+            @if (docTimeline.docId === selectedDocId) {
+              <div class="interval-handle interval-handle-start" 
+                   (mousedown)="onHandleDragStart($event, docTimeline.docId, 'start')"
+                   title="Drag to adjust start date"></div>
+              <div class="interval-handle interval-handle-end" 
+                   (mousedown)="onHandleDragStart($event, docTimeline.docId, 'end')"
+                   title="Drag to adjust end date"></div>
+            }
           </div>
         }
       </div>

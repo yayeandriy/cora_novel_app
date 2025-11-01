@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, Change
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TimelineService } from '../../services/timeline.service';
+import { ProjectService } from '../../services/project.service';
 import type { Timeline } from '../../shared/models';
 
 interface TimelineTick {
@@ -25,15 +26,27 @@ export class ProjectTimelineComponent implements OnInit, OnChanges {
   @Input() startDate: string | null = null;
   @Input() endDate: string | null = null;
   @Input() editable: boolean = true;
+  @Input() selectedDocId?: number;
 
   @Output() startDateChange = new EventEmitter<string>();
   @Output() endDateChange = new EventEmitter<string>();
   @Output() timelineUpdated = new EventEmitter<Timeline>();
+  @Output() docTimelineClick = new EventEmitter<{ docId: number, clickPosition: number }>();
+  @Output() docIntervalClick = new EventEmitter<{ docId: number }>();
 
   private timeline: Timeline | null = null;
+  docTimelines: Array<{ docId: number, docName: string, timeline: Timeline }> = [];
+  
+  // Drag state for resizing intervals
+  private dragState: {
+    docId: number;
+    edge: 'start' | 'end';
+    trackElement: HTMLElement | null;
+  } | null = null;
 
   constructor(
     private timelineService: TimelineService,
+    private projectService: ProjectService,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -49,12 +62,14 @@ export class ProjectTimelineComponent implements OnInit, OnChanges {
     // Don't block on initialization - load timeline asynchronously
     if (this.projectId) {
       this.loadTimeline();
+      this.loadDocTimelines();
     }
   }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['projectId'] && !changes['projectId'].firstChange && this.projectId) {
       this.loadTimeline();
+      this.loadDocTimelines();
     }
   }
 
@@ -94,6 +109,34 @@ export class ProjectTimelineComponent implements OnInit, OnChanges {
         console.error('Error saving timeline:', error);
         // You might want to show a user-facing error here
       });
+  }
+
+  async loadDocTimelines(): Promise<void> {
+    if (!this.projectId) return;
+    
+    try {
+      // Get all docs for this project
+      const docs = await this.projectService.listDocs(this.projectId);
+      
+      // Load timelines for each doc
+      const docTimelinePromises = docs.map(async (doc) => {
+        const timeline = await this.timelineService.getTimelineByEntity('doc', doc.id);
+        if (timeline && timeline.start_date && timeline.end_date) {
+          return {
+            docId: doc.id,
+            docName: doc.name || 'Untitled',
+            timeline
+          };
+        }
+        return null;
+      });
+      
+      const results = await Promise.all(docTimelinePromises);
+      this.docTimelines = results.filter(r => r !== null) as Array<{ docId: number, docName: string, timeline: Timeline }>;
+      this.cdr.markForCheck();
+    } catch (error) {
+      console.error('Error loading doc timelines:', error);
+    }
   }
 
   openStartDatePicker() {
@@ -450,4 +493,172 @@ export class ProjectTimelineComponent implements OnInit, OnChanges {
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
   }
+
+  getDocTimelineIntervals(): Array<{ docId: number, docName: string, startPosition: number, width: number }> {
+    if (!this.startDate || !this.endDate) {
+      return [];
+    }
+
+    const start = this.parseDate(this.startDate);
+    const end = this.parseDate(this.endDate);
+    if (!start || !end) {
+      return [];
+    }
+
+    const totalMs = end.getTime() - start.getTime();
+
+    return this.docTimelines.map(dt => {
+      const docStart = this.parseDate(dt.timeline.start_date ?? null);
+      const docEnd = this.parseDate(dt.timeline.end_date ?? null);
+      
+      if (!docStart || !docEnd) {
+        return null;
+      }
+
+      const startPosition = Math.max(0, ((docStart.getTime() - start.getTime()) / totalMs) * 100);
+      const endPosition = Math.min(100, ((docEnd.getTime() - start.getTime()) / totalMs) * 100);
+      const width = endPosition - startPosition;
+
+      return {
+        docId: dt.docId,
+        docName: dt.docName,
+        startPosition,
+        width
+      };
+    }).filter(interval => interval !== null) as Array<{ docId: number, docName: string, startPosition: number, width: number }>;
+  }
+
+  onTimelineClick(event: MouseEvent): void {
+    if (!this.editable || !this.selectedDocId || !this.startDate || !this.endDate) {
+      return;
+    }
+
+    // Get the click position as a percentage
+    const track = event.currentTarget as HTMLElement;
+    const rect = track.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const clickPosition = (clickX / rect.width) * 100;
+    
+    // Emit event for parent to handle
+    this.docTimelineClick.emit({ docId: this.selectedDocId, clickPosition });
+  }
+
+  onDocIntervalClick(event: MouseEvent, docId: number): void {
+    event.stopPropagation(); // Prevent timeline click
+    // Emit event for parent to handle editing/clearing
+    this.docIntervalClick.emit({ docId });
+  }
+
+  onHandleDragStart(event: MouseEvent, docId: number, edge: 'start' | 'end'): void {
+    event.stopPropagation(); // Prevent timeline click and interval click
+    event.preventDefault(); // Prevent text selection
+    
+    if (!this.editable) return;
+    
+    // Only allow dragging the selected doc's timeline
+    if (docId !== this.selectedDocId) return;
+    
+    // Find the timeline track element
+    const trackElement = (event.target as HTMLElement).closest('.timeline-track') as HTMLElement;
+    if (!trackElement) return;
+    
+    // Set drag state
+    this.dragState = { docId, edge, trackElement };
+    
+    // Add global mouse listeners
+    document.addEventListener('mousemove', this.onHandleDrag);
+    document.addEventListener('mouseup', this.onHandleDragEnd);
+    
+    // Add visual feedback class
+    document.body.style.cursor = 'ew-resize';
+  }
+
+  private onHandleDrag = (event: MouseEvent): void => {
+    if (!this.dragState || !this.startDate || !this.endDate || !this.dragState.trackElement) return;
+    
+    const { trackElement, docId, edge } = this.dragState;
+    const rect = trackElement.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const clickPosition = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
+    
+    // Calculate the date from position
+    const startMs = new Date(this.startDate).getTime();
+    const endMs = new Date(this.endDate).getTime();
+    const duration = endMs - startMs;
+    const clickMs = startMs + (duration * clickPosition / 100);
+    const newDate = new Date(clickMs).toISOString().split('T')[0];
+    
+    // Find the doc timeline
+    const docTimeline = this.docTimelines.find(dt => dt.docId === docId);
+    if (!docTimeline) return;
+    
+    const currentStart = docTimeline.timeline.start_date;
+    const currentEnd = docTimeline.timeline.end_date;
+    
+    if (!currentStart || !currentEnd) return;
+    
+    // Update the appropriate edge, ensuring start <= end
+    let newStartDate = currentStart;
+    let newEndDate = currentEnd;
+    
+    if (edge === 'start') {
+      newStartDate = newDate;
+      // Ensure start doesn't go past end
+      if (new Date(newStartDate) > new Date(currentEnd)) {
+        newStartDate = currentEnd;
+      }
+    } else {
+      newEndDate = newDate;
+      // Ensure end doesn't go before start
+      if (new Date(newEndDate) < new Date(currentStart)) {
+        newEndDate = currentStart;
+      }
+    }
+    
+    // Update the timeline immediately for visual feedback
+    // Create a new timeline object to trigger change detection
+    docTimeline.timeline = {
+      ...docTimeline.timeline,
+      start_date: newStartDate,
+      end_date: newEndDate
+    };
+    
+    // Force immediate change detection for smooth dragging
+    this.cdr.detectChanges();
+  }
+
+  private onHandleDragEnd = async (event: MouseEvent): Promise<void> => {
+    if (!this.dragState) return;
+    
+    const { docId } = this.dragState;
+    
+    // Clean up
+    document.removeEventListener('mousemove', this.onHandleDrag);
+    document.removeEventListener('mouseup', this.onHandleDragEnd);
+    document.body.style.cursor = '';
+    
+    // Find the doc timeline
+    const docTimeline = this.docTimelines.find(dt => dt.docId === docId);
+    if (docTimeline && docTimeline.timeline.start_date && docTimeline.timeline.end_date) {
+      try {
+        // Save the updated timeline to backend
+        await this.timelineService.upsertTimeline(
+          'doc',
+          docId,
+          docTimeline.timeline.start_date,
+          docTimeline.timeline.end_date
+        );
+        
+        // Reload to get fresh data
+        await this.loadDocTimelines();
+      } catch (error) {
+        console.error('Error updating doc timeline:', error);
+        // Reload to revert on error
+        await this.loadDocTimelines();
+      }
+    }
+    
+    this.dragState = null;
+  }
 }
+

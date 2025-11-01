@@ -162,3 +162,67 @@
   padding: 0;
   border: none;
 }
+
+/* Document timeline intervals */
+.doc-timelines {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 12px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.doc-timeline-interval {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: rgba(17, 24, 39, 0.25);
+  border-radius: 2px;
+  cursor: default;
+  pointer-events: auto;
+  transition: all 150ms;
+}
+
+.doc-timeline-interval:hover {
+  background: rgba(17, 24, 39, 0.35);
+}
+
+.doc-timeline-interval.selected {
+  background: rgba(59, 130, 246, 0.8);
+  cursor: pointer;
+}
+
+.doc-timeline-interval.selected:hover {
+  background: rgba(59, 130, 246, 1);
+  border: none;
+}
+
+/* Draggable handles on interval edges */
+.interval-handle {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 5;
+}
+
+.interval-handle:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.interval-handle-start {
+  left: 0;
+  border-left: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.interval-handle-end {
+  right: 0;
+  border-right: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.doc-timeline-interval:hover .interval-handle {
+  background: rgba(255, 255, 255, 0.2);
+}

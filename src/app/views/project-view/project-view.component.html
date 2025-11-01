@@ -18,7 +18,10 @@
         [projectName]="projectName"
         [startDate]="timelineStart"
         [endDate]="timelineEnd"
-        (timelineUpdated)="onTimelineUpdated($event)">
+        [selectedDocId]="selectedDoc?.id"
+        (timelineUpdated)="onTimelineUpdated($event)"
+        (docTimelineClick)="onDocTimelineClick($event)"
+        (docIntervalClick)="onDocIntervalClick($event)">
       </app-project-timeline>
     </div>
     
