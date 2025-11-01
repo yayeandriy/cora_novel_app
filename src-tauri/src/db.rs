@@ -45,6 +45,17 @@ pub fn init_pool() -> anyhow::Result<DbPool> {
         conn.execute_batch(include_str!("../migrations/005_add_event_start_end.sql")).context("running migrations 005")?;
     }
 
+    // Conditionally run 006: create timelines table if missing
+    let table_exists: bool = conn.query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='timelines'",
+        [],
+        |row| row.get(0)
+    ).unwrap_or(0) > 0;
+    
+    if !table_exists {
+        conn.execute_batch(include_str!("../migrations/006_add_timelines.sql")).context("running migrations 006")?;
+    }
+
     Ok(pool)
 }
 

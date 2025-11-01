@@ -81,3 +81,23 @@ export interface DraftUpdate {
   name?: string | null;
   content?: string | null;
 }
+
+export interface Timeline {
+  id: number;
+  entity_type: 'project' | 'doc' | 'folder' | 'event';
+  entity_id: number;
+  start_date?: string | null;
+  end_date?: string | null;
+}
+
+export interface TimelineCreate {
+  entity_type: 'project' | 'doc' | 'folder' | 'event';
+  entity_id: number;
+  start_date?: string | null;
+  end_date?: string | null;
+}
+
+export interface TimelineUpdate {
+  start_date?: string | null;
+  end_date?: string | null;
+}

@@ -1,5 +1,5 @@
 use crate::db::DbPool;
-use crate::models::{ProjectCreate, Project, Character, Event, DraftCreate, DraftUpdate, Draft};
+use crate::models::{ProjectCreate, Project, Character, Event, DraftCreate, DraftUpdate, Draft, Timeline, TimelineCreate, TimelineUpdate};
 use crate::services::projects as project_service;
 use tauri::State;
 
@@ -286,4 +286,47 @@ pub async fn draft_restore(state: State<'_, AppState>, draft_id: i64) -> Result<
 pub async fn draft_delete_all(state: State<'_, AppState>, doc_id: i64) -> Result<(), String> {
     let pool = &state.pool;
     crate::services::drafts::delete_all_drafts_for_doc(pool, doc_id).map_err(|e| e.to_string())
+}
+
+// Timeline Commands
+#[tauri::command]
+pub async fn timeline_create(state: State<'_, AppState>, payload: TimelineCreate) -> Result<Timeline, String> {
+    let pool = &state.pool;
+    crate::services::timelines::create(pool, payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn timeline_get(state: State<'_, AppState>, id: i64) -> Result<Option<Timeline>, String> {
+    let pool = &state.pool;
+    crate::services::timelines::get(pool, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn timeline_get_by_entity(state: State<'_, AppState>, entity_type: String, entity_id: i64) -> Result<Option<Timeline>, String> {
+    let pool = &state.pool;
+    crate::services::timelines::get_by_entity(pool, &entity_type, entity_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn timeline_list(state: State<'_, AppState>) -> Result<Vec<Timeline>, String> {
+    let pool = &state.pool;
+    crate::services::timelines::list(pool).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn timeline_update(state: State<'_, AppState>, id: i64, payload: TimelineUpdate) -> Result<Timeline, String> {
+    let pool = &state.pool;
+    crate::services::timelines::update(pool, id, payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn timeline_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::timelines::delete(pool, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn timeline_delete_by_entity(state: State<'_, AppState>, entity_type: String, entity_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::timelines::delete_by_entity(pool, &entity_type, entity_id).map_err(|e| e.to_string())
 }

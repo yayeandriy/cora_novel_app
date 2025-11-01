@@ -9,6 +9,8 @@ import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
 import { DocumentEditorComponent } from '../../components/document-editor/document-editor.component';
 import { GroupViewComponent } from '../../components/group-view/group-view.component';
 import { RightSidebarComponent } from '../../components/right-sidebar/right-sidebar.component';
+import { ProjectTimelineComponent } from '../../components/project-timeline/project-timeline.component';
+import type { Timeline } from '../../shared/models';
 
 interface DocGroup {
   id: number;
@@ -56,7 +58,8 @@ interface Event {
     DocTreeComponent,
     DocumentEditorComponent,
     GroupViewComponent,
-    RightSidebarComponent
+    RightSidebarComponent,
+    ProjectTimelineComponent
   ],
   templateUrl: './project-view.component.html',
   styleUrls: ['./project-view.component.css'],
@@ -72,6 +75,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   
   projectId: number = 0;
   projectName: string = '';
+  timelineStart: string | null = null;
+  timelineEnd: string | null = null;
   
   // Layout state
   leftCollapsed = false;
@@ -162,6 +167,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       const project = await this.projectService.getProject(this.projectId);
       if (project) {
         this.projectName = project.name;
+        // Timeline dates are loaded by the timeline component itself
+        // this.timelineStart = project.timeline_start ?? null;
+        // this.timelineEnd = project.timeline_end ?? null;
       }
 
       // Load doc groups and docs from backend
@@ -1402,6 +1410,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   goBack() {
     this.router.navigate(['/']);
+  }
+
+  onTimelineUpdated(timeline: Timeline) {
+    this.timelineStart = timeline.start_date ?? null;
+    this.timelineEnd = timeline.end_date ?? null;
+    this.changeDetector.markForCheck();
   }
 
   getWordCount(): number {

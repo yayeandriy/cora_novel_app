@@ -3,7 +3,7 @@ module.exports = {
   testEnvironment: 'jsdom',
   testMatch: ['<rootDir>/src/**/*.spec.ts', '<rootDir>/src/**/*.test.ts'],
   testPathIgnorePatterns: ['/node_modules/', '/e2e/'],
-  transformIgnorePatterns: ['/node_modules/(?!(@angular|@tauri|rxjs)/)'],
+  transformIgnorePatterns: ['node_modules/(?!(@angular|@tauri-apps|rxjs)/)'],
   moduleFileExtensions: ['ts', 'js', 'mjs', 'json'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
@@ -23,6 +23,17 @@ module.exports = {
           experimentalDecorators: true,
           emitDecoratorMetadata: true,
           lib: ['ES2020', 'dom']
+        }
+      }
+    ],
+    '^.+\\.mjs$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          module: 'esnext',
+          target: 'ES2020',
+          esModuleInterop: true,
+          allowSyntheticDefaultImports: true
         }
       }
     ]

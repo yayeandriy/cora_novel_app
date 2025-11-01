@@ -1,0 +1,164 @@
+.project-timeline {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+}
+
+.project-title-section {
+  display: none; /* Project name is now in the header */
+}
+
+.project-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.project-desc {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.timeline-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.timeline-button {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  color: #374151;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 150ms;
+  white-space: nowrap;
+}
+
+.timeline-button:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.timeline-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.timeline-button .icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.inline-date-input {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+  background: white;
+  color: #111827;
+  font-size: 0.875rem;
+}
+
+.timeline-track {
+  flex: 1;
+  position: relative;
+  height: 60px;
+}
+
+.timeline-track::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #d1d5db;
+  border-radius: 2px;
+  transform: translateY(-50%);
+}
+
+.ticks {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tick-line {
+  width: 1px;
+  height: 10px;
+  background: #d1d5db;
+}
+
+.tick.major .tick-line {
+  height: 15px;
+  background: #9ca3af;
+}
+
+.tick.year .tick-line {
+  width: 2px;
+  height: 15px;
+  background: #6b7280;
+}
+
+.tick-label {
+  font-size: 0.5rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+  white-space: nowrap;
+}
+
+.tick.major .tick-label {
+  font-weight: 500;
+  padding-top: 0.5rem;
+  color: #374151;
+  font-size: 0.57rem;
+}
+
+.tick.year .tick-label {
+  font-weight: 700;
+  color: #111827;
+}
+
+.timeline-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+/* Hidden inputs used to trigger native date pickers programmatically.
+   They are positioned off-screen but remain focusable/clickable.
+   This ensures the browser opens the date picker UI even though the input is not visible. */
+.hidden-date-input {
+  /* Small off‑screen input that remains focusable/clickable. */
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  pointer-events: auto;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}

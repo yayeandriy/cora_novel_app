@@ -10,23 +10,16 @@ CREATE TABLE IF NOT EXISTS projects (
   timeline_end TEXT
 );
 
-CREATE TABLE IF NOT EXISTS timelines (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  project_id INTEGER NOT NULL,
-  start_date TEXT,
-  end_date TEXT,
-  FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
-);
+-- NOTE: timelines table moved to 006_add_timelines.sql with polymorphic entity design
 
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   project_id INTEGER NOT NULL,
-  timeline_id INTEGER,
+  timeline_id INTEGER, -- Deprecated: timeline now uses polymorphic entity design (see 006)
   name TEXT,
   desc TEXT,
   date TEXT,
-  FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
-  FOREIGN KEY(timeline_id) REFERENCES timelines(id) ON DELETE SET NULL
+  FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS characters (
@@ -42,13 +35,12 @@ CREATE TABLE IF NOT EXISTS docs (
   project_id INTEGER NOT NULL,
   path TEXT NOT NULL,
   name TEXT,
-  timeline_id INTEGER,
+  timeline_id INTEGER, -- Deprecated: timeline now uses polymorphic entity design (see 006)
   text TEXT,
   notes TEXT,
   doc_group_id INTEGER REFERENCES doc_groups(id) ON DELETE SET NULL,
   sort_order INTEGER NOT NULL DEFAULT 0,
-  FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
-  FOREIGN KEY(timeline_id) REFERENCES timelines(id)
+  FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS doc_characters (

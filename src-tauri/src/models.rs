@@ -81,3 +81,26 @@ pub struct DraftUpdate {
     pub name: Option<String>,
     pub content: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Timeline {
+    pub id: i64,
+    pub entity_type: String, // 'project', 'doc', 'folder', 'event'
+    pub entity_id: i64,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimelineCreate {
+    pub entity_type: String,
+    pub entity_id: i64,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimelineUpdate {
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+}

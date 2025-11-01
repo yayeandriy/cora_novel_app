@@ -7,6 +7,7 @@ mod services {
     pub mod events;
     pub mod doc_groups;
     pub mod drafts;
+    pub mod timelines;
 }
 mod commands;
 
@@ -67,6 +68,13 @@ pub fn run() {
             commands::draft_delete,
             commands::draft_restore,
             commands::draft_delete_all,
+            commands::timeline_create,
+            commands::timeline_get,
+            commands::timeline_get_by_entity,
+            commands::timeline_list,
+            commands::timeline_update,
+            commands::timeline_delete,
+            commands::timeline_delete_by_entity,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

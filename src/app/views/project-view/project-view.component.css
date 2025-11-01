@@ -26,6 +26,20 @@
   z-index: 100;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+}
+
+.timeline-section {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  transition: margin-left 200ms ease-in-out;
+}
+
 .back-button {
   display: flex;
   align-items: center;
