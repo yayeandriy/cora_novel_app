@@ -74,7 +74,8 @@
         *ngIf="selectedGroup && !selectedDoc"
         [selectedGroup]="selectedGroup"
         (groupNameChange)="renameGroup($event)"
-        (createDocRequested)="createDoc()">
+        (createDocRequested)="createDoc()"
+        (focusTreeRequested)="focusTree()">
       </app-group-view>
       
       <!-- Empty state -->

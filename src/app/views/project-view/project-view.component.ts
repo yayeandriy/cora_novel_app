@@ -507,21 +507,22 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
 
     // Cmd+S to save (works in textarea or anywhere)
-    if ((event.key === 'S' || event.key === 's') && event.metaKey) {
+    // Use event.code to support different keyboard layouts
+    if ((event.key === 'S' || event.key === 's' || event.code === 'KeyS') && event.metaKey) {
       event.preventDefault();
       this.saveDoc();
       return;
     }
 
-    // Cmd+Shift+N to create new folder (check both cases)
-    if ((event.key === 'N' || event.key === 'n') && event.metaKey && event.shiftKey) {
+    // Cmd+Shift+N to create new folder (check both key and code for layout support)
+    if ((event.key === 'N' || event.key === 'n' || event.code === 'KeyN') && event.metaKey && event.shiftKey) {
       event.preventDefault();
       this.createGroup();
       return;
     }
 
     // Cmd+N to create new document (without shift)
-    if ((event.key === 'N' || event.key === 'n') && event.metaKey && !event.shiftKey) {
+    if ((event.key === 'N' || event.key === 'n' || event.code === 'KeyN') && event.metaKey && !event.shiftKey) {
       event.preventDefault();
       if (this.currentGroup) {
         this.createDocInGroup(this.currentGroup);
@@ -741,9 +742,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         // If a folder is selected, toggle expansion
         this.toggleGroup(this.selectedGroup);
       }
-    } else if (event.key === 'R' && event.shiftKey) {
+    } else if ((event.key === 'R' || event.code === 'KeyR') && event.shiftKey) {
       event.preventDefault();
-      // Shift+R: Focus the name input for renaming
+      // Shift+R: Focus the name input for renaming (works with different keyboard layouts)
       if (this.selectedDoc) {
         // Focus the title input in the document editor (rename)
         setTimeout(() => {

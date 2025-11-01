@@ -26,6 +26,7 @@ export class GroupViewComponent {
   
   @Output() groupNameChange = new EventEmitter<DocGroup>();
   @Output() createDocRequested = new EventEmitter<void>();
+  @Output() focusTreeRequested = new EventEmitter<void>();
   
   @ViewChild('groupNameInput') groupNameInput?: ElementRef<HTMLInputElement>;
 
@@ -51,5 +52,7 @@ export class GroupViewComponent {
     if (this.selectedGroup) {
       this.groupNameChange.emit(this.selectedGroup);
     }
+    // Request focus to be switched back to tree
+    this.focusTreeRequested.emit();
   }
 }
