@@ -25,13 +25,15 @@
   <div class="sidebar-content">
     <div class="doc-tree" #docTree tabindex="0" (keydown)="handleTreeKeyDown($event)">
       <!-- Empty state -->
-      <div *ngIf="docGroups.length === 0" class="empty-state">
-        <p class="empty-message">No folders yet</p>
-        <p class="empty-hint">Create your first folder</p>
-      </div>
+      @if (docGroups.length === 0) {
+        <div class="empty-state">
+          <p class="empty-message">No folders yet</p>
+          <p class="empty-hint">Create your first folder</p>
+        </div>
+      }
       
       <!-- Tree -->
-      <ng-container *ngFor="let group of docGroups; let gi = index">
+      @for (group of docGroups; let gi = $index; track group.id) {
         <div class="tree-item" [class.selected]="selectedGroup?.id === group.id">
           <div class="tree-item-header" (click)="selectGroup(group, $event)">
             <!-- <svg xmlns="http://www.w3.org/2000/svg" 
@@ -61,9 +63,10 @@
             </button>
           </div>
           
-          <div *ngIf="group.expanded" class="tree-children">
+          @if (group.expanded) {
+            <div class="tree-children">
             <!-- Nested groups -->
-            <ng-container *ngFor="let subGroup of group.groups; let si = index">
+            @for (subGroup of group.groups; let si = $index; track subGroup.id) {
               <div class="tree-item nested" [class.selected]="selectedGroup?.id === subGroup.id">
                 <div class="tree-item-header" (click)="selectGroup(subGroup, $event)">
                   <svg xmlns="http://www.w3.org/2000/svg" 
@@ -93,34 +96,41 @@
                   </button>
                 </div>
                 
-                <div *ngIf="subGroup.expanded" class="tree-children">
+                @if (subGroup.expanded) {
+                  <div class="tree-children">
                   <!-- Documents -->
-                  <div *ngFor="let doc of subGroup.docs; let di = index" 
-                       class="tree-item doc nested-2" 
-                       [class.selected]="selectedDoc?.id === doc.id"
-                       (click)="selectDoc(doc)">
-                    <div class="tree-item-header">
-                      <span class="doc-index">{{ si + 1 }}.{{ di + 1 }}</span>
-                      <span class="tree-item-name">{{ doc.name }}</span>
+                  @for (doc of subGroup.docs; let di = $index; track doc.id) {
+                    <div 
+                      class="tree-item doc nested-2" 
+                      [class.selected]="selectedDoc?.id === doc.id"
+                      (click)="selectDoc(doc)">
+                      <div class="tree-item-header">
+                        <span class="doc-index">{{ si + 1 }}.{{ di + 1 }}</span>
+                        <span class="tree-item-name">{{ doc.name }}</span>
+                      </div>
                     </div>
-                  </div>
+                  }
                 </div>
+              }
               </div>
-            </ng-container>
+            }
             
             <!-- Direct docs in group -->
-            <div *ngFor="let doc of group.docs; let di = index" 
-                 class="tree-item doc nested" 
-                 [class.selected]="selectedDoc?.id === doc.id"
-                 (click)="selectDoc(doc)">
-              <div class="tree-item-header">
-                <span class="doc-index">{{ gi + 1 }}.{{ di + 1 }}</span>
-                <span class="tree-item-name">{{ doc.name }}</span>
+            @for (doc of group.docs; let di = $index; track doc.id) {
+              <div 
+                class="tree-item doc nested" 
+                [class.selected]="selectedDoc?.id === doc.id"
+                (click)="selectDoc(doc)">
+                <div class="tree-item-header">
+                  <span class="doc-index">{{ gi + 1 }}.{{ di + 1 }}</span>
+                  <span class="tree-item-name">{{ doc.name }}</span>
+                </div>
               </div>
-            </div>
+            }
           </div>
+        }
         </div>
-      </ng-container>
+      }
     </div>
   </div>
   

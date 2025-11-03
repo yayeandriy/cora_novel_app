@@ -13,16 +13,19 @@
     </button>
   </div>
 
-  <div *ngIf="expanded" class="section-content">
-    <app-character-card
-      *ngFor="let char of characters"
-      [character]="char"
-      [checked]="docCharacterIds?.has(char.id) || false"
-      [canToggle]="!!selectedDoc"
-      [editing]="editingCharacterId === char.id"
-      (toggle)="toggle.emit({ characterId: $event.id, checked: $event.checked })"
-      (update)="update.emit($event)"
-      (remove)="remove.emit($event)">
-    </app-character-card>
-  </div>
+  @if (expanded) {
+    <div class="section-content">
+      @for (char of characters; track char.id) {
+        <app-character-card
+          [character]="char"
+          [checked]="docCharacterIds?.has(char.id) || false"
+          [canToggle]="!!selectedDoc"
+          [editing]="editingCharacterId === char.id"
+          (toggle)="toggle.emit({ characterId: $event.id, checked: $event.checked })"
+          (update)="update.emit($event)"
+          (remove)="remove.emit($event)">
+        </app-character-card>
+      }
+    </div>
+  }
 </div>

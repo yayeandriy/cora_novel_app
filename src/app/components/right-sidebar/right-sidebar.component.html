@@ -41,14 +41,17 @@
         </div>
       </div>
       
-      <div *ngIf="notesExpanded" class="section-content">
-        <textarea 
-          *ngIf="selectedDoc"
-          class="notes-textarea" 
-          [(ngModel)]="selectedDoc.notes"
-          (input)="onNotesChange()"
-          placeholder="Add notes..."></textarea>
-      </div>
+      @if (notesExpanded) {
+        <div class="section-content">
+          @if (selectedDoc) {
+            <textarea 
+              class="notes-textarea" 
+              [(ngModel)]="selectedDoc.notes"
+              (input)="onNotesChange()"
+              placeholder="Add notes..."></textarea>
+          }
+        </div>
+      }
     </div>
 
     <!-- Drafts Section -->

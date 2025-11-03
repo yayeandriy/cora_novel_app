@@ -44,8 +44,8 @@
   <!-- Main content area -->
   <div class="content-wrapper">
     <!-- Left Sidebar -->
+    @if (!leftCollapsed) {
     <app-doc-tree 
-      *ngIf="!leftCollapsed"
       [docGroups]="docGroups"
       [selectedDoc]="selectedDoc"
       [selectedGroup]="selectedGroup"
@@ -61,12 +61,13 @@
       (treeKeyDown)="handleTreeKeyDown($event)"
       (widthChanged)="startResizeLeft($event)">
     </app-doc-tree>
+    }
 
     <!-- Editor -->
     <main class="editor-area">
       <!-- Document editor -->
+      @if (selectedDoc && !selectedGroup) {
       <app-document-editor 
-        *ngIf="selectedDoc && !selectedGroup"
         [selectedDoc]="selectedDoc"
         [allProjectDocs]="getAllDocs()"
         [showSaveStatus]="showSaveStatus"
@@ -75,29 +76,33 @@
         (docTextChange)="onDocumentTextChange()"
         (docSaved)="saveDoc()">
       </app-document-editor>
+      }
 
       <!-- Group view -->
+      @if (selectedGroup && !selectedDoc) {
       <app-group-view 
-        *ngIf="selectedGroup && !selectedDoc"
         [selectedGroup]="selectedGroup"
         (groupNameChange)="renameGroup($event)"
         (createDocRequested)="createDoc()"
         (focusTreeRequested)="focusTree()">
       </app-group-view>
+      }
       
       <!-- Empty state -->
-      <div *ngIf="!selectedDoc && !selectedGroup" class="editor-empty-state">
+      @if (!selectedDoc && !selectedGroup) {
+      <div class="editor-empty-state">
         <svg xmlns="http://www.w3.org/2000/svg" class="empty-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
         <p class="empty-message">No document selected</p>
         <p class="empty-hint">Create a folder and add documents to start writing</p>
       </div>
+      }
     </main>
 
     <!-- Right Sidebar -->
-    <app-right-sidebar
-      *ngIf="!rightCollapsed"
+  @if (!rightCollapsed) {
+  <app-right-sidebar
       [selectedDoc]="selectedDoc"
       [characters]="characters"
       [docCharacterIds]="docCharacterIds"
@@ -134,23 +139,30 @@
       (draftContentRequested)="getDraftLocalContent($event)"
       (widthChanged)="startResizeRight($event)">
     </app-right-sidebar>
+  }
   </div>
 
   <!-- Import target folder dialog -->
-  <div *ngIf="showImportDialog" class="modal-overlay" (click)="cancelImport()">
-    <div class="modal" (click)="$event.stopPropagation()">
-      <div class="modal-header">Import text files</div>
-      <div class="modal-body">
-        <div class="mb-2 text-sm text-gray-600">Choose a folder to place the imported documents.</div>
-        <select class="modal-select" [(ngModel)]="importTargetGroupId">
-          <option *ngFor="let opt of flattenedGroups" [ngValue]="opt.id">{{ opt.label }}</option>
-        </select>
-  <div class="mt-3 text-xs text-gray-500" *ngIf="pendingImportFiles.length">{{ pendingImportFiles.length }} file(s) selected</div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-secondary" (click)="cancelImport()">Cancel</button>
-        <button class="btn-primary" [disabled]="!importTargetGroupId" (click)="confirmImport()">Import</button>
+  @if (showImportDialog) {
+    <div class="modal-overlay" (click)="cancelImport()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">Import text files</div>
+        <div class="modal-body">
+          <div class="mb-2 text-sm text-gray-600">Choose a folder to place the imported documents.</div>
+          <select class="modal-select" [(ngModel)]="importTargetGroupId">
+            @for (opt of flattenedGroups; track opt.id) {
+              <option [ngValue]="opt.id">{{ opt.label }}</option>
+            }
+          </select>
+          @if (pendingImportFiles.length) {
+            <div class="mt-3 text-xs text-gray-500">{{ pendingImportFiles.length }} file(s) selected</div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" (click)="cancelImport()">Cancel</button>
+          <button class="btn-primary" [disabled]="!importTargetGroupId" (click)="confirmImport()">Import</button>
+        </div>
       </div>
     </div>
-  </div>
+  }
 </div>

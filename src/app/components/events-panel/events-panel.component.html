@@ -13,16 +13,19 @@
     </button>
   </div>
 
-  <div *ngIf="expanded" class="section-content">
-    <app-event-card
-      *ngFor="let ev of events"
-      [event]="ev"
-      [checked]="docEventIds?.has(ev.id) || false"
-      [canToggle]="!!selectedDoc"
-      [editing]="editingEventId === ev.id"
-      (toggle)="toggle.emit({ eventId: $event.id, checked: $event.checked })"
-      (update)="update.emit($event)"
-      (remove)="remove.emit($event)">
-    </app-event-card>
-  </div>
+  @if (expanded) {
+    <div class="section-content">
+      @for (ev of events; track ev.id) {
+        <app-event-card
+          [event]="ev"
+          [checked]="docEventIds?.has(ev.id) || false"
+          [canToggle]="!!selectedDoc"
+          [editing]="editingEventId === ev.id"
+          (toggle)="toggle.emit({ eventId: $event.id, checked: $event.checked })"
+          (update)="update.emit($event)"
+          (remove)="remove.emit($event)">
+        </app-event-card>
+      }
+    </div>
+  }
 </div>

@@ -22,7 +22,8 @@
     </div>
   </header>
 
-  <div *ngIf="showCreate" class="mb-8">
+  @if (showCreate) {
+  <div class="mb-8">
     <form [formGroup]="form" (ngSubmit)="create()" class="bg-white border border-gray-200 rounded-lg p-6">
       <h3 class="text-lg font-semibold mb-4">{{ editingId ? 'Edit Project' : 'New Project' }}</h3>
       <div class="space-y-4">
@@ -51,9 +52,11 @@
       </div>
     </form>
   </div>
+  }
 
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-    <div *ngFor="let p of projects" 
+    @for (p of projects; track p.id) {
+    <div 
          class="bg-white border border-gray-200 rounded-xl p-5 hover:border-gray-300 transition-all group relative">
       <div class="cursor-pointer" (click)="openProject(p)">
         <div class="flex items-start gap-4 mb-4">
@@ -94,13 +97,16 @@
         </button>
       </div>
     </div>
+    }
   </div>
 
-  <div *ngIf="!projects.length && !showCreate" class="text-center py-16">
+  @if (!projects.length && !showCreate) {
+  <div class="text-center py-16">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
       <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
     </svg>
     <p class="text-sm text-gray-500">No projects yet. Click "New Project" to add one.</p>
   </div>
+  }
 </section>
 </main>
