@@ -1,15 +1,18 @@
 @if (selectedDoc) {
 <div class="editor-container">
   <div class="editor-toolbar">
-    <input 
-      #docTitleInput
-      type="text" 
-      class="doc-title-input" 
-      [(ngModel)]="selectedDoc.name"
-  [attr.size]="getDocTitleSize()"
-      (blur)="onTitleChange(selectedDoc!)"
-      (keydown.enter)="focusEditor()"
-      placeholder="Untitled">
+    <div class="title-group">
+      <input 
+        #docTitleInput
+        type="text" 
+        class="doc-title-input" 
+        [(ngModel)]="selectedDoc.name"
+        [attr.size]="getDocTitleSize()"
+        (blur)="onTitleChange(selectedDoc!)"
+        (keydown.enter)="focusEditor()"
+        placeholder="Untitled">
+      @if (showSaveStatus) { <span class="tab-dot" title="Saved">✓</span> }
+    </div>
     <div class="toolbar-actions">
       <div class="draft-controls">
         <div class="draft-tabs">
@@ -50,19 +53,6 @@
         </div>
         <button class="toolbar-button" (click)="addDraft()" title="Add draft">+ Draft</button>
       </div>
-      @if (showSaveStatus || hasUnsavedChanges) {
-      <div class="save-status">
-        <svg xmlns="http://www.w3.org/2000/svg" class="save-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-        </svg>
-        @if (showSaveStatus) {
-          <span class="save-text">Saved</span>
-        }
-        @if (!showSaveStatus && hasUnsavedChanges) {
-          <span class="save-text">Unsaved</span>
-        }
-      </div>
-      }
     </div>
   </div>
   
@@ -95,7 +85,7 @@
         <span class="divider-grip"></span>
       </div>
       @if (!isSplitCollapsed) {
-        <div class="pane pane-right border-l" [style.flex]="'0 0 ' + draftPaneWidth + 'px'" [style.width.px]="draftPaneWidth">
+        <div class="pane pane-right " [style.flex]="'0 0 ' + draftPaneWidth + 'px'" [style.width.px]="draftPaneWidth">
           <textarea 
             #draftTextarea
             [(ngModel)]="selectedDraft!.content"

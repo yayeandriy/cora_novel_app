@@ -15,6 +15,7 @@
   height: 3.5rem;
   flex-shrink: 0;
 }
+.title-group { display: flex; align-items: center; gap: 0.35rem; min-width: 0; }
 .draft-controls {
   display: flex;
   align-items: center;

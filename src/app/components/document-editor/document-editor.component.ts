@@ -244,6 +244,8 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private adjustWidthToContainer() {
+    // If user is actively resizing, don't override their in-progress size.
+    if (this.resizing) return;
     const container = this.splitContainer?.nativeElement;
     if (!container) return;
     const rect = container.getBoundingClientRect();
