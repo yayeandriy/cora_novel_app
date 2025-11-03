@@ -897,6 +897,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   handleTreeKeyDown(event: KeyboardEvent) {
+    // Reorder with Option/Alt + Arrow keys
+    if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && event.altKey) {
+      event.preventDefault();
+      const direction = event.key === 'ArrowUp' ? 'up' : 'down';
+      this.reorderSelected(direction);
+      return;
+    }
+
     if (event.key === 'ArrowUp') {
       event.preventDefault();
       this.navigateTree('up');
@@ -933,6 +941,84 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         }, 0);
       }
     }
+  }
+
+  private async reorderSelected(direction: 'up' | 'down') {
+    try {
+      if (this.selectedDoc) {
+        const doc = this.selectedDoc;
+        const group = doc.doc_group_id ? this.findGroupById(this.docGroups, doc.doc_group_id) : null;
+        if (!group) return;
+
+        const docIndex = group.docs.findIndex(d => d.id === doc.id);
+
+        if (direction === 'up') {
+          if (docIndex > 0) {
+            // Normal reorder within the same group
+            await this.projectService.reorderDoc(doc.id, 'up');
+            await this.loadProject(true);
+            return;
+          } else {
+            // At top of the group -> move to previous sibling group (end)
+            const sib = this.findGroupSiblingsAndIndex(group.id);
+            if (sib.siblings && sib.indexInSiblings > 0) {
+              const prevGroup = sib.siblings[sib.indexInSiblings - 1];
+              // Ensure target group is expanded
+              await this.expandGroup(prevGroup.id);
+              await this.projectService.moveDocToGroup(doc.id, prevGroup.id);
+              await this.loadProject(true);
+            }
+            return;
+          }
+        } else {
+          if (docIndex < group.docs.length - 1) {
+            // Normal reorder within the same group
+            await this.projectService.reorderDoc(doc.id, 'down');
+            await this.loadProject(true);
+            return;
+          } else {
+            // At bottom of the group -> move to next sibling group and place as FIRST
+            const sib = this.findGroupSiblingsAndIndex(group.id);
+            if (sib.siblings && sib.indexInSiblings < sib.siblings.length - 1) {
+              const nextGroup = sib.siblings[sib.indexInSiblings + 1];
+              // Ensure target group is expanded
+              await this.expandGroup(nextGroup.id);
+              // Compute how many docs are currently in target group; after move, item likely appended to end
+              const docsBefore = nextGroup.docs.length;
+              await this.projectService.moveDocToGroup(doc.id, nextGroup.id);
+              // Move up 'docsBefore' times to get to index 0
+              for (let i = 0; i < docsBefore; i++) {
+                await this.projectService.reorderDoc(doc.id, 'up');
+              }
+              await this.loadProject(true);
+            }
+            return;
+          }
+        }
+      }
+      if (this.selectedGroup) {
+        await this.projectService.reorderDocGroup(this.selectedGroup.id, direction);
+        await this.loadProject(true);
+        return;
+      }
+    } catch (error) {
+      console.error('Failed to reorder item:', error);
+    }
+  }
+
+  private findGroupSiblingsAndIndex(targetGroupId: number): { siblings: DocGroup[] | null; indexInSiblings: number } {
+    const search = (groups: DocGroup[]): { siblings: DocGroup[] | null; indexInSiblings: number } | null => {
+      const idx = groups.findIndex(g => g.id === targetGroupId);
+      if (idx !== -1) return { siblings: groups, indexInSiblings: idx };
+      for (const g of groups) {
+        if (g.groups && g.groups.length > 0) {
+          const found = search(g.groups);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    return search(this.docGroups) ?? { siblings: null, indexInSiblings: -1 };
   }
 
   private navigateTree(direction: 'up' | 'down') {
