@@ -86,6 +86,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   rightCollapsed = false;
   leftWidth = 250;
   rightWidth = 300;
+  timelineHeaderVisible = false;
   
   // Deletion state
   isDeletingItem = false;
@@ -1765,6 +1766,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.saveLayoutState();
   }
 
+  toggleTimelineHeader() {
+    this.timelineHeaderVisible = !this.timelineHeaderVisible;
+    this.saveLayoutState();
+  }
+
   startResizeLeft(width: number) {
     this.leftWidth = width;
     this.saveLayoutState();
@@ -1775,12 +1781,46 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.saveLayoutState();
   }
 
+  // Allow dragging from collapsed handles to expand sidebars
+  startDragExpandLeft(event: MouseEvent) {
+    event.preventDefault();
+    const onMouseMove = (e: MouseEvent) => {
+      // Expand and set width based on cursor X
+      this.leftCollapsed = false;
+      this.leftWidth = Math.max(200, Math.min(600, e.clientX));
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      this.saveLayoutState();
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }
+
+  startDragExpandRight(event: MouseEvent) {
+    event.preventDefault();
+    const onMouseMove = (e: MouseEvent) => {
+      // Expand and set width from right edge
+      this.rightCollapsed = false;
+      this.rightWidth = Math.max(250, window.innerWidth - e.clientX);
+    };
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      this.saveLayoutState();
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }
+
   saveLayoutState() {
     localStorage.setItem('cora-layout', JSON.stringify({
       leftWidth: this.leftWidth,
       rightWidth: this.rightWidth,
       leftCollapsed: this.leftCollapsed,
-      rightCollapsed: this.rightCollapsed
+      rightCollapsed: this.rightCollapsed,
+      timelineHeaderVisible: this.timelineHeaderVisible
     }));
   }
 
@@ -1792,6 +1832,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.rightWidth = state.rightWidth || 300;
       this.leftCollapsed = state.leftCollapsed || false;
       this.rightCollapsed = state.rightCollapsed || false;
+      this.timelineHeaderVisible = !!state.timelineHeaderVisible; // hidden by default
     }
   }
 

@@ -62,6 +62,7 @@ export class RightSidebarComponent {
   @Input() eventsExpanded: boolean = true;
   @Input() notesExpanded: boolean = true;
   @Input() draftsExpanded: boolean = true;
+  @Input() timelineHeaderVisible: boolean = false;
   
   @Output() charactersExpandedChange = new EventEmitter<boolean>();
   @Output() eventsExpandedChange = new EventEmitter<boolean>();
@@ -75,6 +76,8 @@ export class RightSidebarComponent {
   @Output() draftDeleted = new EventEmitter<number>();
   @Output() draftContentRequested = new EventEmitter<number>();
   @Output() widthChanged = new EventEmitter<number>();
+  @Output() collapseToggle = new EventEmitter<void>();
+  @Output() timelineHeaderToggle = new EventEmitter<void>();
   // Character events
   @Output() characterAdd = new EventEmitter<void>();
   @Output() characterNameChange = new EventEmitter<{ id: number; name: string }>();
@@ -153,6 +156,10 @@ export class RightSidebarComponent {
     document.addEventListener('mouseup', onMouseUp);
   }
 
+  onToggleCollapse() {
+    this.collapseToggle.emit();
+  }
+
   // ===== Characters UI handlers =====
   onCharacterAdd() {
     this.characterAdd.emit();
@@ -178,5 +185,9 @@ export class RightSidebarComponent {
     const input = event?.target as HTMLInputElement;
     const checked = !!input?.checked;
     this.characterToggle.emit({ characterId: id, checked });
+  }
+
+  onTimelineHeaderToggle() {
+    this.timelineHeaderToggle.emit();
   }
 }

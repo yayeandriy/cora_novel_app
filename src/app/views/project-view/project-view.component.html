@@ -1,57 +1,21 @@
 <div class="project-view">
-  <!-- Header with Timeline -->
-  <header class="w-full flex">
-    <div class="flex-none text-left flex items-center" style="min-width: 400px;" >
-      <button (click)="goBack()" class="back-button" title="Back">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
-      <div class="text-left project-name ml-2" (click)="startEditProjectName($event)" title="Click to rename">
-        @if (!editingProjectName) {
-          <span class="cursor-text">{{ projectName }}</span>
-        } @else {
-          <input
-            #projectNameInput
-            class="project-name-input"
-            [(ngModel)]="projectNameEdit"
-            (blur)="saveProjectName()"
-            (keydown)="onProjectNameKeydown($event)"
-            placeholder="Project name"
-          />
-        }
+  <!-- Header with Timeline (hidden by default, full-width timeline when visible) -->
+  @if (timelineHeaderVisible) {
+    <header class="w-full flex">
+      <div class="w-full grow">
+        <app-project-timeline
+          [projectId]="projectId"
+          [projectName]="projectName"
+          [startDate]="timelineStart"
+          [endDate]="timelineEnd"
+          [selectedDocId]="selectedDoc?.id"
+          (timelineUpdated)="onTimelineUpdated($event)"
+          (docTimelineClick)="onDocTimelineClick($event)"
+          (docIntervalClick)="onDocIntervalClick($event)">
+        </app-project-timeline>
       </div>
-    </div>
-
-
-    <!-- Timeline Section -->
-    <div class="w-full grow" >
-      <app-project-timeline
-        [projectId]="projectId"
-        [projectName]="projectName"
-        [startDate]="timelineStart"
-        [endDate]="timelineEnd"
-        [selectedDocId]="selectedDoc?.id"
-        (timelineUpdated)="onTimelineUpdated($event)"
-        (docTimelineClick)="onDocTimelineClick($event)"
-        (docIntervalClick)="onDocIntervalClick($event)">
-      </app-project-timeline>
-    </div>
-    
-    <!-- <div class="flex-none">
-      <button class="icon-button" title="Toggle left sidebar" (click)="toggleLeftSidebar()">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-      
-      <button class="icon-button" title="Toggle right sidebar" (click)="toggleRightSidebar()">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      </button>
-    </div> -->
-  </header>
+    </header>
+  }
 
 
   <!-- Main content area -->
@@ -62,6 +26,9 @@
       [docGroups]="docGroups"
       [selectedDoc]="selectedDoc"
       [selectedGroup]="selectedGroup"
+      [projectName]="projectName"
+      [editingProjectName]="editingProjectName"
+      [(projectNameEdit)]="projectNameEdit"
       [style.width.px]="leftWidth"
       (groupSelected)="selectGroup($event.group, $event.event)"
       (docSelected)="selectDoc($event)"
@@ -72,8 +39,17 @@
       (importFilesRequested)="onImportFilesRequested()"
       (exportProjectRequested)="onExportProjectRequested()"
       (treeKeyDown)="handleTreeKeyDown($event)"
-      (widthChanged)="startResizeLeft($event)">
+      (widthChanged)="startResizeLeft($event)"
+      (collapseToggle)="toggleLeftSidebar()"
+      (projectNameEditStart)="startEditProjectName($event)"
+      (projectNameSave)="saveProjectName()"
+      (projectNameKeydown)="onProjectNameKeydown($event)"
+      (backClicked)="goBack()">
     </app-doc-tree>
+    } @else {
+      <div class="collapsed-handle collapsed-left" (mousedown)="startDragExpandLeft($event)" title="Drag to expand">
+        <span class="divider-grip"></span>
+      </div>
     }
 
     <!-- Editor -->
@@ -135,6 +111,7 @@
       [eventsExpanded]="eventsExpanded"
       [notesExpanded]="notesExpanded"
       [draftsExpanded]="draftsExpanded"
+      [timelineHeaderVisible]="timelineHeaderVisible"
   [editingCharacterId]="editingCharacterId"
   [docEventIds]="docEventIds"
   [editingEventId]="editingEventId"
@@ -143,6 +120,8 @@
       (eventsExpandedChange)="eventsExpanded = $event"
       (notesExpandedChange)="notesExpanded = $event"
       (draftsExpandedChange)="draftsExpanded = $event"
+  (collapseToggle)="toggleRightSidebar()"
+      (timelineHeaderToggle)="toggleTimelineHeader()"
   (characterUpdate)="onSidebarCharacterUpdate($event)"
       (characterAdd)="onSidebarCharacterAdd()"
       (characterNameChange)="onSidebarCharacterNameChange($event)"
@@ -161,6 +140,10 @@
       (draftContentRequested)="getDraftLocalContent($event)"
       (widthChanged)="startResizeRight($event)">
     </app-right-sidebar>
+  } @else {
+    <div class="collapsed-handle collapsed-right" (mousedown)="startDragExpandRight($event)" title="Drag to expand">
+      <span class="divider-grip"></span>
+    </div>
   }
   </div>
 

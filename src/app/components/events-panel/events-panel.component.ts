@@ -17,12 +17,14 @@ export class EventsPanelComponent {
   @Input() selectedDoc: { id: number } | null = null;
   @Input() expanded: boolean = true;
   @Input() editingEventId: number | null = null;
+  @Input() timelineHeaderVisible: boolean = false;
 
   @Output() expandedChange = new EventEmitter<boolean>();
   @Output() add = new EventEmitter<void>();
   @Output() update = new EventEmitter<{ id: number; name: string; desc: string; start_date: string | null; end_date: string | null }>();
   @Output() remove = new EventEmitter<number>();
   @Output() toggle = new EventEmitter<{ eventId: number; checked: boolean }>();
+  @Output() timelineHeaderToggle = new EventEmitter<void>();
 
   onHeaderClick() {
     this.expandedChange.emit(!this.expanded);
@@ -31,5 +33,10 @@ export class EventsPanelComponent {
   onAddClick(event: MouseEvent) {
     event.stopPropagation();
     this.add.emit();
+  }
+
+  onTimelineToggleClick(event: MouseEvent) {
+    event.stopPropagation();
+    this.timelineHeaderToggle.emit();
   }
 }

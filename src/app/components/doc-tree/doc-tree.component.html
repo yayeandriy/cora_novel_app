@@ -1,5 +1,24 @@
 <aside class="left-sidebar" [style.width.px]="leftWidth">
-  
+  <div class="sidebar-header">
+    <button class="icon-button-small" title="Back to projects" (click)="backClicked.emit()">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+      </svg>
+    </button>
+    @if (!editingProjectName) {
+      <div class="project-title cursor-pointer" title="Click to rename" (click)="projectNameEditStart.emit($event)">{{ projectName }}</div>
+    } @else {
+      <input
+        #projectNameInput
+        class="project-name-input"
+        [(ngModel)]="projectNameEdit"
+        (ngModelChange)="projectNameEditChange.emit($event)"
+        (blur)="projectNameSave.emit()"
+        (keydown)="projectNameKeydown.emit($event)"
+        placeholder="Project name" />
+    }
+  </div>
+
   <div class="sidebar-content">
     <div class="doc-tree" #docTree tabindex="0" (keydown)="handleTreeKeyDown($event)">
       <!-- Empty state -->
@@ -138,5 +157,7 @@
     </button>
   </div>
 
-  <div class="resize-handle left" (mousedown)="startResize($event)"></div>
+  <div class="resize-handle left" (mousedown)="startResize($event)" (dblclick)="onToggleCollapse()">
+    <span class="divider-grip"></span>
+  </div>
 </aside>

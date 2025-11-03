@@ -28,6 +28,34 @@
   color: #6b7280;
 }
 
+/* Project name shown in left sidebar header */
+.project-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-name-input {
+  max-width: none;
+  width: auto;
+  min-width: 6ch;
+  flex: 0 1 auto;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+  border: 1px solid transparent;
+  background: transparent;
+  outline: none;
+  padding: 0.375rem 0.625rem;
+  border-radius: 0.375rem;
+  transition: all 150ms;
+}
+.project-name-input:hover { background: #f9fafb; border-color: #e5e7eb; }
+.project-name-input:focus { background: #f3f4f6; border-color: #d1d5db; }
+
 .sidebar-actions {
   display: flex;
   gap: 0.25rem;
@@ -268,13 +296,27 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 4px;
+  width: 6px;
   cursor: col-resize;
   user-select: none;
   z-index: 10;
-  right: -2px;
+  right: -3px;
+  background: transparent;
 }
-
-.resize-handle:hover {
-  background: #3b82f6;
+.resize-handle:hover { background: rgba(0,0,0,0.04); }
+.divider-grip {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.divider-grip::before {
+  content: '⋮⋮';
+  font-size: 12px;
+  color: #9ca3af;
 }

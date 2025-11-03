@@ -57,7 +57,7 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges {
   private clickTimer: any;
 
   // Split state
-  isSplitCollapsed: boolean = false;
+  isSplitCollapsed: boolean = true; // default collapsed by default until a saved state is loaded
   draftPaneWidth: number = 360; // right pane width in px
   private resizing = false;
   private moveListener?: (e: MouseEvent) => void;
@@ -66,6 +66,7 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges {
   private readonly WIDTH_KEY_GLOBAL = 'cora-editor-split-width';
   private readonly COLLAPSE_KEY_GLOBAL = 'cora-editor-split-collapsed';
   private loadedProjectId: number | null = null;
+  // Draft controls follow split visibility (no separate collapse state)
 
   private getWidthKey(): string {
     const pid = this.selectedDoc?.project_id;
@@ -241,6 +242,23 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges {
       // Just expanded: make sure width is valid for current container
       setTimeout(() => this.adjustWidthToContainer(), 0);
     }
+  }
+
+  expandDrafts() {
+    if (this.isSplitCollapsed) {
+      this.isSplitCollapsed = false;
+      try { localStorage.setItem(this.getCollapseKey(), 'false'); } catch {}
+      setTimeout(() => this.adjustWidthToContainer(), 0);
+      this.cdr.markForCheck();
+    }
+  }
+
+  toggleDraftControls() {
+    // Directly toggle the split; toolbar visibility follows split state
+    this.isSplitCollapsed = !this.isSplitCollapsed;
+    try { localStorage.setItem(this.getCollapseKey(), String(this.isSplitCollapsed)); } catch {}
+    if (!this.isSplitCollapsed) setTimeout(() => this.adjustWidthToContainer(), 0);
+    this.cdr.markForCheck();
   }
 
   private adjustWidthToContainer() {

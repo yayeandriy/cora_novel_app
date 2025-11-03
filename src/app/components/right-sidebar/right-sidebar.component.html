@@ -1,5 +1,7 @@
 <aside class="right-sidebar">
-  <div class="resize-handle right" (mousedown)="startResize($event)"></div>
+  <div class="resize-handle right" (mousedown)="startResize($event)" (dblclick)="onToggleCollapse()">
+    <span class="divider-grip"></span>
+  </div>
   
   <div class="sidebar-content">
     <!-- Characters Section (separate component) -->
@@ -23,11 +25,13 @@
       [selectedDoc]="selectedDoc"
       [expanded]="eventsExpanded"
       [editingEventId]="editingEventId"
+      [timelineHeaderVisible]="timelineHeaderVisible"
       (expandedChange)="onEventsToggle()"
       (add)="eventAdd.emit()"
       (update)="eventUpdate.emit($event)"
       (remove)="eventDelete.emit($event)"
-      (toggle)="eventToggle.emit($event)">
+      (toggle)="eventToggle.emit($event)"
+      (timelineHeaderToggle)="onTimelineHeaderToggle()">
     </app-events-panel>
 
     <!-- Notes Section -->

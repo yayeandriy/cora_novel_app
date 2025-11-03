@@ -15,43 +15,46 @@
     </div>
     <div class="toolbar-actions">
       <div class="draft-controls">
-        <div class="draft-tabs">
-          @for (d of drafts; track d.id) {
-            <div class="draft-tab-wrapper">
-              @if (editingDraftId === d.id) {
-                <div class="draft-edit-row">
-                  <input
-                    #draftNameInput
-                    class="draft-name-input"
-                    [(ngModel)]="draftNameEdit"
-                    (blur)="saveDraftName()"
-                    (keydown.enter)="saveDraftName()"
-                    (keydown.escape)="cancelDraftNameEdit()"
-                    placeholder="Draft name" />
-                  <button
-                    class="draft-delete-btn"
-                    (mousedown)="$event.preventDefault()"
-                    (click)="onClickDeleteDraft(d.id)"
-                    title="Delete draft">
-                    🗑
+        @if (!isSplitCollapsed) {
+          <div class="draft-tabs">
+            @for (d of drafts; track d.id) {
+              <div class="draft-tab-wrapper">
+                @if (editingDraftId === d.id) {
+                  <div class="draft-edit-row">
+                    <input
+                      #draftNameInput
+                      class="draft-name-input"
+                      [(ngModel)]="draftNameEdit"
+                      (blur)="saveDraftName()"
+                      (keydown.enter)="saveDraftName()"
+                      (keydown.escape)="cancelDraftNameEdit()"
+                      placeholder="Draft name" />
+                    <button
+                      class="draft-delete-btn"
+                      (mousedown)="$event.preventDefault()"
+                      (click)="onClickDeleteDraft(d.id)"
+                      title="Delete draft">
+                      🗑
+                    </button>
+                  </div>
+                } @else {
+                  <button 
+                    class="draft-tab" 
+                    [class.active]="d.id === selectedDraftId"
+                    (click)="selectOrToggle(d.id, $event)"
+                    (dblclick)="startEditDraftName(d.id, d.name)"
+                    title="Open draft (double-click to rename)">
+                    {{ d.name }}
+                    @if (draftSyncStatus[d.id] === 'syncing') { <span class="tab-dot">⟳</span> }
+                    @if (draftSyncStatus[d.id] === 'synced') { <span class="tab-dot">✓</span> }
                   </button>
-                </div>
-              } @else {
-                <button 
-                  class="draft-tab" 
-                  [class.active]="d.id === selectedDraftId"
-                  (click)="selectOrToggle(d.id, $event)"
-                  (dblclick)="startEditDraftName(d.id, d.name)"
-                  title="Open draft (double-click to rename)">
-                  {{ d.name }}
-                  @if (draftSyncStatus[d.id] === 'syncing') { <span class="tab-dot">⟳</span> }
-                  @if (draftSyncStatus[d.id] === 'synced') { <span class="tab-dot">✓</span> }
-                </button>
-              }
-            </div>
-          }
-        </div>
-        <button class="toolbar-button" (click)="addDraft()" title="Add draft">+ Draft</button>
+                }
+              </div>
+            }
+          </div>
+          <button class="toolbar-button" (click)="addDraft()" title="Add draft">+ Draft</button>
+        }
+        <button class="toolbar-button" (click)="toggleDraftControls()" title="Toggle drafts">Drafts</button>
       </div>
     </div>
   </div>

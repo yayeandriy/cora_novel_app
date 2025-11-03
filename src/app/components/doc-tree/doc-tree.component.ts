@@ -37,6 +37,9 @@ export class DocTreeComponent {
   @Input() docGroups: DocGroup[] = [];
   @Input() selectedDoc: Doc | null = null;
   @Input() selectedGroup: DocGroup | null = null;
+  @Input() projectName: string = '';
+  @Input() editingProjectName: boolean = false;
+  @Input() projectNameEdit: string = '';
   
   @Output() groupSelected = new EventEmitter<{ group: DocGroup; event?: MouseEvent }>();
   @Output() docSelected = new EventEmitter<Doc>();
@@ -49,6 +52,13 @@ export class DocTreeComponent {
   @Output() exportProjectRequested = new EventEmitter<void>();
   @Output() treeKeyDown = new EventEmitter<KeyboardEvent>();
   @Output() widthChanged = new EventEmitter<number>();
+  @Output() collapseToggle = new EventEmitter<void>();
+  // Project name editing events (delegated to parent)
+  @Output() projectNameEditStart = new EventEmitter<MouseEvent>();
+  @Output() projectNameSave = new EventEmitter<void>();
+  @Output() projectNameKeydown = new EventEmitter<KeyboardEvent>();
+  @Output() projectNameEditChange = new EventEmitter<string>();
+  @Output() backClicked = new EventEmitter<void>();
   
   @ViewChild('docTree') docTree?: ElementRef<HTMLDivElement>;
   
@@ -122,5 +132,9 @@ export class DocTreeComponent {
     
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+  }
+
+  onToggleCollapse() {
+    this.collapseToggle.emit();
   }
 }
