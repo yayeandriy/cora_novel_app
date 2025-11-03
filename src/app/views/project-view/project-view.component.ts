@@ -559,6 +559,22 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  async onExportProjectRequested() {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select destination folder for export'
+      });
+      if (!selected || Array.isArray(selected)) return;
+      await this.projectService.exportProject(this.projectId, selected as string);
+      alert('Project exported successfully');
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Export failed: ' + err);
+    }
+  }
+
   private restoreSelection() {
     try {
       const saved = localStorage.getItem(`project_${this.projectId}_selection`);

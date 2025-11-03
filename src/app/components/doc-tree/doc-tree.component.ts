@@ -46,6 +46,7 @@ export class DocTreeComponent {
   @Output() importRequested = new EventEmitter<void>();
   @Output() importFoldersRequested = new EventEmitter<void>();
   @Output() importFilesRequested = new EventEmitter<void>();
+  @Output() exportProjectRequested = new EventEmitter<void>();
   @Output() treeKeyDown = new EventEmitter<KeyboardEvent>();
   @Output() widthChanged = new EventEmitter<number>();
   
@@ -83,6 +84,10 @@ export class DocTreeComponent {
 
   requestImportFiles() {
     this.importFilesRequested.emit();
+  }
+
+  requestExportProject() {
+    this.exportProjectRequested.emit();
   }
 
   createDocInGroup(group: DocGroup, event: MouseEvent) {

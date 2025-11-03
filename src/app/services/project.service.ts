@@ -197,4 +197,9 @@ export class ProjectService {
   async importProject(folderPath: string): Promise<Project> {
     return invoke<Project>("import_project", { folderPath });
   }
+
+  // Export a whole project to a folder
+  async exportProject(projectId: number, destPath: string): Promise<void> {
+    return invoke<void>("export_project", { projectId, destPath });
+  }
 }

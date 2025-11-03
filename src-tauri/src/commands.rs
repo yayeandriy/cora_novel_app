@@ -462,3 +462,160 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
 
     serde_json::to_value(project).map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_path: String) -> Result<(), String> {
+    // use std::path::{PathBuf};
+    let pool = &state.pool;
+
+    let dest = Path::new(&dest_path);
+    if !dest.exists() {
+        fs::create_dir_all(dest).map_err(|e| format!("Failed to create destination: {}", e))?;
+    }
+    if !dest.is_dir() { return Err("Destination is not a directory".into()); }
+
+    // Load project
+    let project = crate::services::projects::get(pool, project_id).map_err(|e| e.to_string())?
+        .ok_or_else(|| "Project not found".to_string())?;
+
+    // Load groups and docs
+    let groups = crate::services::doc_groups::list_doc_groups(pool, project_id).map_err(|e| e.to_string())?;
+    let docs = crate::services::docs::list_docs(pool, project_id).map_err(|e| e.to_string())?;
+
+    // Build maps
+    use std::collections::HashMap;
+    let mut children: HashMap<Option<i64>, Vec<&crate::models::DocGroup>> = HashMap::new();
+    for g in &groups {
+        children.entry(g.parent_id).or_default().push(g);
+    }
+    // Sort siblings by sort_order
+    for v in children.values_mut() {
+        v.sort_by_key(|g| g.sort_order.unwrap_or(0));
+    }
+    let mut docs_by_group: HashMap<i64, Vec<&crate::models::Doc>> = HashMap::new();
+    for d in &docs {
+        if let Some(gid) = d.doc_group_id { docs_by_group.entry(gid).or_default().push(d); }
+    }
+    for v in docs_by_group.values_mut() { v.sort_by_key(|d| d.sort_order.unwrap_or(0)); }
+
+    // Helper: sanitize names
+    fn sanitize(s: &str) -> String {
+        let mut out = s.trim().to_string();
+        if out.is_empty() { out = "Untitled".into(); }
+        let bad = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+        out.chars().map(|c| if bad.contains(&c) { '_' } else { c }).collect()
+    }
+
+    // Export recursively
+    fn export_group_recursive(
+        pool: &crate::db::DbPool,
+        base_dir: &Path,
+        group: &crate::models::DocGroup,
+        group_index: usize,
+        children: &HashMap<Option<i64>, Vec<&crate::models::DocGroup>>,
+        docs_by_group: &HashMap<i64, Vec<&crate::models::Doc>>,
+    ) -> Result<(), String> {
+        // Directory name: "{index} {name}"
+        let dir_name = format!("{} {}", group_index, sanitize(&group.name));
+        let group_dir = base_dir.join(dir_name);
+        fs::create_dir_all(&group_dir).map_err(|e| format!("Failed to create group dir: {}", e))?;
+
+        // Docs in this group
+        if let Some(dd) = docs_by_group.get(&group.id) {
+            for (i, d) in dd.iter().enumerate() {
+                let doc_index = format!("{}.{}", group_index, i + 1);
+                let doc_name = sanitize(d.name.as_deref().unwrap_or("Untitled"));
+                let file_name = format!("{} {}.txt", doc_index, doc_name);
+                let file_path = group_dir.join(file_name);
+                let content = d.text.clone().unwrap_or_default();
+                fs::write(&file_path, content).map_err(|e| format!("Write doc failed: {}", e))?;
+
+                // Drafts as separate files: doc_index + doc_file + draft_index
+                let drafts = crate::services::drafts::list_drafts(pool, d.id).map_err(|e| e.to_string())?;
+                for (k, draft) in drafts.iter().enumerate() {
+                    let draft_file = format!("{} {} draft-{}.txt", doc_index, doc_name, k + 1);
+                    let draft_path = group_dir.join(draft_file);
+                    fs::write(&draft_path, &draft.content).map_err(|e| format!("Write draft failed: {}", e))?;
+                }
+            }
+        }
+
+        // Recurse into child groups under this group
+        if let Some(childs) = children.get(&Some(group.id)) {
+            for (idx, child) in childs.iter().enumerate() {
+                export_group_recursive(pool, &group_dir, child, idx + 1, children, docs_by_group)?;
+            }
+        }
+        Ok(())
+    }
+
+    // Determine export root directory name inside destination
+    let base_name = sanitize(&project.name);
+    let mut candidate = base_name.clone();
+    let mut counter: usize = 2;
+    let export_root = loop {
+        let try_path = dest.join(&candidate);
+        if !try_path.exists() { break try_path; }
+        candidate = format!("{} export {}", base_name, counter);
+        counter += 1;
+        if counter > 9999 { return Err("Failed to pick unique export folder name".into()); }
+    };
+    fs::create_dir_all(&export_root).map_err(|e| format!("Failed to create export folder: {}", e))?;
+
+    // Export root-level groups into export_root
+    if let Some(root_groups) = children.get(&None) {
+        for (gi, g) in root_groups.iter().enumerate() {
+            export_group_recursive(pool, &export_root, g, gi + 1, &children, &docs_by_group)?;
+        }
+    }
+
+    // Build metadata
+    let characters = crate::services::characters::list(pool, project_id).map_err(|e| e.to_string())?;
+    let events = crate::services::events::list(pool, project_id).map_err(|e| e.to_string())?;
+    // doc -> character ids
+    let mut doc_characters: HashMap<i64, Vec<i64>> = HashMap::new();
+    let mut doc_events: HashMap<i64, Vec<i64>> = HashMap::new();
+    for d in &docs {
+        let ch = crate::services::characters::list_for_doc(pool, d.id).map_err(|e| e.to_string())?;
+        doc_characters.insert(d.id, ch);
+        let ev = crate::services::events::list_for_doc(pool, d.id).map_err(|e| e.to_string())?;
+        doc_events.insert(d.id, ev);
+    }
+    let project_timeline = crate::services::timelines::get_by_entity(pool, "project", project_id).map_err(|e| e.to_string())?;
+    let mut doc_timelines: HashMap<i64, Option<crate::models::Timeline>> = HashMap::new();
+    for d in &docs {
+        let tl = crate::services::timelines::get_by_entity(pool, "doc", d.id).map_err(|e| e.to_string())?;
+        doc_timelines.insert(d.id, tl);
+    }
+
+    #[derive(serde::Serialize)]
+    struct ExportMetadata<'a> {
+        project: &'a crate::models::Project,
+        groups: &'a Vec<crate::models::DocGroup>,
+        docs: &'a Vec<crate::models::Doc>,
+        characters: Vec<crate::models::Character>,
+        events: Vec<crate::models::Event>,
+        doc_characters: HashMap<i64, Vec<i64>>, // doc_id -> character_ids
+        doc_events: HashMap<i64, Vec<i64>>,     // doc_id -> event_ids
+        project_timeline: Option<crate::models::Timeline>,
+        doc_timelines: HashMap<i64, Option<crate::models::Timeline>>,
+    }
+
+    let meta = ExportMetadata {
+        project: &project,
+        groups: &groups,
+        docs: &docs,
+        characters,
+        events,
+        doc_characters,
+        doc_events,
+        project_timeline,
+        doc_timelines,
+    };
+
+    let meta_json = serde_json::to_string_pretty(&meta).map_err(|e| e.to_string())?;
+    let meta_path = export_root.join("metadata.json");
+    fs::write(&meta_path, meta_json).map_err(|e| format!("Write metadata failed: {}", e))?;
+
+    Ok(())
+}

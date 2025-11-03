@@ -65,6 +65,28 @@
   width: 100%;
 }
 
+.sidebar-footer {
+  padding: 0.5rem 0.75rem 0.75rem 0.75rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.375rem;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #111827;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.export-button:hover {
+  background: #f9fafb;
+}
+
 .doc-tree {
   font-size: 0.875rem;
   outline: none;
