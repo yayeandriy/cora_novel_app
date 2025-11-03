@@ -130,6 +130,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private draftAutoSaveTimeouts: Map<number, any> = new Map();
   draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
   private focusedDraftId: number | null = null;
+  selectedDraftId: number | null = null;
 
   // Import flow state
   showImportDialog = false;
@@ -531,6 +532,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
     
     // Load drafts for this document
+    this.selectedDraftId = null; // reset draft selection when switching docs
     await this.loadDrafts(this.selectedDoc.id);
   // Load characters attached to this doc
   await this.loadDocCharacters(this.selectedDoc.id);
@@ -846,6 +848,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.selectedDoc = null;
       this.selectedGroup = null;
       this.currentGroup = null;
+  this.selectedDraftId = null;
       
   // Reload tree but do NOT auto-restore selection; we'll set it manually
   await this.loadProject(false, true);
@@ -902,6 +905,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.selectedGroup = null;
       this.selectedDoc = null;
       this.currentGroup = null;
+  this.selectedDraftId = null;
       
       await this.loadProject();
       
@@ -1491,6 +1495,17 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       
       // Reload drafts for the current document
       await this.loadDrafts(this.selectedDoc.id);
+      // Select the newly created draft to open split view
+      this.selectedDraftId = draft.id;
+      // Ensure brand-new draft starts with EMPTY content in UI and local cache
+      this.draftLocalContent.set(draft.id, '');
+      this.setLocalDraftContent(draft.id, '');
+      const idx = this.drafts.findIndex(d => d.id === draft.id);
+      if (idx !== -1) {
+        this.drafts[idx] = { ...this.drafts[idx], content: '' };
+      }
+      // Mark as pending so a blur will sync the empty content if user doesn't type
+      this.draftSyncStatus[draft.id] = 'pending';
     } catch (error) {
       console.error('Failed to create draft:', error);
       alert('Failed to create draft: ' + error);
@@ -1975,8 +1990,29 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       
       // Remove from drafts array
       this.drafts = this.drafts.filter(d => d.id !== draftId);
+      // Clear selection if we deleted the selected draft
+      if (this.selectedDraftId === draftId) {
+        this.selectedDraftId = null;
+      }
     } catch (error) {
       console.error('Failed to delete draft:', error);
     }
+  }
+
+  // ==================== DOCUMENT EDITOR DRAFT HANDLERS ====================
+  onDocumentDraftAdd(): void {
+    this.createDraft();
+  }
+
+  onDocumentDraftSelect(draftId: number): void {
+    this.selectedDraftId = draftId;
+  }
+
+  onDocumentDraftChanged(event: { draftId: number; content: string; cursorPosition: number }): void {
+    this.onDraftChange(event.draftId, event.content, event.cursorPosition);
+  }
+
+  onDocumentDraftBlurred(draftId: number): void {
+    this.onDraftBlur(draftId);
   }
 }

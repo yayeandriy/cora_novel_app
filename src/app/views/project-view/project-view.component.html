@@ -85,9 +85,16 @@
         [allProjectDocs]="getAllDocs()"
         [showSaveStatus]="showSaveStatus"
         [hasUnsavedChanges]="hasUnsavedChanges"
+        [drafts]="drafts"
+        [draftSyncStatus]="draftSyncStatus"
+        [selectedDraftId]="selectedDraftId"
         (docNameChange)="renameDoc($event)"
         (docTextChange)="onDocumentTextChange()"
-        (docSaved)="saveDoc()">
+        (docSaved)="saveDoc()"
+        (draftAdd)="onDocumentDraftAdd()"
+        (draftSelect)="onDocumentDraftSelect($event)"
+        (draftChanged)="onDocumentDraftChanged($event)"
+        (draftBlurred)="onDocumentDraftBlurred($event)">
       </app-document-editor>
       }
 

@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import type { Draft } from '../../shared/models';
 
 export interface Doc {
   id: number;
@@ -27,6 +28,15 @@ export class DocumentEditorComponent {
   @Input() showSaveStatus: boolean = false;
   @Input() hasUnsavedChanges: boolean = false;
   @Input() allProjectDocs: Doc[] = [];
+  // Drafts integration
+  @Input() drafts: Draft[] = [];
+  @Input() draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
+  @Input() selectedDraftId: number | null = null;
+  
+  @Output() draftAdd = new EventEmitter<void>();
+  @Output() draftSelect = new EventEmitter<number>();
+  @Output() draftChanged = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();
+  @Output() draftBlurred = new EventEmitter<number>();
   
   @Output() docNameChange = new EventEmitter<Doc>();
   @Output() docTextChange = new EventEmitter<void>();
@@ -34,9 +44,33 @@ export class DocumentEditorComponent {
   
   @ViewChild('docTitleInput') docTitleInput?: ElementRef<HTMLInputElement>;
   @ViewChild('editorTextarea') editorTextarea?: ElementRef<HTMLTextAreaElement>;
+  @ViewChild('draftTextarea') draftTextarea?: ElementRef<HTMLTextAreaElement>;
 
   focusEditor() {
     this.editorTextarea?.nativeElement.focus();
+  }
+
+  // Draft helpers
+  get selectedDraft() {
+    return this.drafts.find(d => d.id === this.selectedDraftId) || null;
+  }
+
+  addDraft() {
+    this.draftAdd.emit();
+  }
+
+  selectDraft(id: number) {
+    this.draftSelect.emit(id);
+    setTimeout(() => this.draftTextarea?.nativeElement.focus(), 0);
+  }
+
+  onDraftInput(event: Event, draftId: number) {
+    const target = event.target as HTMLTextAreaElement;
+    this.draftChanged.emit({ draftId, content: target.value, cursorPosition: target.selectionStart });
+  }
+
+  onDraftBlur(draftId: number) {
+    this.draftBlurred.emit(draftId);
   }
 
   focusTitle() {

@@ -54,17 +54,6 @@
       }
     </div>
 
-    <!-- Drafts Section -->
-    <app-drafts-panel
-      [drafts]="drafts"
-      [draftSyncStatus]="draftSyncStatus"
-      [expanded]="draftsExpanded"
-      (expandedChange)="onDraftsToggle($event)"
-      (draftCreated)="onDraftCreated()"
-      (draftChanged)="onDraftChanged($event)"
-      (draftBlurred)="onDraftBlurred($event)"
-      (draftDeleted)="onDraftDeleted($event)"
-      (draftContentRequested)="onDraftContentRequested($event)">
-    </app-drafts-panel>
+    <!-- Drafts Section removed: moved to Document Editor header and split view -->
   </div>
 </aside>

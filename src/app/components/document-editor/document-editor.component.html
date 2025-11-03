@@ -10,6 +10,22 @@
       (keydown.enter)="focusEditor()"
       placeholder="Untitled">
     <div class="toolbar-actions">
+      <div class="draft-controls">
+        <button class="toolbar-button" (click)="addDraft()" title="Add draft">+ Draft</button>
+        <div class="draft-tabs">
+          @for (d of drafts; track d.id) {
+            <button 
+              class="draft-tab" 
+              [class.active]="d.id === selectedDraftId"
+              (click)="selectDraft(d.id)"
+              title="Open draft">
+              {{ d.name }}
+              @if (draftSyncStatus[d.id] === 'syncing') { <span class="tab-dot">⟳</span> }
+              @if (draftSyncStatus[d.id] === 'synced') { <span class="tab-dot">✓</span> }
+            </button>
+          }
+        </div>
+      </div>
       @if (showSaveStatus || hasUnsavedChanges) {
       <div class="save-status">
         <svg xmlns="http://www.w3.org/2000/svg" class="save-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -26,14 +42,39 @@
     </div>
   </div>
   
-  <textarea 
-    #editorTextarea
-    [(ngModel)]="selectedDoc.text"
-    (input)="onTextChange()"
-    class="editor-textarea"
-    (blur)="onBlur()"
-    placeholder="Start writing...">
-  </textarea>
+  @if (!selectedDraft) {
+    <textarea 
+      #editorTextarea
+      [(ngModel)]="selectedDoc.text"
+      (input)="onTextChange()"
+      class="editor-textarea"
+      (blur)="onBlur()"
+      placeholder="Start writing...">
+    </textarea>
+  } @else {
+    <div class="editor-split">
+      <div class="pane">
+        <textarea 
+          #editorTextarea
+          [(ngModel)]="selectedDoc.text"
+          (input)="onTextChange()"
+          class="editor-textarea"
+          (blur)="onBlur()"
+          placeholder="Start writing...">
+        </textarea>
+      </div>
+      <div class="pane border-l">
+        <textarea 
+          #draftTextarea
+          [(ngModel)]="selectedDraft!.content"
+          (input)="onDraftInput($event, selectedDraft!.id)"
+          (blur)="onDraftBlur(selectedDraft!.id)"
+          class="editor-textarea"
+          placeholder="Draft content...">
+        </textarea>
+      </div>
+    </div>
+  }
   
   <div class="editor-footer">
     <div class="stats-container">
