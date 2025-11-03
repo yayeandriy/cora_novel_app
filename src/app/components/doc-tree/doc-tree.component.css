@@ -167,6 +167,34 @@
   white-space: nowrap;
 }
 
+.folder-index {
+  min-width: 1.25rem;
+  text-align: right;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tree-item.selected > .tree-item-header .folder-index {
+  color: white;
+}
+
+.folder-name {
+  font-weight: 600;
+}
+
+.doc-index {
+  min-width: 2rem;
+  text-align: right;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tree-item.selected > .tree-item-header .doc-index {
+  color: white;
+}
+
 .add-doc-button {
   display: flex;
   align-items: center;
