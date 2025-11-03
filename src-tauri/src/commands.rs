@@ -398,69 +398,202 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
         return Err("Selected path is not a directory".to_string());
     }
 
-    // Project name from folder basename
-    let project_name = base.file_name().and_then(|s| s.to_str()).unwrap_or("Imported Project").to_string();
-
-    // Create project with path saved
-    let payload = crate::models::ProjectCreate { name: project_name.clone(), desc: None, path: Some(folder_path.clone()) };
-    let project = crate::services::projects::create(pool, payload).map_err(|e| e.to_string())?;
-
-    // Read entries and partition into subdirs and root .txt files
-    let mut subdirs: Vec<(String, std::path::PathBuf)> = Vec::new();
-    let mut root_txt_files: Vec<std::path::PathBuf> = Vec::new();
-
-    for entry in fs::read_dir(base).map_err(|e| format!("Failed to read dir {}: {}", base.display(), e))? {
-        let entry = entry.map_err(|e| e.to_string())?;
-        let p = entry.path();
-        if p.is_dir() {
-            // collect subdir
-            let name = p.file_name().and_then(|s| s.to_str()).unwrap_or("Folder").to_string();
-            subdirs.push((name, p));
-        } else if p.is_file() {
-            if p.extension().and_then(|e| e.to_str()).map(|e| e.eq_ignore_ascii_case("txt")).unwrap_or(false) {
-                root_txt_files.push(p);
+    // First, check for metadata.json to detect exported project format
+    let metadata_path = base.join("metadata.json");
+    if metadata_path.exists() && metadata_path.is_file() {
+        // Parse and import based on metadata
+        let content = fs::read_to_string(&metadata_path).map_err(|e| format!("Failed to read metadata.json: {}", e))?;
+        #[derive(serde::Deserialize)]
+        struct MetaHeader { app: Option<String>, version: Option<u32>, exported_at: Option<String> }
+        #[derive(serde::Deserialize)]
+        struct ImportFile {
+            meta: Option<MetaHeader>,
+            project: crate::models::Project,
+            groups: Vec<crate::models::DocGroup>,
+            docs: Vec<crate::models::Doc>,
+            characters: Vec<crate::models::Character>,
+            events: Vec<crate::models::Event>,
+            doc_characters: std::collections::HashMap<i64, Vec<i64>>,
+            doc_events: std::collections::HashMap<i64, Vec<i64>>,
+            project_timeline: Option<crate::models::Timeline>,
+            doc_timelines: std::collections::HashMap<i64, Option<crate::models::Timeline>>,
+            #[serde(default)]
+            drafts_by_doc: std::collections::HashMap<i64, Vec<crate::models::Draft>>,
+        }
+        let parsed: ImportFile = match serde_json::from_str(&content) {
+            Ok(v) => v,
+            Err(_) => {
+                // Fallback to legacy import on parse error
+                return legacy_import_folder(pool, base, &folder_path);
+            }
+        };
+        if let Some(meta) = &parsed.meta {
+            if meta.app.as_deref() != Some("cora-novel-app") {
+                // Fallback to legacy import if not our format
+                return legacy_import_folder(pool, base, &folder_path);
             }
         }
-    }
 
-    // Sort by name for determinism
-    subdirs.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
-    root_txt_files.sort();
+        // Create project (prefer metadata project name)
+        let project_name = parsed.project.name.clone();
+        let payload = crate::models::ProjectCreate { name: project_name, desc: parsed.project.desc.clone(), path: Some(folder_path.clone()) };
+        let new_project = crate::services::projects::create(pool, payload).map_err(|e| e.to_string())?;
 
-    // Create groups for subdirs and import immediate .txt files
-    for (dir_name, dir_path) in subdirs.iter() {
-        let group = crate::services::doc_groups::create_doc_group(pool, project.id, dir_name, None)
-            .map_err(|e| e.to_string())?;
-        // Import only immediate .txt files
-        for entry in fs::read_dir(dir_path).map_err(|e| format!("Failed to read dir {}: {}", dir_path.display(), e))? {
-            let entry = entry.map_err(|e| e.to_string())?;
-            let file_path = entry.path();
-            if file_path.is_file() {
-                if file_path.extension().and_then(|e| e.to_str()).map(|e| e.eq_ignore_ascii_case("txt")).unwrap_or(false) {
-                    let name = file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("Imported");
-                    let content = fs::read_to_string(&file_path).map_err(|e| format!("Failed to read {}: {}", file_path.display(), e))?;
-                    let doc = crate::services::docs::create_doc(pool, project.id, name, Some(group.id))
-                        .map_err(|e| e.to_string())?;
-                    crate::services::docs::update_doc(pool, doc.id, &content).map_err(|e| e.to_string())?;
+        use std::collections::HashMap;
+        // Create groups in parent-first order using original ids for mapping
+        let mut groups_by_parent: HashMap<Option<i64>, Vec<&crate::models::DocGroup>> = HashMap::new();
+        for g in &parsed.groups {
+            groups_by_parent.entry(g.parent_id).or_default().push(g);
+        }
+        for v in groups_by_parent.values_mut() {
+            v.sort_by_key(|g| g.sort_order.unwrap_or(0_i64));
+        }
+        let mut group_id_map: HashMap<i64, i64> = HashMap::new(); // old -> new
+        // Create root groups
+        if let Some(root) = groups_by_parent.get(&None) {
+            for g in root {
+                let created = crate::services::doc_groups::create_doc_group(pool, new_project.id, &g.name, None).map_err(|e| e.to_string())?;
+                group_id_map.insert(g.id, created.id);
+                // Recurse children for this group
+                let mut stack: Vec<i64> = vec![g.id];
+                while let Some(parent_old_id) = stack.pop() {
+                    if let Some(children) = groups_by_parent.get(&Some(parent_old_id)) {
+                        for ch in children {
+                            let new_parent_id = *group_id_map.get(&parent_old_id).expect("parent must be created");
+                            let created_child = crate::services::doc_groups::create_doc_group(pool, new_project.id, &ch.name, Some(new_parent_id)).map_err(|e| e.to_string())?;
+                            group_id_map.insert(ch.id, created_child.id);
+                            stack.push(ch.id);
+                        }
+                    }
                 }
             }
         }
-    }
 
-    // If root .txt files exist, create UNSORTED group last and import
-    if !root_txt_files.is_empty() {
-        let unsorted = crate::services::doc_groups::create_doc_group(pool, project.id, "UNSORTED", None)
-            .map_err(|e| e.to_string())?;
-        for file_path in root_txt_files.iter() {
-            let name = file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("Imported");
-            let content = fs::read_to_string(&file_path).map_err(|e| format!("Failed to read {}: {}", file_path.display(), e))?;
-            let doc = crate::services::docs::create_doc(pool, project.id, name, Some(unsorted.id))
-                .map_err(|e| e.to_string())?;
-            crate::services::docs::update_doc(pool, doc.id, &content).map_err(|e| e.to_string())?;
+        // Create docs ordered by (doc_group_id, sort_order)
+        let mut docs_sorted: Vec<&crate::models::Doc> = parsed.docs.iter().collect();
+        docs_sorted.sort_by_key(|d| (d.doc_group_id.unwrap_or(-1_i64), d.sort_order.unwrap_or(0_i64)));
+        let mut doc_id_map: HashMap<i64, i64> = HashMap::new();
+        for d in docs_sorted {
+            let name = d.name.clone().unwrap_or("Untitled".to_string());
+            let new_group = d.doc_group_id.and_then(|old_gid| group_id_map.get(&old_gid).copied());
+            let created = crate::services::docs::create_doc(pool, new_project.id, &name, new_group).map_err(|e| e.to_string())?;
+            if let Some(t) = d.text.clone() { crate::services::docs::update_doc(pool, created.id, &t).map_err(|e| e.to_string())?; }
+            if let Some(n) = d.notes.clone() { crate::services::docs::update_doc_notes(pool, created.id, &n).map_err(|e| e.to_string())?; }
+            doc_id_map.insert(d.id, created.id);
         }
+
+        // Create drafts per doc if present
+        for (old_doc_id, drafts) in parsed.drafts_by_doc.iter() {
+            if let Some(&new_doc_id) = doc_id_map.get(old_doc_id) {
+                for dr in drafts {
+                    let name = dr.name.clone();
+                    let content = dr.content.clone();
+                    crate::services::drafts::create_draft(pool, new_doc_id, crate::models::DraftCreate { name, content }).map_err(|e| e.to_string())?;
+                }
+            }
+        }
+
+        // Characters
+        let mut char_id_map: HashMap<i64, i64> = HashMap::new();
+        for c in &parsed.characters {
+            let created = crate::services::characters::create(pool, new_project.id, &c.name, c.desc.clone()).map_err(|e| e.to_string())?;
+            char_id_map.insert(c.id, created.id);
+        }
+        // Events
+        let mut event_id_map: HashMap<i64, i64> = HashMap::new();
+        for e in &parsed.events {
+            let created = crate::services::events::create(pool, new_project.id, &e.name, e.desc.clone(), e.start_date.clone(), e.end_date.clone(), e.date.clone()).map_err(|e| e.to_string())?;
+            event_id_map.insert(e.id, created.id);
+        }
+
+        // Attachments
+        for (old_doc_id, old_chars) in parsed.doc_characters.iter() {
+            if let Some(&new_doc_id) = doc_id_map.get(old_doc_id) {
+                for old_ch in old_chars {
+                    if let Some(&new_ch_id) = char_id_map.get(old_ch) {
+                        crate::services::characters::attach_to_doc(pool, new_doc_id, new_ch_id).map_err(|e| e.to_string())?;
+                    }
+                }
+            }
+        }
+        for (old_doc_id, old_events) in parsed.doc_events.iter() {
+            if let Some(&new_doc_id) = doc_id_map.get(old_doc_id) {
+                for old_ev in old_events {
+                    if let Some(&new_ev_id) = event_id_map.get(old_ev) {
+                        crate::services::events::attach_to_doc(pool, new_doc_id, new_ev_id).map_err(|e| e.to_string())?;
+                    }
+                }
+            }
+        }
+
+        // Timelines
+        if let Some(tl) = parsed.project_timeline.clone() {
+            let _ = crate::services::timelines::create(pool, crate::models::TimelineCreate { entity_type: "project".into(), entity_id: new_project.id, start_date: tl.start_date, end_date: tl.end_date }).map_err(|e| e.to_string())?;
+        }
+        for (old_doc_id, maybe_tl) in parsed.doc_timelines.iter() {
+            if let Some(&new_doc_id) = doc_id_map.get(old_doc_id) {
+                if let Some(tl) = maybe_tl {
+                    let _ = crate::services::timelines::create(pool, crate::models::TimelineCreate { entity_type: "doc".into(), entity_id: new_doc_id, start_date: tl.start_date.clone(), end_date: tl.end_date.clone() }).map_err(|e| e.to_string())?;
+                }
+            }
+        }
+
+        return serde_json::to_value(new_project).map_err(|e| e.to_string());
     }
 
-    serde_json::to_value(project).map_err(|e| e.to_string())
+        // Fallback: legacy folder import (no metadata.json)
+        return legacy_import_folder(pool, base, &folder_path);
+}
+
+// Helper to perform legacy folder import
+fn legacy_import_folder(pool: &crate::db::DbPool, base: &Path, folder_path: &str) -> Result<serde_json::Value, String> {
+        // Project name from folder basename
+        let project_name = base.file_name().and_then(|s| s.to_str()).unwrap_or("Imported Project").to_string();
+        let payload = crate::models::ProjectCreate { name: project_name.clone(), desc: None, path: Some(folder_path.to_string()) };
+        let project = crate::services::projects::create(pool, payload).map_err(|e| e.to_string())?;
+
+        // Read entries and partition into subdirs and root .txt files
+        let mut subdirs: Vec<(String, std::path::PathBuf)> = Vec::new();
+        let mut root_txt_files: Vec<std::path::PathBuf> = Vec::new();
+        for entry in fs::read_dir(base).map_err(|e| format!("Failed to read dir {}: {}", base.display(), e))? {
+                let entry = entry.map_err(|e| e.to_string())?;
+                let p = entry.path();
+                if p.is_dir() {
+                        let name = p.file_name().and_then(|s| s.to_str()).unwrap_or("Folder").to_string();
+                        subdirs.push((name, p));
+                } else if p.is_file() {
+                        if p.extension().and_then(|e| e.to_str()).map(|e| e.eq_ignore_ascii_case("txt")).unwrap_or(false) {
+                                root_txt_files.push(p);
+                        }
+                }
+        }
+        subdirs.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+        root_txt_files.sort();
+        for (dir_name, dir_path) in subdirs.iter() {
+                let group = crate::services::doc_groups::create_doc_group(pool, project.id, dir_name, None).map_err(|e| e.to_string())?;
+                for entry in fs::read_dir(dir_path).map_err(|e| format!("Failed to read dir {}: {}", dir_path.display(), e))? {
+                        let entry = entry.map_err(|e| e.to_string())?;
+                        let file_path = entry.path();
+                        if file_path.is_file() {
+                                if file_path.extension().and_then(|e| e.to_str()).map(|e| e.eq_ignore_ascii_case("txt")).unwrap_or(false) {
+                                        let name = file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("Imported");
+                                        let text = fs::read_to_string(&file_path).map_err(|e| format!("Failed to read {}: {}", file_path.display(), e))?;
+                                        let doc = crate::services::docs::create_doc(pool, project.id, name, Some(group.id)).map_err(|e| e.to_string())?;
+                                        crate::services::docs::update_doc(pool, doc.id, &text).map_err(|e| e.to_string())?;
+                                }
+                        }
+                }
+        }
+        if !root_txt_files.is_empty() {
+                let unsorted = crate::services::doc_groups::create_doc_group(pool, project.id, "UNSORTED", None).map_err(|e| e.to_string())?;
+                for file_path in root_txt_files.iter() {
+                        let name = file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("Imported");
+                        let text = fs::read_to_string(&file_path).map_err(|e| format!("Failed to read {}: {}", file_path.display(), e))?;
+                        let doc = crate::services::docs::create_doc(pool, project.id, name, Some(unsorted.id)).map_err(|e| e.to_string())?;
+                        crate::services::docs::update_doc(pool, doc.id, &text).map_err(|e| e.to_string())?;
+                }
+        }
+        serde_json::to_value(project).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -588,30 +721,30 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
         doc_timelines.insert(d.id, tl);
     }
 
-    #[derive(serde::Serialize)]
-    struct ExportMetadata<'a> {
-        project: &'a crate::models::Project,
-        groups: &'a Vec<crate::models::DocGroup>,
-        docs: &'a Vec<crate::models::Doc>,
-        characters: Vec<crate::models::Character>,
-        events: Vec<crate::models::Event>,
-        doc_characters: HashMap<i64, Vec<i64>>, // doc_id -> character_ids
-        doc_events: HashMap<i64, Vec<i64>>,     // doc_id -> event_ids
-        project_timeline: Option<crate::models::Timeline>,
-        doc_timelines: HashMap<i64, Option<crate::models::Timeline>>,
+    // drafts_by_doc for robust import
+    let mut drafts_by_doc: HashMap<i64, Vec<crate::models::Draft>> = HashMap::new();
+    for d in &docs {
+        let ds = crate::services::drafts::list_drafts(pool, d.id).map_err(|e| e.to_string())?;
+        if !ds.is_empty() { drafts_by_doc.insert(d.id, ds); }
     }
 
-    let meta = ExportMetadata {
-        project: &project,
-        groups: &groups,
-        docs: &docs,
-        characters,
-        events,
-        doc_characters,
-        doc_events,
-        project_timeline,
-        doc_timelines,
-    };
+    let meta = serde_json::json!({
+        "meta": {
+            "app": "cora-novel-app",
+            "version": 1,
+            "exported_at": chrono::Utc::now().to_rfc3339(),
+        },
+        "project": project,
+        "groups": groups,
+        "docs": docs,
+        "characters": characters,
+        "events": events,
+        "doc_characters": doc_characters,
+        "doc_events": doc_events,
+        "project_timeline": project_timeline,
+        "doc_timelines": doc_timelines,
+        "drafts_by_doc": drafts_by_doc,
+    });
 
     let meta_json = serde_json::to_string_pretty(&meta).map_err(|e| e.to_string())?;
     let meta_path = export_root.join("metadata.json");
