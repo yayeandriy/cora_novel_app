@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ProjectService } from '../../services/project.service';
 import { TimelineService } from '../../services/timeline.service';
-import { confirm, open } from '@tauri-apps/plugin-dialog';
+import { confirm, open, ask } from '@tauri-apps/plugin-dialog';
 import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
 import { DocumentEditorComponent } from '../../components/document-editor/document-editor.component';
 import { GroupViewComponent } from '../../components/group-view/group-view.component';
@@ -132,6 +132,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Import flow state
   showImportDialog = false;
   pendingImportFiles: string[] = [];
+  pendingImportFolders: string[] = [];
   importTargetGroupId: number | null = null;
   flattenedGroups: Array<{ id: number; label: string }> = [];
 
@@ -168,29 +169,48 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // ========= Import .txt files =========
   async onImportRequested() {
     try {
-      const selection = await open({
+      // Step 1: always allow selecting folders (import to root-level groups)
+      const folderSelection = await open({
+        multiple: true,
+        directory: true,
+        title: 'Select folder(s) to import'
+      });
+      const folders = folderSelection ? (Array.isArray(folderSelection) ? folderSelection : [folderSelection]) : [];
+
+      // Step 2: optional additional files import
+      const fileSelection = await open({
         multiple: true,
         directory: false,
         filters: [{ name: 'Text Files', extensions: ['txt'] }],
-        title: 'Select .txt files to import'
+        title: 'Select .txt files to also import (optional)'
       });
+      const files = fileSelection ? (Array.isArray(fileSelection) ? fileSelection : [fileSelection]) : [];
 
-      if (!selection) return;
+      if (folders.length === 0 && files.length === 0) return;
 
-      const files = Array.isArray(selection) ? selection : [selection];
-      if (!files.length) return;
-
-      // If no folders exist, create a default one and import straight there
-      if (this.docGroups.length === 0) {
-        const group = await this.projectService.createDocGroup(this.projectId, 'Imported', null);
-        this.importTargetGroupId = group.id;
-        await this.performImport(files, group.id);
+      if (files.length === 0) {
+        // Only folders -> import immediately to root (backend ignores group id for folders)
+        await this.projectService.importTxtFiles(this.projectId, -1, folders as string[]);
+        await this.loadProject(true);
+        setTimeout(() => this.focusTree(), 0);
         return;
       }
 
+      // If files exist and there are no groups yet, create default one
+      if (this.docGroups.length === 0) {
+        const group = await this.projectService.createDocGroup(this.projectId, 'Imported', null);
+        this.pendingImportFolders = folders as string[];
+        this.pendingImportFiles = files as string[];
+        await this.performImport([...this.pendingImportFolders, ...this.pendingImportFiles], group.id);
+        this.pendingImportFolders = [];
+        this.pendingImportFiles = [];
+        return;
+      }
+
+      // Store selections; ask for destination only for files
+      this.pendingImportFolders = folders as string[];
       this.pendingImportFiles = files as string[];
       this.flattenedGroups = this.flattenGroupsForSelect(this.docGroups);
-      // Preselect current group if available, otherwise first option
       this.importTargetGroupId = this.selectedGroup?.id ?? (this.flattenedGroups[0]?.id ?? null);
       this.showImportDialog = true;
     } catch (err) {
@@ -198,15 +218,57 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Import Folders: create root-level groups, no prompts
+  async onImportFoldersRequested() {
+    try {
+      const folderSelection = await open({ multiple: true, directory: true, title: 'Select folder(s) to import' });
+      const folders = folderSelection ? (Array.isArray(folderSelection) ? folderSelection : [folderSelection]) : [];
+      if (folders.length === 0) return;
+      await this.projectService.importTxtFiles(this.projectId, -1, folders as string[]);
+      await this.loadProject(true);
+      setTimeout(() => this.focusTree(), 0);
+    } catch (err) {
+      console.error('Failed to import folders:', err);
+      alert('Failed to import folders: ' + err);
+    }
+  }
+
+  // Import Files: ask for destination folder
+  async onImportFilesRequested() {
+    try {
+      const fileSelection = await open({ multiple: true, directory: false, filters: [{ name: 'Text Files', extensions: ['txt'] }], title: 'Select .txt files to import' });
+      const files = fileSelection ? (Array.isArray(fileSelection) ? fileSelection : [fileSelection]) : [];
+      if (files.length === 0) return;
+
+      // If no folders exist, create default and import directly
+      if (this.docGroups.length === 0) {
+        const group = await this.projectService.createDocGroup(this.projectId, 'Imported', null);
+        await this.performImport(files as string[], group.id);
+        return;
+      }
+
+      // Otherwise show destination picker modal
+      this.pendingImportFolders = [];
+      this.pendingImportFiles = files as string[];
+      this.flattenedGroups = this.flattenGroupsForSelect(this.docGroups);
+      this.importTargetGroupId = this.selectedGroup?.id ?? (this.flattenedGroups[0]?.id ?? null);
+      this.showImportDialog = true;
+    } catch (err) {
+      console.error('Failed to import files:', err);
+      alert('Failed to import files: ' + err);
+    }
+  }
+
   cancelImport() {
     this.showImportDialog = false;
     this.pendingImportFiles = [];
+    this.pendingImportFolders = [];
     this.importTargetGroupId = null;
   }
 
   async confirmImport() {
     if (!this.importTargetGroupId || this.pendingImportFiles.length === 0) return;
-    const files = [...this.pendingImportFiles];
+  const files = [...this.pendingImportFolders, ...this.pendingImportFiles];
     const groupId = Number(this.importTargetGroupId);
     this.cancelImport();
     await this.performImport(files, groupId);

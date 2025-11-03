@@ -332,26 +332,54 @@ pub async fn timeline_delete_by_entity(state: State<'_, AppState>, entity_type: 
     crate::services::timelines::delete_by_entity(pool, &entity_type, entity_id).map_err(|e| e.to_string())
 }
 
-/// Import multiple .txt files as new docs under the specified folder (doc_group_id)
+/// Import multiple paths (files or folders).
+/// - Files with .txt are imported as docs into the target folder (doc_group_id).
+/// - Folders always become ROOT-LEVEL doc groups (parent_id = None), regardless of the target folder.
+///   Only the folder's immediate .txt files are imported into that new group. Nested subfolders are ignored.
 #[tauri::command]
 pub async fn import_txt_files(state: State<'_, AppState>, project_id: i64, doc_group_id: i64, files: Vec<String>) -> Result<usize, String> {
     let pool = &state.pool;
     let mut imported = 0usize;
-    for file in files {
-        // Extract base name without extension
-        let name = Path::new(&file)
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("Imported");
 
-        // Read content
-        let content = std::fs::read_to_string(&file).map_err(|e| format!("Failed to read {}: {}", file, e))?;
+    for p in files {
+        let path = Path::new(&p);
+        if path.is_file() {
+            // import a single file if .txt
+            if path.extension().and_then(|e| e.to_str()).map(|e| e.eq_ignore_ascii_case("txt")).unwrap_or(false) {
+                let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("Imported");
+                let content = std::fs::read_to_string(&path).map_err(|e| format!("Failed to read {}: {}", p, e))?;
+                let doc = crate::services::docs::create_doc(pool, project_id, name, Some(doc_group_id))
+                    .map_err(|e| e.to_string())?;
+                crate::services::docs::update_doc(pool, doc.id, &content).map_err(|e| e.to_string())?;
+                imported += 1;
+            }
+            continue;
+        }
 
-        // Create doc and set text
-        let doc = crate::services::docs::create_doc(pool, project_id, name, Some(doc_group_id))
-            .map_err(|e| e.to_string())?;
-        crate::services::docs::update_doc(pool, doc.id, &content).map_err(|e| e.to_string())?;
-        imported += 1;
+        if path.is_dir() {
+            // Create a ROOT-LEVEL group for this directory
+            let group_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("Imported Folder").to_string();
+            let group = crate::services::doc_groups::create_doc_group(pool, project_id, &group_name, None)
+                .map_err(|e| e.to_string())?;
+
+            // Import only immediate .txt files (ignore subdirectories)
+            let entries = std::fs::read_dir(&path).map_err(|e| format!("Failed to read dir {}: {}", p, e))?;
+            for entry in entries {
+                let entry = entry.map_err(|e| e.to_string())?;
+                let entry_path = entry.path();
+                if entry_path.is_file() {
+                    if entry_path.extension().and_then(|e| e.to_str()).map(|e| e.eq_ignore_ascii_case("txt")).unwrap_or(false) {
+                        let name = entry_path.file_stem().and_then(|s| s.to_str()).unwrap_or("Imported");
+                        let content = std::fs::read_to_string(&entry_path).map_err(|e| format!("Failed to read {}: {}", entry_path.display(), e))?;
+                        let doc = crate::services::docs::create_doc(pool, project_id, name, Some(group.id))
+                            .map_err(|e| e.to_string())?;
+                        crate::services::docs::update_doc(pool, doc.id, &content).map_err(|e| e.to_string())?;
+                        imported += 1;
+                    }
+                }
+            }
+        }
     }
+
     Ok(imported)
 }
