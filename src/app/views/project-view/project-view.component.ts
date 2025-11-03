@@ -128,6 +128,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Draft local caching and syncing
   private draftLocalContent: Map<number, string> = new Map();
   private draftAutoSaveTimeouts: Map<number, any> = new Map();
+  private draftSyncedClearTimeouts: Map<number, any> = new Map();
   draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
   private focusedDraftId: number | null = null;
   selectedDraftId: number | null = null;
@@ -1529,8 +1530,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
           this.draftLocalContent.set(draft.id, backendContent);
           draft.content = backendContent; // reflect into UI model
         }
-        // Initialize sync status
-        this.draftSyncStatus[draft.id] = 'synced';
+        // Do not show initial synced checkmark on load; clear any previous timers/status
+        delete this.draftSyncStatus[draft.id];
+        const t = this.draftSyncedClearTimeouts.get(draft.id);
+        if (t) { clearTimeout(t); this.draftSyncedClearTimeouts.delete(draft.id); }
       }
     } catch (error) {
       console.error('Failed to load drafts:', error);
@@ -1893,6 +1896,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     
     // Set status to pending
     this.draftSyncStatus[draftId] = 'pending';
+    // Cancel any pending clear of synced indicator
+    const prevClear = this.draftSyncedClearTimeouts.get(draftId);
+    if (prevClear) {
+      clearTimeout(prevClear);
+      this.draftSyncedClearTimeouts.delete(draftId);
+    }
     
     // Clear existing timeout
     const existingTimeout = this.draftAutoSaveTimeouts.get(draftId);
@@ -1933,6 +1942,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // Check if this is the currently focused draft
     const wasFocused = this.focusedDraftId === draftId;
     
+    // Cancel any pending clear timers before changing status
+    const prevClear = this.draftSyncedClearTimeouts.get(draftId);
+    if (prevClear) {
+      clearTimeout(prevClear);
+      this.draftSyncedClearTimeouts.delete(draftId);
+    }
+
     this.draftSyncStatus[draftId] = 'syncing';
     
     try {
@@ -1967,6 +1983,15 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
       
       this.draftSyncStatus[draftId] = 'synced';
+      // Auto-hide the checkmark after a short delay if no further edits occur
+      const clearTimer = setTimeout(() => {
+        // Only clear if status still 'synced' (i.e., user hasn't typed again)
+        if (this.draftSyncStatus[draftId] === 'synced') {
+          delete this.draftSyncStatus[draftId];
+        }
+        this.draftSyncedClearTimeouts.delete(draftId);
+      }, 2500);
+      this.draftSyncedClearTimeouts.set(draftId, clearTimer);
     } catch (error) {
       console.error('Failed to sync draft:', error);
       this.draftSyncStatus[draftId] = 'pending';
