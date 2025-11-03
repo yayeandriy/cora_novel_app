@@ -38,6 +38,7 @@ export class DocumentEditorComponent {
   @Output() draftRenamed = new EventEmitter<{ id: number; name: string }>();
   @Output() draftChanged = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();
   @Output() draftBlurred = new EventEmitter<number>();
+  @Output() draftDeleted = new EventEmitter<number>();
   
   @Output() docNameChange = new EventEmitter<Doc>();
   @Output() docTextChange = new EventEmitter<void>();
@@ -94,6 +95,12 @@ export class DocumentEditorComponent {
   }
 
   cancelDraftNameEdit() {
+    this.editingDraftId = null;
+  }
+
+  onClickDeleteDraft(draftId: number) {
+    // Emit delete without triggering input blur-save
+    this.draftDeleted.emit(draftId);
     this.editingDraftId = null;
   }
 

@@ -16,14 +16,23 @@
           @for (d of drafts; track d.id) {
             <div class="draft-tab-wrapper">
               @if (editingDraftId === d.id) {
-                <input
-                  #draftNameInput
-                  class="draft-name-input"
-                  [(ngModel)]="draftNameEdit"
-                  (blur)="saveDraftName()"
-                  (keydown.enter)="saveDraftName()"
-                  (keydown.escape)="cancelDraftNameEdit()"
-                  placeholder="Draft name" />
+                <div class="draft-edit-row">
+                  <input
+                    #draftNameInput
+                    class="draft-name-input"
+                    [(ngModel)]="draftNameEdit"
+                    (blur)="saveDraftName()"
+                    (keydown.enter)="saveDraftName()"
+                    (keydown.escape)="cancelDraftNameEdit()"
+                    placeholder="Draft name" />
+                  <button
+                    class="draft-delete-btn"
+                    (mousedown)="$event.preventDefault()"
+                    (click)="onClickDeleteDraft(d.id)"
+                    title="Delete draft">
+                    🗑
+                  </button>
+                </div>
               } @else {
                 <button 
                   class="draft-tab" 
