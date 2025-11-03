@@ -279,6 +279,13 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges {
     this.docNameChange.emit(doc);
   }
 
+  // Compute an appropriate input size so the full title is visible in the header
+  getDocTitleSize(): number {
+    const len = this.selectedDoc?.name ? this.selectedDoc.name.length : 0;
+    // Add 1 extra character for caret/padding headroom
+    return Math.max(1, len + 1);
+  }
+
   onTextChange() {
     this.docTextChange.emit();
   }

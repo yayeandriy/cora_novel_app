@@ -6,6 +6,7 @@
       type="text" 
       class="doc-title-input" 
       [(ngModel)]="selectedDoc.name"
+  [attr.size]="getDocTitleSize()"
       (blur)="onTitleChange(selectedDoc!)"
       (keydown.enter)="focusEditor()"
       placeholder="Untitled">

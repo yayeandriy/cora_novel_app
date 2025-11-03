@@ -48,6 +48,38 @@ app-root {
   overflow: hidden;
 }
 
+/* Light, narrow scrollbars (WebKit + Firefox) */
+:root {
+  --scrollbar-size: 8px;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.12);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.22);
+  --scrollbar-track: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* WebKit */
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  border: 2px solid transparent; /* creates a gap for a lighter look */
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
+}
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
 /* Utilities */
 .min-h-screen { min-height: 100vh; }
 .bg-gray-50 { background-color: #f9fafb; }
