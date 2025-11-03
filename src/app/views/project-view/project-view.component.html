@@ -55,6 +55,7 @@
       (groupToggled)="toggleGroup($event)"
       (groupCreated)="createGroup()"
       (docCreatedInGroup)="createDocInGroup($event)"
+      (importRequested)="onImportRequested()"
       (treeKeyDown)="handleTreeKeyDown($event)"
       (widthChanged)="startResizeLeft($event)">
     </app-doc-tree>
@@ -131,5 +132,23 @@
       (draftContentRequested)="getDraftLocalContent($event)"
       (widthChanged)="startResizeRight($event)">
     </app-right-sidebar>
+  </div>
+
+  <!-- Import target folder dialog -->
+  <div *ngIf="showImportDialog" class="modal-overlay" (click)="cancelImport()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">Import text files</div>
+      <div class="modal-body">
+        <div class="mb-2 text-sm text-gray-600">Choose a folder to place the imported documents.</div>
+        <select class="modal-select" [(ngModel)]="importTargetGroupId">
+          <option *ngFor="let opt of flattenedGroups" [ngValue]="opt.id">{{ opt.label }}</option>
+        </select>
+        <div class="mt-3 text-xs text-gray-500" *ngIf="pendingImportFiles.length">{{ pendingImportFiles.length }} file(s) selected</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="cancelImport()">Cancel</button>
+        <button class="btn-primary" [disabled]="!importTargetGroupId" (click)="confirmImport()">Import</button>
+      </div>
+    </div>
   </div>
 </div>

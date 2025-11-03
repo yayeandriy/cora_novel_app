@@ -187,4 +187,9 @@ export class ProjectService {
   async deleteAllDrafts(docId: number): Promise<void> {
     return invoke<void>("draft_delete_all", { docId });
   }
+
+  // Import .txt files into a target folder
+  async importTxtFiles(projectId: number, docGroupId: number, files: string[]): Promise<number> {
+    return invoke<number>("import_txt_files", { projectId, docGroupId, files });
+  }
 }

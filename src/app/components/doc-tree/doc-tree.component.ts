@@ -43,6 +43,7 @@ export class DocTreeComponent {
   @Output() groupToggled = new EventEmitter<DocGroup>();
   @Output() groupCreated = new EventEmitter<void>();
   @Output() docCreatedInGroup = new EventEmitter<DocGroup>();
+  @Output() importRequested = new EventEmitter<void>();
   @Output() treeKeyDown = new EventEmitter<KeyboardEvent>();
   @Output() widthChanged = new EventEmitter<number>();
   
@@ -68,6 +69,10 @@ export class DocTreeComponent {
 
   createGroup() {
     this.groupCreated.emit();
+  }
+
+  requestImport() {
+    this.importRequested.emit();
   }
 
   createDocInGroup(group: DocGroup, event: MouseEvent) {

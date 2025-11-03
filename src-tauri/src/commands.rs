@@ -2,6 +2,7 @@ use crate::db::DbPool;
 use crate::models::{ProjectCreate, Project, Character, Event, DraftCreate, DraftUpdate, Draft, Timeline, TimelineCreate, TimelineUpdate};
 use crate::services::projects as project_service;
 use tauri::State;
+use std::path::Path;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -329,4 +330,28 @@ pub async fn timeline_delete(state: State<'_, AppState>, id: i64) -> Result<(), 
 pub async fn timeline_delete_by_entity(state: State<'_, AppState>, entity_type: String, entity_id: i64) -> Result<(), String> {
     let pool = &state.pool;
     crate::services::timelines::delete_by_entity(pool, &entity_type, entity_id).map_err(|e| e.to_string())
+}
+
+/// Import multiple .txt files as new docs under the specified folder (doc_group_id)
+#[tauri::command]
+pub async fn import_txt_files(state: State<'_, AppState>, project_id: i64, doc_group_id: i64, files: Vec<String>) -> Result<usize, String> {
+    let pool = &state.pool;
+    let mut imported = 0usize;
+    for file in files {
+        // Extract base name without extension
+        let name = Path::new(&file)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Imported");
+
+        // Read content
+        let content = std::fs::read_to_string(&file).map_err(|e| format!("Failed to read {}: {}", file, e))?;
+
+        // Create doc and set text
+        let doc = crate::services::docs::create_doc(pool, project_id, name, Some(doc_group_id))
+            .map_err(|e| e.to_string())?;
+        crate::services::docs::update_doc(pool, doc.id, &content).map_err(|e| e.to_string())?;
+        imported += 1;
+    }
+    Ok(imported)
 }

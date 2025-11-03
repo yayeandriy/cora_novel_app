@@ -4,8 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ProjectService } from '../../services/project.service';
 import { TimelineService } from '../../services/timeline.service';
-import { confirm } from '@tauri-apps/plugin-dialog';
-import { ask } from '@tauri-apps/plugin-dialog';
+import { confirm, open } from '@tauri-apps/plugin-dialog';
 import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
 import { DocumentEditorComponent } from '../../components/document-editor/document-editor.component';
 import { GroupViewComponent } from '../../components/group-view/group-view.component';
@@ -130,6 +129,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
   private focusedDraftId: number | null = null;
 
+  // Import flow state
+  showImportDialog = false;
+  pendingImportFiles: string[] = [];
+  importTargetGroupId: number | null = null;
+  flattenedGroups: Array<{ id: number; label: string }> = [];
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -158,6 +163,78 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     if (this.autoSaveNotesTimeout) {
       clearTimeout(this.autoSaveNotesTimeout);
     }
+  }
+
+  // ========= Import .txt files =========
+  async onImportRequested() {
+    try {
+      const selection = await open({
+        multiple: true,
+        directory: false,
+        filters: [{ name: 'Text Files', extensions: ['txt'] }],
+        title: 'Select .txt files to import'
+      });
+
+      if (!selection) return;
+
+      const files = Array.isArray(selection) ? selection : [selection];
+      if (!files.length) return;
+
+      // If no folders exist, create a default one and import straight there
+      if (this.docGroups.length === 0) {
+        const group = await this.projectService.createDocGroup(this.projectId, 'Imported', null);
+        this.importTargetGroupId = group.id;
+        await this.performImport(files, group.id);
+        return;
+      }
+
+      this.pendingImportFiles = files as string[];
+      this.flattenedGroups = this.flattenGroupsForSelect(this.docGroups);
+      // Preselect current group if available, otherwise first option
+      this.importTargetGroupId = this.selectedGroup?.id ?? (this.flattenedGroups[0]?.id ?? null);
+      this.showImportDialog = true;
+    } catch (err) {
+      console.error('Failed to select files for import:', err);
+    }
+  }
+
+  cancelImport() {
+    this.showImportDialog = false;
+    this.pendingImportFiles = [];
+    this.importTargetGroupId = null;
+  }
+
+  async confirmImport() {
+    if (!this.importTargetGroupId || this.pendingImportFiles.length === 0) return;
+    const files = [...this.pendingImportFiles];
+    const groupId = Number(this.importTargetGroupId);
+    this.cancelImport();
+    await this.performImport(files, groupId);
+  }
+
+  private async performImport(files: string[], groupId: number) {
+    try {
+      await this.projectService.importTxtFiles(this.projectId, groupId, files);
+      await this.loadProject(true);
+      const group = this.findGroupById(this.docGroups, groupId);
+      if (group) this.selectGroup(group);
+      setTimeout(() => this.focusTree(), 0);
+    } catch (error) {
+      console.error('Import failed:', error);
+      alert('Failed to import files: ' + error);
+    }
+  }
+
+  private flattenGroupsForSelect(groups: DocGroup[], depth = 0): Array<{ id: number; label: string }> {
+    const items: Array<{ id: number; label: string }> = [];
+    for (const g of groups) {
+      const prefix = depth > 0 ? '—'.repeat(depth) + ' ' : '';
+      items.push({ id: g.id, label: `${prefix}${g.name}` });
+      if (g.groups && g.groups.length) {
+        items.push(...this.flattenGroupsForSelect(g.groups, depth + 1));
+      }
+    }
+    return items;
   }
 
   async loadProject(preserveSelection: boolean = false, skipRestore: boolean = false) {
