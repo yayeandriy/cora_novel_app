@@ -36,7 +36,7 @@
                 <button 
                   class="draft-tab" 
                   [class.active]="d.id === selectedDraftId"
-                  (click)="selectDraft(d.id)"
+                  (click)="selectOrToggle(d.id, $event)"
                   (dblclick)="startEditDraftName(d.id, d.name)"
                   title="Open draft (double-click to rename)">
                   {{ d.name }}
@@ -75,7 +75,7 @@
       placeholder="Start writing...">
     </textarea>
   } @else {
-    <div class="editor-split">
+    <div class="editor-split" #splitContainer>
       <div class="pane">
         <textarea 
           #editorTextarea
@@ -86,16 +86,25 @@
           placeholder="Start writing...">
         </textarea>
       </div>
-      <div class="pane border-l">
-        <textarea 
-          #draftTextarea
-          [(ngModel)]="selectedDraft!.content"
-          (input)="onDraftInput($event, selectedDraft!.id)"
-          (blur)="onDraftBlur(selectedDraft!.id)"
-          class="editor-textarea"
-          placeholder="Draft content...">
-        </textarea>
+      <div class="split-divider" 
+           [class.collapsed]="isSplitCollapsed"
+           title="Drag to resize. Double-click to {{ isSplitCollapsed ? 'expand' : 'collapse' }}"
+           (mousedown)="startResize($event)"
+           (dblclick)="toggleCollapse()">
+        <span class="divider-grip"></span>
       </div>
+      @if (!isSplitCollapsed) {
+        <div class="pane pane-right border-l" [style.flex]="'0 0 ' + draftPaneWidth + 'px'" [style.width.px]="draftPaneWidth">
+          <textarea 
+            #draftTextarea
+            [(ngModel)]="selectedDraft!.content"
+            (input)="onDraftInput($event, selectedDraft!.id)"
+            (blur)="onDraftBlur(selectedDraft!.id)"
+            class="editor-textarea"
+            placeholder="Draft content...">
+          </textarea>
+        </div>
+      }
     </div>
   }
   

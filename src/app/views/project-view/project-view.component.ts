@@ -132,6 +132,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
   private focusedDraftId: number | null = null;
   selectedDraftId: number | null = null;
+  
+  private getDraftSelectionKey(docId: number): string {
+    return `cora-draft-selected-${this.projectId}-${docId}`;
+  }
 
   // Import flow state
   showImportDialog = false;
@@ -1494,10 +1498,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       );
       console.log('Draft created:', draft);
       
-      // Reload drafts for the current document
-      await this.loadDrafts(this.selectedDoc.id);
-      // Select the newly created draft to open split view
-      this.selectedDraftId = draft.id;
+  // Reload drafts for the current document
+  await this.loadDrafts(this.selectedDoc.id);
+  // Select the newly created draft to open split view
+  this.selectedDraftId = draft.id;
+  try { localStorage.setItem(this.getDraftSelectionKey(this.selectedDoc.id), String(draft.id)); } catch {}
       // Ensure brand-new draft starts with EMPTY content in UI and local cache
       this.draftLocalContent.set(draft.id, '');
       this.setLocalDraftContent(draft.id, '');
@@ -1535,6 +1540,19 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         const t = this.draftSyncedClearTimeouts.get(draft.id);
         if (t) { clearTimeout(t); this.draftSyncedClearTimeouts.delete(draft.id); }
       }
+      // Restore previously selected draft for this doc if it still exists
+      try {
+        const savedIdStr = localStorage.getItem(this.getDraftSelectionKey(docId));
+        if (savedIdStr) {
+          const savedId = parseInt(savedIdStr, 10);
+          if (this.drafts.some(d => d.id === savedId)) {
+            this.selectedDraftId = savedId;
+          } else {
+            this.selectedDraftId = null;
+            localStorage.removeItem(this.getDraftSelectionKey(docId));
+          }
+        }
+      } catch {}
     } catch (error) {
       console.error('Failed to load drafts:', error);
     }
@@ -2018,6 +2036,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Clear selection if we deleted the selected draft
       if (this.selectedDraftId === draftId) {
         this.selectedDraftId = null;
+        if (this.selectedDoc) {
+          try { localStorage.removeItem(this.getDraftSelectionKey(this.selectedDoc.id)); } catch {}
+        }
       }
     } catch (error) {
       console.error('Failed to delete draft:', error);
@@ -2029,8 +2050,18 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.createDraft();
   }
 
-  onDocumentDraftSelect(draftId: number): void {
-    this.selectedDraftId = draftId;
+  onDocumentDraftSelect(draftId: number | null): void {
+    this.selectedDraftId = draftId ?? null;
+    if (this.selectedDoc) {
+      const key = this.getDraftSelectionKey(this.selectedDoc.id);
+      try {
+        if (draftId == null) {
+          localStorage.removeItem(key);
+        } else {
+          localStorage.setItem(key, String(draftId));
+        }
+      } catch {}
+    }
   }
 
   onDocumentDraftChanged(event: { draftId: number; content: string; cursorPosition: number }): void {
