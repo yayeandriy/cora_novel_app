@@ -2015,4 +2015,22 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   onDocumentDraftBlurred(draftId: number): void {
     this.onDraftBlur(draftId);
   }
+
+  async onDocumentDraftRenamed(event: { id: number; name: string }): Promise<void> {
+    try {
+      const { id, name } = event;
+      // Use latest local content if present so we don't clobber unsaved text
+      const content = this.draftLocalContent.get(id) ?? this.drafts.find(d => d.id === id)?.content ?? '';
+      const updated = await this.projectService.updateDraft(id, name, content);
+      // Update local array
+      const idx = this.drafts.findIndex(d => d.id === id);
+      if (idx !== -1) {
+        this.drafts[idx] = { ...this.drafts[idx], name: updated.name, updated_at: updated.updated_at };
+        this.drafts = [...this.drafts];
+      }
+    } catch (error: any) {
+      console.error('Failed to rename draft:', error);
+      alert('Failed to rename draft: ' + error);
+    }
+  }
 }

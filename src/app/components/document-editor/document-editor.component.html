@@ -14,15 +14,29 @@
         <button class="toolbar-button" (click)="addDraft()" title="Add draft">+ Draft</button>
         <div class="draft-tabs">
           @for (d of drafts; track d.id) {
-            <button 
-              class="draft-tab" 
-              [class.active]="d.id === selectedDraftId"
-              (click)="selectDraft(d.id)"
-              title="Open draft">
-              {{ d.name }}
-              @if (draftSyncStatus[d.id] === 'syncing') { <span class="tab-dot">⟳</span> }
-              @if (draftSyncStatus[d.id] === 'synced') { <span class="tab-dot">✓</span> }
-            </button>
+            <div class="draft-tab-wrapper">
+              @if (editingDraftId === d.id) {
+                <input
+                  #draftNameInput
+                  class="draft-name-input"
+                  [(ngModel)]="draftNameEdit"
+                  (blur)="saveDraftName()"
+                  (keydown.enter)="saveDraftName()"
+                  (keydown.escape)="cancelDraftNameEdit()"
+                  placeholder="Draft name" />
+              } @else {
+                <button 
+                  class="draft-tab" 
+                  [class.active]="d.id === selectedDraftId"
+                  (click)="selectDraft(d.id)"
+                  (dblclick)="startEditDraftName(d.id, d.name)"
+                  title="Open draft (double-click to rename)">
+                  {{ d.name }}
+                  @if (draftSyncStatus[d.id] === 'syncing') { <span class="tab-dot">⟳</span> }
+                  @if (draftSyncStatus[d.id] === 'synced') { <span class="tab-dot">✓</span> }
+                </button>
+              }
+            </div>
           }
         </div>
       </div>

@@ -35,6 +35,7 @@ export class DocumentEditorComponent {
   
   @Output() draftAdd = new EventEmitter<void>();
   @Output() draftSelect = new EventEmitter<number>();
+  @Output() draftRenamed = new EventEmitter<{ id: number; name: string }>();
   @Output() draftChanged = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();
   @Output() draftBlurred = new EventEmitter<number>();
   
@@ -45,6 +46,11 @@ export class DocumentEditorComponent {
   @ViewChild('docTitleInput') docTitleInput?: ElementRef<HTMLInputElement>;
   @ViewChild('editorTextarea') editorTextarea?: ElementRef<HTMLTextAreaElement>;
   @ViewChild('draftTextarea') draftTextarea?: ElementRef<HTMLTextAreaElement>;
+  @ViewChild('draftNameInput') draftNameInput?: ElementRef<HTMLInputElement>;
+
+  // Inline rename state
+  editingDraftId: number | null = null;
+  draftNameEdit: string = '';
 
   focusEditor() {
     this.editorTextarea?.nativeElement.focus();
@@ -62,6 +68,33 @@ export class DocumentEditorComponent {
   selectDraft(id: number) {
     this.draftSelect.emit(id);
     setTimeout(() => this.draftTextarea?.nativeElement.focus(), 0);
+  }
+
+  // Draft name editing
+  startEditDraftName(draftId: number, currentName: string) {
+    this.editingDraftId = draftId;
+    this.draftNameEdit = currentName;
+    // Ensure selected for split view
+    if (this.selectedDraftId !== draftId) {
+      this.draftSelect.emit(draftId);
+    }
+    setTimeout(() => {
+      const el = this.draftNameInput?.nativeElement;
+      if (el) { el.focus(); el.select(); }
+    }, 0);
+  }
+
+  saveDraftName() {
+    if (this.editingDraftId == null) return;
+    const newName = (this.draftNameEdit || '').trim();
+    const id = this.editingDraftId;
+    this.editingDraftId = null;
+    if (!newName) return; // no empty names
+    this.draftRenamed.emit({ id, name: newName });
+  }
+
+  cancelDraftNameEdit() {
+    this.editingDraftId = null;
   }
 
   onDraftInput(event: Event, draftId: number) {
