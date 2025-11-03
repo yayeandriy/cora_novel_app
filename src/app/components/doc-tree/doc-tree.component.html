@@ -34,7 +34,7 @@
       <ng-container *ngFor="let group of docGroups; let gi = index">
         <div class="tree-item" [class.selected]="selectedGroup?.id === group.id">
           <div class="tree-item-header" (click)="selectGroup(group, $event)">
-            <svg xmlns="http://www.w3.org/2000/svg" 
+            <!-- <svg xmlns="http://www.w3.org/2000/svg" 
                  class="toggle-icon" 
                  [class.expanded]="group.expanded" 
                  fill="none" 
@@ -43,7 +43,7 @@
                  stroke-width="2"
                  (click)="toggleGroup(group, $event)">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
+            </svg> -->
             <span class="text-gray-400">{{ gi + 1 }}.</span>
             <span class="tree-item-name folder-name">{{ group.name }}</span>
             <button class="add-doc-button" 

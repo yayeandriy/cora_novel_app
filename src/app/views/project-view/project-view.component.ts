@@ -518,10 +518,32 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     if (event) {
       event.stopPropagation();
     }
+    const isSame = this.selectedGroup?.id === group.id;
+    if (isSame) {
+      // Toggle expand/collapse when clicking the already selected folder
+      group.expanded = !group.expanded;
+      if (group.expanded) {
+        this.expandedGroupIds.add(group.id);
+      } else {
+        this.expandedGroupIds.delete(group.id);
+      }
+      this.saveTreeState();
+      // Keep current selection persisted
+      this.saveSelection();
+      return;
+    }
+
+    // Select new group
     this.selectedGroup = group;
     this.selectedDoc = null; // Clear doc selection - only ONE selection at a time
     this.currentGroup = group; // Track group for create button context
-    
+    // Auto-expand on first selection
+    if (!group.expanded) {
+      group.expanded = true;
+      this.expandedGroupIds.add(group.id);
+      this.saveTreeState();
+    }
+
     // Save selection to localStorage
     this.saveSelection();
     // Clear doc-specific character selection when no doc is selected
