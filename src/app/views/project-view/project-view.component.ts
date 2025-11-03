@@ -658,17 +658,34 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
     console.log('Proceeding with deletion');
     try {
-      // Find item to select after deletion (previous or next)
-      const items = this.getFlatTreeItems();
-      const currentIndex = items.findIndex(item => item.type === 'doc' && item.data.id === doc.id);
-      let newSelection: {type: 'group' | 'doc', data: any} | null = null;
-      
-      if (currentIndex > 0) {
-        // Select previous item
-        newSelection = items[currentIndex - 1];
-      } else if (currentIndex < items.length - 1) {
-        // Select next item
-        newSelection = items[currentIndex + 1];
+      // Preferred: keep selection inside the same folder
+      // Determine parent group and choose next doc in that group (or first),
+      // if none left then select the group itself
+      let selectDocId: number | null = null;
+      let selectGroupId: number | null = null;
+
+      const parentGroup = doc.doc_group_id ? this.findGroupById(this.docGroups, doc.doc_group_id) : null;
+      if (parentGroup) {
+        const docsInGroup = parentGroup.docs;
+        const idx = docsInGroup.findIndex(d => d.id === doc.id);
+        if (docsInGroup.length > 1) {
+          const nextIndex = idx + 1 < docsInGroup.length ? idx + 1 : 0;
+          selectDocId = docsInGroup[nextIndex].id;
+        } else {
+          // No other docs will remain, select the group after deletion
+          selectGroupId = parentGroup.id;
+        }
+      } else {
+        // Fallback to previous global behavior if no parent group (shouldn't happen normally)
+        const items = this.getFlatTreeItems();
+        const currentIndex = items.findIndex(item => item.type === 'doc' && item.data.id === doc.id);
+        if (currentIndex > 0) {
+          const prev = items[currentIndex - 1];
+          if (prev.type === 'doc') selectDocId = prev.data.id; else selectGroupId = prev.data.id;
+        } else if (currentIndex < items.length - 1) {
+          const next = items[currentIndex + 1];
+          if (next.type === 'doc') selectDocId = next.data.id; else selectGroupId = next.data.id;
+        }
       }
 
       console.log('Calling backend deleteDoc');
@@ -680,20 +697,19 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.selectedGroup = null;
       this.currentGroup = null;
       
-      await this.loadProject();
+  // Reload tree but do NOT auto-restore selection; we'll set it manually
+  await this.loadProject(false, true);
       
-      // Restore selection to previous/next item
-      if (newSelection) {
-        if (newSelection.type === 'doc') {
-          const foundDoc = this.findDocById(newSelection.data.id);
-          if (foundDoc) {
-            this.selectDoc(foundDoc);
-          }
-        } else {
-          const foundGroup = this.findGroupById(this.docGroups, newSelection.data.id);
-          if (foundGroup) {
-            this.selectGroup(foundGroup);
-          }
+      // Restore selection within the same folder
+      if (selectDocId) {
+        const foundDoc = this.findDocById(selectDocId);
+        if (foundDoc) {
+          this.selectDoc(foundDoc);
+        }
+      } else if (selectGroupId) {
+        const foundGroup = this.findGroupById(this.docGroups, selectGroupId);
+        if (foundGroup) {
+          this.selectGroup(foundGroup);
         }
       }
       
