@@ -76,6 +76,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   
   projectId: number = 0;
   projectName: string = '';
+  editingProjectName = false;
+  projectNameEdit: string = '';
   timelineStart: string | null = null;
   timelineEnd: string | null = null;
   
@@ -143,6 +145,54 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     private timelineService: TimelineService,
     private changeDetector: ChangeDetectorRef
   ) {}
+
+  // Project name editing
+  startEditProjectName(event?: MouseEvent) {
+    if (event) event.stopPropagation();
+    this.editingProjectName = true;
+    this.projectNameEdit = this.projectName;
+    // Focus handled by template using #projectNameInput
+    setTimeout(() => {
+      const el = document.querySelector<HTMLInputElement>('input.project-name-input');
+      if (el) {
+        el.focus();
+        el.select();
+      }
+    }, 0);
+  }
+
+  async saveProjectName() {
+    const newName = (this.projectNameEdit || '').trim();
+    if (!this.editingProjectName) return;
+    this.editingProjectName = false;
+    if (!newName || newName === this.projectName) {
+      // No change or empty -> revert to previous
+      this.projectNameEdit = this.projectName;
+      return;
+    }
+    try {
+      const updated = await this.projectService.updateProject(this.projectId, { name: newName });
+      // Prefer backend response if present; else fallback to requested name
+      this.projectName = (updated as any)?.name ?? newName;
+      this.projectNameEdit = this.projectName;
+    } catch (error) {
+      console.error('Failed to rename project:', error);
+      alert('Failed to rename project: ' + error);
+      // Revert UI value
+      this.projectNameEdit = this.projectName;
+    }
+  }
+
+  onProjectNameKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.saveProjectName();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      this.editingProjectName = false;
+      this.projectNameEdit = this.projectName;
+    }
+  }
 
   ngOnInit() {
     this.route.params.subscribe((params: any) => {
