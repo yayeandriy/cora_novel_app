@@ -3,6 +3,7 @@ use crate::models::{ProjectCreate, Project, Character, Event, DraftCreate, Draft
 use crate::services::projects as project_service;
 use tauri::State;
 use std::path::Path;
+use std::fs;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -382,4 +383,82 @@ pub async fn import_txt_files(state: State<'_, AppState>, project_id: i64, doc_g
     }
 
     Ok(imported)
+}
+
+/// Import an entire project from a folder path.
+/// - Creates a new project named after the folder (path basename)
+/// - For each immediate subfolder: creates a root-level doc group and imports its immediate .txt files
+/// - For immediate .txt files in the root: creates a doc group named "UNSORTED" (created last) and imports them there
+#[tauri::command]
+pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> Result<serde_json::Value, String> {
+    let pool = &state.pool;
+
+    let base = Path::new(&folder_path);
+    if !base.exists() || !base.is_dir() {
+        return Err("Selected path is not a directory".to_string());
+    }
+
+    // Project name from folder basename
+    let project_name = base.file_name().and_then(|s| s.to_str()).unwrap_or("Imported Project").to_string();
+
+    // Create project with path saved
+    let payload = crate::models::ProjectCreate { name: project_name.clone(), desc: None, path: Some(folder_path.clone()) };
+    let project = crate::services::projects::create(pool, payload).map_err(|e| e.to_string())?;
+
+    // Read entries and partition into subdirs and root .txt files
+    let mut subdirs: Vec<(String, std::path::PathBuf)> = Vec::new();
+    let mut root_txt_files: Vec<std::path::PathBuf> = Vec::new();
+
+    for entry in fs::read_dir(base).map_err(|e| format!("Failed to read dir {}: {}", base.display(), e))? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let p = entry.path();
+        if p.is_dir() {
+            // collect subdir
+            let name = p.file_name().and_then(|s| s.to_str()).unwrap_or("Folder").to_string();
+            subdirs.push((name, p));
+        } else if p.is_file() {
+            if p.extension().and_then(|e| e.to_str()).map(|e| e.eq_ignore_ascii_case("txt")).unwrap_or(false) {
+                root_txt_files.push(p);
+            }
+        }
+    }
+
+    // Sort by name for determinism
+    subdirs.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+    root_txt_files.sort();
+
+    // Create groups for subdirs and import immediate .txt files
+    for (dir_name, dir_path) in subdirs.iter() {
+        let group = crate::services::doc_groups::create_doc_group(pool, project.id, dir_name, None)
+            .map_err(|e| e.to_string())?;
+        // Import only immediate .txt files
+        for entry in fs::read_dir(dir_path).map_err(|e| format!("Failed to read dir {}: {}", dir_path.display(), e))? {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let file_path = entry.path();
+            if file_path.is_file() {
+                if file_path.extension().and_then(|e| e.to_str()).map(|e| e.eq_ignore_ascii_case("txt")).unwrap_or(false) {
+                    let name = file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("Imported");
+                    let content = fs::read_to_string(&file_path).map_err(|e| format!("Failed to read {}: {}", file_path.display(), e))?;
+                    let doc = crate::services::docs::create_doc(pool, project.id, name, Some(group.id))
+                        .map_err(|e| e.to_string())?;
+                    crate::services::docs::update_doc(pool, doc.id, &content).map_err(|e| e.to_string())?;
+                }
+            }
+        }
+    }
+
+    // If root .txt files exist, create UNSORTED group last and import
+    if !root_txt_files.is_empty() {
+        let unsorted = crate::services::doc_groups::create_doc_group(pool, project.id, "UNSORTED", None)
+            .map_err(|e| e.to_string())?;
+        for file_path in root_txt_files.iter() {
+            let name = file_path.file_stem().and_then(|s| s.to_str()).unwrap_or("Imported");
+            let content = fs::read_to_string(&file_path).map_err(|e| format!("Failed to read {}: {}", file_path.display(), e))?;
+            let doc = crate::services::docs::create_doc(pool, project.id, name, Some(unsorted.id))
+                .map_err(|e| e.to_string())?;
+            crate::services::docs::update_doc(pool, doc.id, &content).map_err(|e| e.to_string())?;
+        }
+    }
+
+    serde_json::to_value(project).map_err(|e| e.to_string())
 }

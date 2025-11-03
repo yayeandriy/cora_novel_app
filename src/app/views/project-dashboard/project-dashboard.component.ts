@@ -120,6 +120,24 @@ export class ProjectDashboardComponent {
     this.router.navigate(['/project', p.id]);
   }
 
+  async importProject() {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select a project folder to import'
+      });
+      if (!selected || Array.isArray(selected)) return;
+      const imported = await this.svc.importProject(selected as string);
+      await this.reload();
+      // Navigate to the newly imported project
+      this.openProject(imported);
+    } catch (err) {
+      console.error('Failed to import project:', err);
+      alert('Failed to import project: ' + err);
+    }
+  }
+
   timeAgo(p: Project) {
     // use timeline_start or fallback text
     const when = p.timeline_start ?? null;

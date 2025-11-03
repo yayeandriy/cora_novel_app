@@ -192,4 +192,9 @@ export class ProjectService {
   async importTxtFiles(projectId: number, docGroupId: number, files: string[]): Promise<number> {
     return invoke<number>("import_txt_files", { projectId, docGroupId, files });
   }
+
+  // Import a whole project from a folder
+  async importProject(folderPath: string): Promise<Project> {
+    return invoke<Project>("import_project", { folderPath });
+  }
 }

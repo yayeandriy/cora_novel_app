@@ -76,6 +76,7 @@ pub fn run() {
             commands::timeline_delete,
             commands::timeline_delete_by_entity,
             commands::import_txt_files,
+            commands::import_project,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
