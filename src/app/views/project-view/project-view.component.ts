@@ -1828,11 +1828,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     const saved = localStorage.getItem('cora-layout');
     if (saved) {
       const state = JSON.parse(saved);
-      this.leftWidth = state.leftWidth || 250;
-      this.rightWidth = state.rightWidth || 300;
-      this.leftCollapsed = state.leftCollapsed || false;
-      this.rightCollapsed = state.rightCollapsed || false;
-      this.timelineHeaderVisible = !!state.timelineHeaderVisible; // hidden by default
+      this.leftWidth = (state.leftWidth ?? 250);
+      this.rightWidth = (state.rightWidth ?? 300);
+      this.leftCollapsed = (state.leftCollapsed ?? false);
+      this.rightCollapsed = (state.rightCollapsed ?? false);
+      this.timelineHeaderVisible = !!(state.timelineHeaderVisible); // hidden by default
     }
   }
 

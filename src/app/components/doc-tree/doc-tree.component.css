@@ -298,14 +298,14 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 6px;
+  width: 8px;
   cursor: col-resize;
   user-select: none;
-  z-index: 10;
-  right: -3px;
-  background: transparent;
+  z-index: 20;
+  right: 0;
+  background: rgba(0,0,0,0.02);
 }
-.resize-handle:hover { background: rgba(0,0,0,0.04); }
+.resize-handle:hover { background: rgba(0,0,0,0.06); }
 .divider-grip {
   position: absolute;
   top: 50%;
