@@ -70,6 +70,29 @@
               (keydown)="onProjectNameKeydown($event)"
               placeholder="Project name" />
           }
+          <div class="drafts-row">
+            @if (projectDraftsExpanded) {
+              <div class="drafts-list">
+                @for (pd of projectDrafts; track pd.id) {
+                  <div class="draft-chip" [class.active]="selectedProjectDraftId === pd.id" (click)="onProjectDraftChipClick(pd, $event)" (dblclick)="startEditProjectDraft(pd)" title="Click to select, double-click to rename">
+                    @if (editingProjectDraftId === pd.id) {
+                      <input class="draft-name-input"
+                             [(ngModel)]="projectDraftNameEdit"
+                             (blur)="saveProjectDraftName()"
+                             (keydown.enter)="saveProjectDraftName()"
+                             (keydown.escape)="cancelProjectDraftEdit()"
+                             placeholder="Draft name" />
+                      <button class="draft-delete-btn" title="Delete draft" (click)="deleteProjectDraft(pd.id); $event.stopPropagation();">🗑</button>
+                    } @else {
+                      <span class="draft-name">{{ pd.name }}</span>
+                    }
+                  </div>
+                }
+                <button class="draft-add-btn" (click)="createProjectDraft()">+ Draft</button>
+              </div>
+            }
+            <button class="drafts-toggle" (click)="toggleProjectDrafts()">Drafts</button>
+          </div>
         </div>
       </div>
 
@@ -127,10 +150,10 @@
         [drafts]="drafts"
         [draftSyncStatus]="draftSyncStatus"
         [selectedDraftId]="selectedDraftId"
-        [externalMode]="selectedFolderDraftId != null"
-        [externalDraftId]="selectedFolderDraftId"
-  [externalDraftName]="selectedFolderDraftId ? (getSelectedFolderDraftName() ?? 'Draft') : null"
-        [externalDraftContent]="selectedFolderDraftId ? getFolderDraftLocalContent(selectedFolderDraftId) : ''"
+    [externalMode]="selectedFolderDraftId != null || selectedProjectDraftId != null"
+    [externalDraftId]="selectedFolderDraftId ?? selectedProjectDraftId"
+  [externalDraftName]="selectedFolderDraftId ? (getSelectedFolderDraftName() ?? 'Draft') : (selectedProjectDraftId ? (getSelectedProjectDraftName() ?? 'Draft') : null)"
+    [externalDraftContent]="selectedFolderDraftId ? getFolderDraftLocalContent(selectedFolderDraftId) : (selectedProjectDraftId ? getProjectDraftLocalContent(selectedProjectDraftId) : '')"
         [docIndexLabel]="getDocIndexLabel()"
         (docNameChange)="renameDoc($event)"
         (docTextChange)="onDocumentTextChange()"

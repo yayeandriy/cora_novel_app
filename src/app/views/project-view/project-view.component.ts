@@ -129,6 +129,18 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private folderDraftSyncedClearTimeouts: Map<number, any> = new Map();
   folderDraftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
   private focusedFolderDraftId: number | null = null;
+  // Project drafts UI state
+  projectDraftsExpanded = false;
+  projectDrafts: import('../../shared/models').ProjectDraft[] = [];
+  editingProjectDraftId: number | null = null;
+  projectDraftNameEdit: string = '';
+  selectedProjectDraftId: number | null = null;
+  private projectDraftLocalContent: Map<number, string> = new Map();
+  private projectDraftAutoSaveTimeouts: Map<number, any> = new Map();
+  private projectDraftSyncedClearTimeouts: Map<number, any> = new Map();
+  projectDraftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
+  private focusedProjectDraftId: number | null = null;
+  private projectDraftClickTimer: any;
   private folderDraftClickTimer: any;
   // Characters per-doc selection
   docCharacterIds: Set<number> = new Set();
@@ -152,6 +164,15 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   
   private getDraftSelectionKey(docId: number): string {
     return `cora-draft-selected-${this.projectId}-${docId}`;
+  }
+  private getProjectDraftSelectionKey(projectId: number): string {
+    return `cora-project-draft-selected-${projectId}`;
+  }
+  private getProjectDraftsExpandedKey(projectId: number): string {
+    return `cora-project-drafts-expanded-${projectId}`;
+  }
+  private getLocalProjectDraftKey(draftId: number): string {
+    return `cora-project-draft-${draftId}`;
   }
 
   // Import flow state
@@ -1737,11 +1758,17 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }, 220);
     }
 
-    // Only one draft type edited at a time: clear doc draft selection when a folder draft is actively selected
-    if (this.selectedFolderDraftId != null && this.selectedDraftId != null) {
-      this.selectedDraftId = null;
-      if (this.selectedDoc) {
-        try { localStorage.removeItem(this.getDraftSelectionKey(this.selectedDoc.id)); } catch {}
+    // Only one draft type edited at a time: clear doc/project selections when a folder draft is actively selected
+    if (this.selectedFolderDraftId != null) {
+      if (this.selectedDraftId != null) {
+        this.selectedDraftId = null;
+        if (this.selectedDoc) {
+          try { localStorage.removeItem(this.getDraftSelectionKey(this.selectedDoc.id)); } catch {}
+        }
+      }
+      if (this.selectedProjectDraftId != null) {
+        this.selectedProjectDraftId = null;
+        try { localStorage.removeItem(this.getProjectDraftSelectionKey(this.projectId)); } catch {}
       }
     }
 
@@ -1751,6 +1778,213 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         const key = this.getFolderDraftSelectionKey(group.id);
         if (this.selectedFolderDraftId == null) localStorage.removeItem(key); else localStorage.setItem(key, String(this.selectedFolderDraftId));
       } catch {}
+    }
+  }
+
+  // ===== Project drafts UI =====
+  toggleProjectDrafts() {
+    this.projectDraftsExpanded = !this.projectDraftsExpanded;
+    if (this.projectDraftsExpanded) {
+      this.loadProjectDrafts(this.projectId, /*restoreSelection*/ false);
+    }
+    try { localStorage.setItem(this.getProjectDraftsExpandedKey(this.projectId), String(this.projectDraftsExpanded)); } catch {}
+  }
+
+  async loadProjectDrafts(projectId: number, restoreSelection: boolean = true) {
+    try {
+      this.projectDrafts = await this.projectService.listProjectDrafts(projectId);
+      for (const d of this.projectDrafts) {
+        const cached = this.getLocalProjectDraftContent(d.id);
+        if (cached !== null) {
+          this.projectDraftLocalContent.set(d.id, cached);
+          (d as any).content = cached;
+        } else {
+          const backendContent = (d as any).content || '';
+          this.projectDraftLocalContent.set(d.id, backendContent);
+          (d as any).content = backendContent;
+        }
+        delete this.projectDraftSyncStatus[d.id];
+        const t = this.projectDraftSyncedClearTimeouts.get(d.id);
+        if (t) { clearTimeout(t); this.projectDraftSyncedClearTimeouts.delete(d.id); }
+      }
+      if (restoreSelection) {
+        try {
+          const savedIdStr = localStorage.getItem(this.getProjectDraftSelectionKey(projectId));
+          if (savedIdStr) {
+            const savedId = parseInt(savedIdStr, 10);
+            if (this.projectDrafts.some(pd => pd.id === savedId)) {
+              // Only restore if no doc or folder draft is currently selected
+              if (this.selectedDraftId == null && this.selectedFolderDraftId == null) {
+                this.selectedProjectDraftId = savedId;
+              }
+            } else {
+              localStorage.removeItem(this.getProjectDraftSelectionKey(projectId));
+              if (this.selectedProjectDraftId === savedId) this.selectedProjectDraftId = null;
+            }
+          }
+        } catch {}
+      }
+    } catch (e) {
+      console.error('Failed to load project drafts:', e);
+      this.projectDrafts = [];
+    }
+  }
+
+  async createProjectDraft() {
+    try {
+      const draftName = `Draft ${new Date().toLocaleTimeString()}`;
+      await this.projectService.createProjectDraft(this.projectId, draftName, '');
+      await this.loadProjectDrafts(this.projectId);
+    } catch (e) {
+      console.error('Failed to create project draft:', e);
+      alert('Failed to create project draft: ' + e);
+    }
+  }
+
+  async deleteProjectDraft(id: number) {
+    try {
+      await this.projectService.deleteProjectDraft(id);
+      this.projectDrafts = this.projectDrafts.filter(d => d.id !== id);
+      if (this.selectedProjectDraftId === id) {
+        this.selectedProjectDraftId = null;
+      }
+    } catch (e) {
+      console.error('Failed to delete project draft:', e);
+      alert('Failed to delete project draft: ' + e);
+    }
+  }
+
+  startEditProjectDraft(d: import('../../shared/models').ProjectDraft) {
+    if (this.projectDraftClickTimer) { clearTimeout(this.projectDraftClickTimer); this.projectDraftClickTimer = null; }
+    this.editingProjectDraftId = d.id;
+    this.projectDraftNameEdit = d.name;
+    setTimeout(() => {
+      const el = document.querySelector<HTMLInputElement>('input.draft-name-input');
+      if (el) { el.focus(); el.select(); }
+    }, 0);
+  }
+
+  async saveProjectDraftName() {
+    if (this.editingProjectDraftId == null) return;
+    const id = this.editingProjectDraftId;
+    const name = (this.projectDraftNameEdit || '').trim();
+    this.editingProjectDraftId = null;
+    if (!name) return;
+    try {
+      const updated = await this.projectService.updateProjectDraft(id, { name });
+      const idx = this.projectDrafts.findIndex(d => d.id === id);
+      if (idx !== -1) {
+        this.projectDrafts[idx] = { ...this.projectDrafts[idx], name: (updated as any).name, updated_at: (updated as any).updated_at } as any;
+        this.projectDrafts = [...this.projectDrafts];
+      }
+    } catch (e) {
+      console.error('Failed to rename project draft:', e);
+      alert('Failed to rename project draft: ' + e);
+    }
+  }
+
+  cancelProjectDraftEdit() {
+    this.editingProjectDraftId = null;
+  }
+
+  onProjectDraftChipClick(d: import('../../shared/models').ProjectDraft, event?: MouseEvent) {
+    if (event) event.stopPropagation();
+    if (this.selectedProjectDraftId !== d.id) {
+      if (this.projectDraftClickTimer) { clearTimeout(this.projectDraftClickTimer); this.projectDraftClickTimer = null; }
+      this.selectedProjectDraftId = d.id;
+    } else {
+      if (this.projectDraftClickTimer) { clearTimeout(this.projectDraftClickTimer); }
+      this.projectDraftClickTimer = setTimeout(() => {
+        this.selectedProjectDraftId = null;
+        this.projectDraftClickTimer = null;
+        try { localStorage.removeItem(this.getProjectDraftSelectionKey(this.projectId)); } catch {}
+      }, 220);
+    }
+
+    // Only one draft type at a time: clear doc and folder selections when selecting a project draft
+    if (this.selectedProjectDraftId != null) {
+      if (this.selectedDraftId != null) {
+        this.selectedDraftId = null;
+        if (this.selectedDoc) {
+          try { localStorage.removeItem(this.getDraftSelectionKey(this.selectedDoc.id)); } catch {}
+        }
+      }
+      if (this.selectedFolderDraftId != null) {
+        this.selectedFolderDraftId = null;
+        const group = this.selectedGroup || this.currentGroup;
+        if (group) {
+          try { localStorage.removeItem(this.getFolderDraftSelectionKey(group.id)); } catch {}
+        }
+      }
+    }
+
+    try {
+      const key = this.getProjectDraftSelectionKey(this.projectId);
+      if (this.selectedProjectDraftId == null) localStorage.removeItem(key); else localStorage.setItem(key, String(this.selectedProjectDraftId));
+    } catch {}
+  }
+
+  getSelectedProjectDraftName(): string | null {
+    if (this.selectedProjectDraftId == null) return null;
+    const pd = this.projectDrafts.find(p => p.id === this.selectedProjectDraftId);
+    return pd ? pd.name : null;
+  }
+
+  getProjectDraftLocalContent(draftId: number): string {
+    return this.projectDraftLocalContent.get(draftId) || '';
+  }
+
+  private getLocalProjectDraftContent(draftId: number): string | null {
+    try { return localStorage.getItem(this.getLocalProjectDraftKey(draftId)); } catch { return null; }
+  }
+
+  private setLocalProjectDraftContent(draftId: number, content: string): void {
+    try { localStorage.setItem(this.getLocalProjectDraftKey(draftId), content); } catch {}
+  }
+
+  onProjectDraftChange(draftId: number, content: string, cursorPosition: number): void {
+    this.focusedProjectDraftId = draftId;
+    this.projectDraftLocalContent.set(draftId, content);
+    this.setLocalProjectDraftContent(draftId, content);
+    this.projectDraftSyncStatus[draftId] = 'pending';
+    const prevClear = this.projectDraftSyncedClearTimeouts.get(draftId);
+    if (prevClear) { clearTimeout(prevClear); this.projectDraftSyncedClearTimeouts.delete(draftId); }
+    const existing = this.projectDraftAutoSaveTimeouts.get(draftId);
+    if (existing) clearTimeout(existing);
+    const timeout = setTimeout(() => { this.syncProjectDraftToBackend(draftId, cursorPosition); }, 500);
+    this.projectDraftAutoSaveTimeouts.set(draftId, timeout);
+  }
+
+  onProjectDraftBlur(draftId: number): void {
+    if (this.focusedProjectDraftId === draftId) this.focusedProjectDraftId = null;
+    const t = this.projectDraftAutoSaveTimeouts.get(draftId);
+    if (t) { clearTimeout(t); this.projectDraftAutoSaveTimeouts.delete(draftId); }
+    if (this.projectDraftSyncStatus[draftId] === 'pending') {
+      this.syncProjectDraftToBackend(draftId);
+    }
+  }
+
+  private async syncProjectDraftToBackend(draftId: number, cursorPosition?: number): Promise<void> {
+    const content = this.projectDraftLocalContent.get(draftId);
+    if (content === undefined) return;
+    const wasFocused = this.focusedProjectDraftId === draftId;
+    const prevClear = this.projectDraftSyncedClearTimeouts.get(draftId);
+    if (prevClear) { clearTimeout(prevClear); this.projectDraftSyncedClearTimeouts.delete(draftId); }
+    this.projectDraftSyncStatus[draftId] = 'syncing';
+    try {
+      await this.projectService.updateProjectDraft(draftId, { content });
+      this.projectDraftSyncStatus[draftId] = 'synced';
+      const clearTimer = setTimeout(() => {
+        if (this.projectDraftSyncStatus[draftId] === 'synced') { delete this.projectDraftSyncStatus[draftId]; }
+        this.projectDraftSyncedClearTimeouts.delete(draftId);
+      }, 2500);
+      this.projectDraftSyncedClearTimeouts.set(draftId, clearTimer);
+      if (wasFocused && cursorPosition !== undefined) {
+        // caret restoration handled by browser for now
+      }
+    } catch (e) {
+      console.error('Failed to sync project draft:', e);
+      this.projectDraftSyncStatus[draftId] = 'pending';
     }
   }
 
@@ -2476,6 +2710,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // Route to folder draft handler if external mode is active
     if (this.selectedFolderDraftId != null && event.draftId === this.selectedFolderDraftId) {
       this.onFolderDraftChange(event.draftId, event.content, event.cursorPosition);
+    } else if (this.selectedProjectDraftId != null && event.draftId === this.selectedProjectDraftId) {
+      this.onProjectDraftChange(event.draftId, event.content, event.cursorPosition);
     } else {
       this.onDraftChange(event.draftId, event.content, event.cursorPosition);
     }
@@ -2484,6 +2720,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   onDocumentDraftBlurred(draftId: number): void {
     if (this.selectedFolderDraftId != null && draftId === this.selectedFolderDraftId) {
       this.onFolderDraftBlur(draftId);
+    } else if (this.selectedProjectDraftId != null && draftId === this.selectedProjectDraftId) {
+      this.onProjectDraftBlur(draftId);
     } else {
       this.onDraftBlur(draftId);
     }
