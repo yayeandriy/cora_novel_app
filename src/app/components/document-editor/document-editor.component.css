@@ -21,7 +21,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-right: 0.75rem;
+  /* Align with container right padding; no extra margin */
+  margin-right: 0;
 }
 .toolbar-button {
   display: inline-flex;

@@ -208,7 +208,8 @@ app-doc-tree {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  padding: 2.5rem .75rem;
+  /* Match right padding with folder row and editor toolbar so draft tools align vertically */
+  padding: 2.5rem 1.5rem;
   
 }
 
