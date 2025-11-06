@@ -6,7 +6,7 @@
     "analytics": false
   },
   "projects": {
-    "cora-novel-app": {
+    "cora": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -64,10 +64,10 @@
           },
           "configurations": {
             "production": {
-              "buildTarget": "cora-novel-app:build:production"
+              "buildTarget": "cora:build:production"
             },
             "development": {
-              "buildTarget": "cora-novel-app:build:development"
+              "buildTarget": "cora:build:development"
             }
           },
           "defaultConfiguration": "development"

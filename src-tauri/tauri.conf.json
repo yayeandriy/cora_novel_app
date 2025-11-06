@@ -1,18 +1,18 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "cora-novel-app",
+  "productName": "Cora",
   "version": "0.1.0",
-  "identifier": "com.pluton.cora-novel-app",
+  "identifier": "com.pluton.cora",
   "build": {
     "beforeDevCommand": "pnpm start",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "pnpm build",
-    "frontendDist": "../dist/cora-novel-app/browser"
+    "frontendDist": "../dist/cora/browser"
   },
   "app": {
     "windows": [
       {
-        "title": "cora-novel-app",
+        "title": "Cora",
         "width": 800,
         "height": 600
       }

@@ -54,6 +54,24 @@
 
     <!-- Editor -->
     <main class="editor-area">
+      <!-- Project title moved to the middle section on top of the doc header -->
+      <div class="project-title-bar">
+        <div class="project-title-center">
+          @if (!editingProjectName) {
+            <div class="project-name">
+              <span class="cursor-text" title="Click to rename" (click)="startEditProjectName($event)">{{ projectName }}</span>
+            </div>
+          } @else {
+            <input
+              #projectNameInput
+              class="project-name-input"
+              [(ngModel)]="projectNameEdit"
+              (blur)="saveProjectName()"
+              (keydown)="onProjectNameKeydown($event)"
+              placeholder="Project name" />
+          }
+        </div>
+      </div>
       <!-- Document editor -->
       @if (selectedDoc && !selectedGroup) {
       <app-document-editor 

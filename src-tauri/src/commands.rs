@@ -428,7 +428,7 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
             }
         };
         if let Some(meta) = &parsed.meta {
-            if meta.app.as_deref() != Some("cora-novel-app") {
+            if meta.app.as_deref() != Some("cora") {
                 // Fallback to legacy import if not our format
                 return legacy_import_folder(pool, base, &folder_path);
             }
@@ -730,7 +730,7 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
 
     let meta = serde_json::json!({
         "meta": {
-            "app": "cora-novel-app",
+            "app": "cora",
             "version": 1,
             "exported_at": chrono::Utc::now().to_rfc3339(),
         },

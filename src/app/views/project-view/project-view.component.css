@@ -68,6 +68,7 @@
 .project-name {
   display: flex;
   align-items: center;
+  
 }
 
 .project-name .cursor-text {
@@ -195,6 +196,23 @@ app-doc-tree {
   width: 100%;
   height: 100%;
 }
+
+/* Middle section project title bar */
+.project-title-bar {
+  flex-shrink: 0;
+  background: white;
+  border-bottom: none;
+}
+
+.project-title-center {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 2.5rem 1.5rem;
+  
+}
+
+/* Reuse .project-name and .project-name-input styles already defined above */
 
 app-document-editor {
   display: flex;

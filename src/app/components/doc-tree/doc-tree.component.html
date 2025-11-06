@@ -5,18 +5,6 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
       </svg>
     </button>
-    @if (!editingProjectName) {
-      <div class="project-title cursor-pointer" title="Click to rename" (click)="projectNameEditStart.emit($event)">{{ projectName }}</div>
-    } @else {
-      <input
-        #projectNameInput
-        class="project-name-input"
-        [(ngModel)]="projectNameEdit"
-        (ngModelChange)="projectNameEditChange.emit($event)"
-        (blur)="projectNameSave.emit()"
-        (keydown)="projectNameKeydown.emit($event)"
-        placeholder="Project name" />
-    }
   </div>
 
   <div class="sidebar-content">
