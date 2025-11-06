@@ -266,6 +266,24 @@ app-doc-tree {
   border-color: #d1d5db;
 }
 
+.drafts-toggle.active {
+  background: #eef2ff;
+  border-color: #6366f1;
+  color: #111827;
+}
+
+.icon-drafts {
+  width: 1rem;
+  height: 1rem;
+  display: inline-block;
+}
+
+.icon-plus {
+  width: 1rem;
+  height: 1rem;
+  display: inline-block;
+}
+
 .drafts-list {
   display: flex;
   align-items: center;

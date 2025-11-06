@@ -39,6 +39,7 @@
   transition: all 150ms;
 }
 .toolbar-button:hover { background: #f9fafb; border-color: #d1d5db; }
+.toolbar-button.active { background: #eef2ff; border-color: #6366f1; color: #111827; }
 .draft-tabs { display: flex; align-items: center; gap: 0.25rem; }
 .draft-tab-wrapper { display: flex; align-items: center; }
 .draft-tab {
@@ -117,6 +118,9 @@
   font-size: 12px;
   color: #9ca3af;
 }
+
+.icon-drafts { width: 1rem; height: 1rem; display: inline-block; }
+.icon-plus { width: 1rem; height: 1rem; display: inline-block; }
 
 .doc-title-input {
   /* Let the title input size to its content, but shrink if space is tight */

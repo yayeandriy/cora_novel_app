@@ -480,6 +480,26 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Load characters and events
   await Promise.all([this.loadCharacters(), this.loadEvents()]);
 
+      // Restore draft tool expansion states from localStorage
+      try {
+        const projDraftsExpanded = localStorage.getItem(this.getProjectDraftsExpandedKey(this.projectId));
+        if (projDraftsExpanded != null) {
+          this.projectDraftsExpanded = projDraftsExpanded === 'true';
+          if (this.projectDraftsExpanded) {
+            // Preload project drafts and optionally restore selection
+            await this.loadProjectDrafts(this.projectId, /*restoreSelection*/ true);
+          }
+        }
+      } catch {}
+
+      try {
+        const folderExpanded = localStorage.getItem(this.getFolderDraftsExpandedKey(this.projectId));
+        if (folderExpanded != null) {
+          this.folderDraftsExpanded = folderExpanded === 'true';
+          // Actual loading of folder drafts is tied to group selection; will load on selectGroup()
+        }
+      } catch {}
+
       // Skip restoration if requested (e.g., when creating new doc and managing selection manually)
       if (skipRestore) {
         return;

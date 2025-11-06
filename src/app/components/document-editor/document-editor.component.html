@@ -53,9 +53,17 @@
               </div>
             }
           </div>
-          <button class="toolbar-button" (click)="addDraft()" title="Add draft">+ Draft</button>
+          <button class="toolbar-button" (click)="addDraft()" aria-label="Add draft" title="Add draft">
+            <svg class="icon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/>
+            </svg>
+          </button>
         }
-        <button class="toolbar-button" (click)="toggleDraftControls()" title="Toggle drafts">Drafts</button>
+        <button class="toolbar-button" (click)="toggleDraftControls()" [class.active]="!isSplitCollapsed" aria-label="Document drafts" title="Document drafts">
+          <svg class="icon-drafts" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7 7h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm0-2a2 2 0 0 0-2 2v1h12a2 2 0 0 1 2 2V7a2 2 0 0 0-2-2H7z"/>
+          </svg>
+        </button>
       </div>
     </div>
   </div>
