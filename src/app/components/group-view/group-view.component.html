@@ -19,8 +19,32 @@
     </div>
   </div>
   
-  <div class="group-content">
-    <p class="group-empty-message">Select a document to start editing or create a new one</p>
-  </div>
+  @if (!selectedFolderDraftId) {
+    <div class="group-content">
+      <p class="group-empty-message">Select a folder draft to start editing or create a new one</p>
+    </div>
+  } @else {
+    <div class="editor-split">
+      <div class="pane"></div>
+      <div class="split-divider"
+           [class.collapsed]="isSplitCollapsed"
+           title="Drag to resize. Double-click to {{ isSplitCollapsed ? 'expand' : 'collapse' }}"
+           (mousedown)="startResize($event)"
+           (dblclick)="toggleCollapse()">
+        <span class="divider-grip"></span>
+      </div>
+      @if (!isSplitCollapsed) {
+        <div class="pane pane-right" [style.flex]="'0 0 ' + draftPaneWidth + 'px'" [style.width.px]="draftPaneWidth">
+          <textarea
+            #folderDraftTextarea
+            [(ngModel)]="selectedFolderDraftContent"
+            (input)="onFolderDraftInput($event)"
+            (blur)="onFolderDraftBlur()"
+            class="editor-textarea"
+            placeholder="Folder draft content..."></textarea>
+        </div>
+      }
+    </div>
+  }
 </div>
 }

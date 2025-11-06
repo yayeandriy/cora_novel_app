@@ -1,5 +1,12 @@
 use crate::db::DbPool;
-use crate::models::{ProjectCreate, Project, Character, Event, DraftCreate, DraftUpdate, Draft, Timeline, TimelineCreate, TimelineUpdate};
+use crate::models::{
+    ProjectCreate, Project,
+    Character, Event,
+    DraftCreate, DraftUpdate, Draft,
+    ProjectDraft, ProjectDraftCreate, ProjectDraftUpdate,
+    FolderDraft, FolderDraftCreate, FolderDraftUpdate,
+    Timeline, TimelineCreate, TimelineUpdate
+};
 use crate::services::projects as project_service;
 use tauri::State;
 use std::path::Path;
@@ -288,6 +295,80 @@ pub async fn draft_restore(state: State<'_, AppState>, draft_id: i64) -> Result<
 pub async fn draft_delete_all(state: State<'_, AppState>, doc_id: i64) -> Result<(), String> {
     let pool = &state.pool;
     crate::services::drafts::delete_all_drafts_for_doc(pool, doc_id).map_err(|e| e.to_string())
+}
+
+// Project Draft Commands
+#[tauri::command]
+pub async fn project_draft_create(state: State<'_, AppState>, project_id: i64, payload: ProjectDraftCreate) -> Result<ProjectDraft, String> {
+    let pool = &state.pool;
+    crate::services::project_drafts::create(pool, project_id, payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn project_draft_get(state: State<'_, AppState>, id: i64) -> Result<Option<ProjectDraft>, String> {
+    let pool = &state.pool;
+    crate::services::project_drafts::get(pool, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn project_draft_list(state: State<'_, AppState>, project_id: i64) -> Result<Vec<ProjectDraft>, String> {
+    let pool = &state.pool;
+    crate::services::project_drafts::list(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn project_draft_update(state: State<'_, AppState>, id: i64, payload: ProjectDraftUpdate) -> Result<ProjectDraft, String> {
+    let pool = &state.pool;
+    crate::services::project_drafts::update(pool, id, payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn project_draft_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::project_drafts::delete(pool, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn project_draft_delete_all(state: State<'_, AppState>, project_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::project_drafts::delete_all_for_project(pool, project_id).map_err(|e| e.to_string())
+}
+
+// Folder (Doc Group) Draft Commands
+#[tauri::command]
+pub async fn folder_draft_create(state: State<'_, AppState>, doc_group_id: i64, payload: FolderDraftCreate) -> Result<FolderDraft, String> {
+    let pool = &state.pool;
+    crate::services::folder_drafts::create(pool, doc_group_id, payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn folder_draft_get(state: State<'_, AppState>, id: i64) -> Result<Option<FolderDraft>, String> {
+    let pool = &state.pool;
+    crate::services::folder_drafts::get(pool, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn folder_draft_list(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<FolderDraft>, String> {
+    let pool = &state.pool;
+    crate::services::folder_drafts::list(pool, doc_group_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn folder_draft_update(state: State<'_, AppState>, id: i64, payload: FolderDraftUpdate) -> Result<FolderDraft, String> {
+    let pool = &state.pool;
+    crate::services::folder_drafts::update(pool, id, payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn folder_draft_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::folder_drafts::delete(pool, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn folder_draft_delete_all(state: State<'_, AppState>, doc_group_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::folder_drafts::delete_all_for_group(pool, doc_group_id).map_err(|e| e.to_string())
 }
 
 // Timeline Commands

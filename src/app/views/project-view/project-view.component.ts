@@ -10,7 +10,7 @@ import { DocumentEditorComponent } from '../../components/document-editor/docume
 import { GroupViewComponent } from '../../components/group-view/group-view.component';
 import { RightSidebarComponent } from '../../components/right-sidebar/right-sidebar.component';
 import { ProjectTimelineComponent } from '../../components/project-timeline/project-timeline.component';
-import type { Timeline } from '../../shared/models';
+import type { Timeline, FolderDraft } from '../../shared/models';
 
 interface DocGroup {
   id: number;
@@ -118,6 +118,18 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   characters: Character[] = [];
   events: Event[] = [];
   drafts: any[] = [];
+  // Folder drafts UI state
+  folderDraftsExpanded = false;
+  folderDrafts: FolderDraft[] = [];
+  editingFolderDraftId: number | null = null;
+  folderDraftNameEdit: string = '';
+  selectedFolderDraftId: number | null = null;
+  private folderDraftLocalContent: Map<number, string> = new Map();
+  private folderDraftAutoSaveTimeouts: Map<number, any> = new Map();
+  private folderDraftSyncedClearTimeouts: Map<number, any> = new Map();
+  folderDraftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
+  private focusedFolderDraftId: number | null = null;
+  private folderDraftClickTimer: any;
   // Characters per-doc selection
   docCharacterIds: Set<number> = new Set();
   // Editing state for character cards
@@ -664,6 +676,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // Clear doc-specific character selection when no doc is selected
     this.docCharacterIds = new Set();
     this.docEventIds = new Set();
+
+    // Load folder drafts if the drafts panel is expanded
+    if (this.folderDraftsExpanded) {
+      this.loadFolderDrafts(group.id);
+    }
   }
 
   private saveSelection() {
@@ -1576,6 +1593,243 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ==================== FOLDER DRAFTS UI ====================
+  toggleFolderDrafts() {
+    this.folderDraftsExpanded = !this.folderDraftsExpanded;
+    const group = this.selectedGroup || this.currentGroup;
+    if (this.folderDraftsExpanded && group) {
+      // When expanding via the toggler, don't auto-restore a previously selected folder draft,
+      // so we don't hide doc draft tools or switch external mode unexpectedly.
+      this.loadFolderDrafts(group.id, /*restoreSelection*/ false);
+    }
+    // Persist selection visibility per group
+    try { localStorage.setItem(this.getFolderDraftsExpandedKey(this.projectId), String(this.folderDraftsExpanded)); } catch {}
+  }
+
+  async loadFolderDrafts(docGroupId: number, restoreSelection: boolean = true) {
+    try {
+      this.folderDrafts = await this.projectService.listFolderDrafts(docGroupId);
+      // Load local cached content for each folder draft
+      for (const d of this.folderDrafts) {
+        const cached = this.getLocalFolderDraftContent(d.id);
+        if (cached !== null) {
+          this.folderDraftLocalContent.set(d.id, cached);
+          (d as any).content = cached;
+        } else {
+          const backendContent = (d as any).content || '';
+          this.folderDraftLocalContent.set(d.id, backendContent);
+          (d as any).content = backendContent;
+        }
+        delete this.folderDraftSyncStatus[d.id];
+        const t = this.folderDraftSyncedClearTimeouts.get(d.id);
+        if (t) { clearTimeout(t); this.folderDraftSyncedClearTimeouts.delete(d.id); }
+      }
+      // Optionally restore previously selected folder draft for this group
+      if (restoreSelection) {
+        try {
+          const savedIdStr = localStorage.getItem(this.getFolderDraftSelectionKey(docGroupId));
+          if (savedIdStr) {
+            const savedId = parseInt(savedIdStr, 10);
+            if (this.folderDrafts.some(fd => fd.id === savedId)) {
+              // Only restore if no document draft is currently selected, to avoid hiding doc draft tools
+              if (this.selectedDraftId == null) {
+                this.selectedFolderDraftId = savedId;
+              }
+            } else {
+              // Saved selection no longer valid
+              localStorage.removeItem(this.getFolderDraftSelectionKey(docGroupId));
+              if (this.selectedFolderDraftId === savedId) {
+                this.selectedFolderDraftId = null;
+              }
+            }
+          }
+        } catch {}
+      }
+    } catch (e) {
+      console.error('Failed to load folder drafts:', e);
+      this.folderDrafts = [];
+    }
+  }
+
+  async createFolderDraft() {
+    const group = this.selectedGroup || this.currentGroup;
+    if (!group) {
+      alert('Please select a folder first');
+      return;
+    }
+    try {
+      const draftName = `Draft ${new Date().toLocaleTimeString()}`;
+      await this.projectService.createFolderDraft(group.id, draftName, '');
+      await this.loadFolderDrafts(group.id);
+    } catch (e) {
+      console.error('Failed to create folder draft:', e);
+      alert('Failed to create folder draft: ' + e);
+    }
+  }
+
+  async deleteFolderDraft(id: number) {
+    try {
+      await this.projectService.deleteFolderDraft(id);
+      this.folderDrafts = this.folderDrafts.filter(d => d.id !== id);
+      if (this.selectedFolderDraftId === id) {
+        this.selectedFolderDraftId = null;
+      }
+    } catch (e) {
+      console.error('Failed to delete folder draft:', e);
+      alert('Failed to delete folder draft: ' + e);
+    }
+  }
+
+  startEditFolderDraft(d: FolderDraft) {
+    // Cancel pending click-based deselection so double-click doesn't clear selection
+    if (this.folderDraftClickTimer) { clearTimeout(this.folderDraftClickTimer); this.folderDraftClickTimer = null; }
+    this.editingFolderDraftId = d.id;
+    this.folderDraftNameEdit = d.name;
+    setTimeout(() => {
+      const el = document.querySelector<HTMLInputElement>('input.draft-name-input');
+      if (el) { el.focus(); el.select(); }
+    }, 0);
+  }
+
+  async saveFolderDraftName() {
+    if (this.editingFolderDraftId == null) return;
+    const id = this.editingFolderDraftId;
+    const name = (this.folderDraftNameEdit || '').trim();
+    this.editingFolderDraftId = null;
+    if (!name) return;
+    try {
+      const updated = await this.projectService.updateFolderDraft(id, { name });
+      const idx = this.folderDrafts.findIndex(d => d.id === id);
+      if (idx !== -1) {
+        this.folderDrafts[idx] = { ...this.folderDrafts[idx], name: (updated as any).name, updated_at: (updated as any).updated_at } as any;
+        this.folderDrafts = [...this.folderDrafts];
+      }
+    } catch (e) {
+      console.error('Failed to rename folder draft:', e);
+      alert('Failed to rename folder draft: ' + e);
+    }
+  }
+
+  cancelFolderDraftEdit() {
+    this.editingFolderDraftId = null;
+  }
+
+  // ===== Folder draft selection & syncing =====
+  onFolderDraftChipClick(d: FolderDraft, event?: MouseEvent) {
+    if (event) event.stopPropagation();
+    // Click-to-select, click-again-to-collapse with dblclick cancel
+    if (this.selectedFolderDraftId !== d.id) {
+      if (this.folderDraftClickTimer) { clearTimeout(this.folderDraftClickTimer); this.folderDraftClickTimer = null; }
+      this.selectedFolderDraftId = d.id;
+    } else {
+      if (this.folderDraftClickTimer) { clearTimeout(this.folderDraftClickTimer); }
+      this.folderDraftClickTimer = setTimeout(() => {
+        this.selectedFolderDraftId = null;
+        this.folderDraftClickTimer = null;
+        // Persist cleared selection
+        const group = this.selectedGroup || this.currentGroup;
+        if (group) {
+          try {
+            const key = this.getFolderDraftSelectionKey(group.id);
+            localStorage.removeItem(key);
+          } catch {}
+        }
+      }, 220);
+    }
+
+    // Only one draft type edited at a time: clear doc draft selection when a folder draft is actively selected
+    if (this.selectedFolderDraftId != null && this.selectedDraftId != null) {
+      this.selectedDraftId = null;
+      if (this.selectedDoc) {
+        try { localStorage.removeItem(this.getDraftSelectionKey(this.selectedDoc.id)); } catch {}
+      }
+    }
+
+    const group = this.selectedGroup || this.currentGroup;
+    if (group) {
+      try {
+        const key = this.getFolderDraftSelectionKey(group.id);
+        if (this.selectedFolderDraftId == null) localStorage.removeItem(key); else localStorage.setItem(key, String(this.selectedFolderDraftId));
+      } catch {}
+    }
+  }
+
+  getSelectedFolderDraftName(): string | null {
+    if (this.selectedFolderDraftId == null) return null;
+    const fd = this.folderDrafts.find(f => f.id === this.selectedFolderDraftId);
+    return fd ? fd.name : null;
+  }
+
+  getFolderDraftLocalContent(draftId: number): string {
+    return this.folderDraftLocalContent.get(draftId) || '';
+  }
+
+  private getLocalFolderDraftKey(draftId: number): string {
+    return `cora-folder-draft-${draftId}`;
+  }
+
+  private getLocalFolderDraftContent(draftId: number): string | null {
+    try { return localStorage.getItem(this.getLocalFolderDraftKey(draftId)); } catch { return null; }
+  }
+
+  private setLocalFolderDraftContent(draftId: number, content: string): void {
+    try { localStorage.setItem(this.getLocalFolderDraftKey(draftId), content); } catch {}
+  }
+
+  private getFolderDraftSelectionKey(groupId: number): string {
+    return `cora-folder-draft-selected-${this.projectId}-${groupId}`;
+  }
+
+  private getFolderDraftsExpandedKey(projectId: number): string {
+    return `cora-folder-drafts-expanded-${projectId}`;
+  }
+
+  onFolderDraftChange(draftId: number, content: string, cursorPosition: number): void {
+    this.focusedFolderDraftId = draftId;
+    this.folderDraftLocalContent.set(draftId, content);
+    this.setLocalFolderDraftContent(draftId, content);
+    this.folderDraftSyncStatus[draftId] = 'pending';
+    const prevClear = this.folderDraftSyncedClearTimeouts.get(draftId);
+    if (prevClear) { clearTimeout(prevClear); this.folderDraftSyncedClearTimeouts.delete(draftId); }
+    const existing = this.folderDraftAutoSaveTimeouts.get(draftId);
+    if (existing) clearTimeout(existing);
+    const timeout = setTimeout(() => { this.syncFolderDraftToBackend(draftId, cursorPosition); }, 500);
+    this.folderDraftAutoSaveTimeouts.set(draftId, timeout);
+  }
+
+  onFolderDraftBlur(draftId: number): void {
+    if (this.focusedFolderDraftId === draftId) this.focusedFolderDraftId = null;
+    const t = this.folderDraftAutoSaveTimeouts.get(draftId);
+    if (t) { clearTimeout(t); this.folderDraftAutoSaveTimeouts.delete(draftId); }
+    if (this.folderDraftSyncStatus[draftId] === 'pending') {
+      this.syncFolderDraftToBackend(draftId);
+    }
+  }
+
+  private async syncFolderDraftToBackend(draftId: number, cursorPosition?: number): Promise<void> {
+    const content = this.folderDraftLocalContent.get(draftId);
+    if (content === undefined) return;
+    const wasFocused = this.focusedFolderDraftId === draftId;
+    const prevClear = this.folderDraftSyncedClearTimeouts.get(draftId);
+    if (prevClear) { clearTimeout(prevClear); this.folderDraftSyncedClearTimeouts.delete(draftId); }
+    this.folderDraftSyncStatus[draftId] = 'syncing';
+    try {
+      await this.projectService.updateFolderDraft(draftId, { content });
+      this.folderDraftSyncStatus[draftId] = 'synced';
+      const clearTimer = setTimeout(() => {
+        if (this.folderDraftSyncStatus[draftId] === 'synced') { delete this.folderDraftSyncStatus[draftId]; }
+        this.folderDraftSyncedClearTimeouts.delete(draftId);
+      }, 2500);
+      this.folderDraftSyncedClearTimeouts.set(draftId, clearTimer);
+      if (wasFocused && cursorPosition !== undefined) {
+        // caret restoration handled by browser for now
+      }
+    } catch (e) {
+      console.error('Failed to sync folder draft:', e);
+      this.folderDraftSyncStatus[draftId] = 'pending';
+    }
+  }
+
   private async loadDrafts(docId: number) {
     try {
       this.drafts = await this.projectService.listDrafts(docId);
@@ -2202,6 +2456,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   onDocumentDraftSelect(draftId: number | null): void {
     this.selectedDraftId = draftId ?? null;
+    // Only one draft type at a time: clear folder draft selection when a document draft is selected
+    if (this.selectedDraftId != null) {
+      this.selectedFolderDraftId = null;
+    }
     if (this.selectedDoc) {
       const key = this.getDraftSelectionKey(this.selectedDoc.id);
       try {
@@ -2215,11 +2473,20 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   onDocumentDraftChanged(event: { draftId: number; content: string; cursorPosition: number }): void {
-    this.onDraftChange(event.draftId, event.content, event.cursorPosition);
+    // Route to folder draft handler if external mode is active
+    if (this.selectedFolderDraftId != null && event.draftId === this.selectedFolderDraftId) {
+      this.onFolderDraftChange(event.draftId, event.content, event.cursorPosition);
+    } else {
+      this.onDraftChange(event.draftId, event.content, event.cursorPosition);
+    }
   }
 
   onDocumentDraftBlurred(draftId: number): void {
-    this.onDraftBlur(draftId);
+    if (this.selectedFolderDraftId != null && draftId === this.selectedFolderDraftId) {
+      this.onFolderDraftBlur(draftId);
+    } else {
+      this.onDraftBlur(draftId);
+    }
   }
 
   async onDocumentDraftRenamed(event: { id: number; name: string }): Promise<void> {

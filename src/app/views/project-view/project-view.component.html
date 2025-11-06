@@ -91,6 +91,29 @@
               (keydown)="onFolderNameKeydown($event)"
               placeholder="Folder name" />
           }
+          <div class="drafts-row">
+            @if (folderDraftsExpanded) {
+              <div class="drafts-list">
+                @for (fd of folderDrafts; track fd.id) {
+                  <div class="draft-chip" [class.active]="selectedFolderDraftId === fd.id" (click)="onFolderDraftChipClick(fd, $event)" (dblclick)="startEditFolderDraft(fd)" title="Click to select, double-click to rename">
+                    @if (editingFolderDraftId === fd.id) {
+                      <input class="draft-name-input"
+                             [(ngModel)]="folderDraftNameEdit"
+                             (blur)="saveFolderDraftName()"
+                             (keydown.enter)="saveFolderDraftName()"
+                             (keydown.escape)="cancelFolderDraftEdit()"
+                             placeholder="Draft name" />
+                      <button class="draft-delete-btn" title="Delete draft" (click)="deleteFolderDraft(fd.id); $event.stopPropagation();">🗑</button>
+                    } @else {
+                      <span class="draft-name">{{ fd.name }}</span>
+                    }
+                  </div>
+                }
+                <button class="draft-add-btn" (click)="createFolderDraft()">+ Draft</button>
+              </div>
+            }
+            <button class="drafts-toggle" (click)="toggleFolderDrafts()">Drafts</button>
+          </div>
         </div>
       </div>
       }
@@ -104,13 +127,17 @@
         [drafts]="drafts"
         [draftSyncStatus]="draftSyncStatus"
         [selectedDraftId]="selectedDraftId"
+        [externalMode]="selectedFolderDraftId != null"
+        [externalDraftId]="selectedFolderDraftId"
+  [externalDraftName]="selectedFolderDraftId ? (getSelectedFolderDraftName() ?? 'Draft') : null"
+        [externalDraftContent]="selectedFolderDraftId ? getFolderDraftLocalContent(selectedFolderDraftId) : ''"
         [docIndexLabel]="getDocIndexLabel()"
         (docNameChange)="renameDoc($event)"
         (docTextChange)="onDocumentTextChange()"
         (docSaved)="saveDoc()"
         (draftRenamed)="onDocumentDraftRenamed($event)"
         (draftAdd)="onDocumentDraftAdd()"
-  (draftSelect)="onDocumentDraftSelect($event)"
+        (draftSelect)="onDocumentDraftSelect($event)"
         (draftChanged)="onDocumentDraftChanged($event)"
         (draftBlurred)="onDocumentDraftBlurred($event)"
         (draftDeleted)="deleteDraft($event)">
@@ -121,6 +148,10 @@
       @if (selectedGroup && !selectedDoc) {
       <app-group-view 
         [selectedGroup]="selectedGroup"
+        [selectedFolderDraftId]="selectedFolderDraftId"
+        [selectedFolderDraftContent]="selectedFolderDraftId ? getFolderDraftLocalContent(selectedFolderDraftId) : ''"
+        (folderDraftChanged)="onFolderDraftChange($event.draftId, $event.content, $event.cursorPosition)"
+        (folderDraftBlurred)="onFolderDraftBlur($event)"
         (groupNameChange)="renameGroup($event)"
         (createDocRequested)="createDoc()"
         (focusTreeRequested)="focusTree()">

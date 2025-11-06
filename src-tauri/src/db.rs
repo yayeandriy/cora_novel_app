@@ -56,6 +56,21 @@ pub fn init_pool() -> anyhow::Result<DbPool> {
         conn.execute_batch(include_str!("../migrations/006_add_timelines.sql")).context("running migrations 006")?;
     }
 
+    // Conditionally run 007: project_drafts and folder_drafts
+    let drafts_tables_missing: bool = conn.query_row(
+        "SELECT (
+            (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='project_drafts') = 0
+         ) OR (
+            (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='folder_drafts') = 0
+         )",
+        [],
+        |row| row.get::<_, i64>(0)
+    ).unwrap_or(1) != 0; // treat error as missing
+
+    if drafts_tables_missing {
+        conn.execute_batch(include_str!("../migrations/007_add_project_folder_drafts.sql")).context("running migrations 007")?;
+    }
+
     Ok(pool)
 }
 

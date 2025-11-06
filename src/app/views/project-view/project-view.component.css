@@ -233,6 +233,99 @@ app-doc-tree {
 
 .folder-name-input { /* hook for focus */ }
 
+/* Folder drafts controls — match Document Editor styles */
+.drafts-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto; /* push to right side of the row */
+  order: 999; /* always last within the row */
+  flex-shrink: 0; /* prevent squishing when row gets tight */
+}
+
+.drafts-toggle,
+.draft-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.drafts-toggle:hover,
+.draft-add-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.drafts-list {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.draft-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 0.75rem;
+  color: #374151;
+}
+
+.draft-chip:hover {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.draft-chip.active {
+  background: #eef2ff;
+  border-color: #6366f1;
+  color: #111827;
+}
+
+.draft-name-input {
+  height: 1.5rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid #d1d5db;
+  outline: none;
+}
+
+.draft-name-input:focus {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+
+.draft-delete-btn {
+  height: 1.5rem;
+  width: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.draft-delete-btn:hover {
+  background: #fef2f2;
+}
+
 app-document-editor {
   display: flex;
   flex-direction: column;

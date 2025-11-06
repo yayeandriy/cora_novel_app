@@ -82,6 +82,52 @@ pub struct DraftUpdate {
     pub content: Option<String>,
 }
 
+// Project-level drafts
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectDraft {
+    pub id: i64,
+    pub project_id: i64,
+    pub name: String,
+    pub content: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectDraftCreate {
+    pub name: String,
+    pub content: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectDraftUpdate {
+    pub name: Option<String>,
+    pub content: Option<String>,
+}
+
+// Folder (doc group) drafts
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FolderDraft {
+    pub id: i64,
+    pub doc_group_id: i64,
+    pub name: String,
+    pub content: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FolderDraftCreate {
+    pub name: String,
+    pub content: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FolderDraftUpdate {
+    pub name: Option<String>,
+    pub content: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Timeline {
     pub id: i64,

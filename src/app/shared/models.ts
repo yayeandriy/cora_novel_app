@@ -82,6 +82,46 @@ export interface DraftUpdate {
   content?: string | null;
 }
 
+// Project-level drafts
+export interface ProjectDraft {
+  id: number;
+  project_id: number;
+  name: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectDraftCreate {
+  name: string;
+  content: string;
+}
+
+export interface ProjectDraftUpdate {
+  name?: string | null;
+  content?: string | null;
+}
+
+// Folder (doc group) drafts
+export interface FolderDraft {
+  id: number;
+  doc_group_id: number;
+  name: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FolderDraftCreate {
+  name: string;
+  content: string;
+}
+
+export interface FolderDraftUpdate {
+  name?: string | null;
+  content?: string | null;
+}
+
 export interface Timeline {
   id: number;
   entity_type: 'project' | 'doc' | 'folder' | 'event';

@@ -1,6 +1,12 @@
 import { Injectable } from "@angular/core";
 import { invoke } from "@tauri-apps/api/core";
-import type { Project, ProjectCreate, Doc, Character, Event, Draft, DraftCreate } from "../shared/models";
+import type {
+  Project, ProjectCreate,
+  Doc, Character, Event,
+  Draft, DraftCreate,
+  ProjectDraft, ProjectDraftCreate, ProjectDraftUpdate,
+  FolderDraft, FolderDraftCreate, FolderDraftUpdate
+} from "../shared/models";
 
 @Injectable({ providedIn: "root" })
 export class ProjectService {
@@ -186,6 +192,58 @@ export class ProjectService {
 
   async deleteAllDrafts(docId: number): Promise<void> {
     return invoke<void>("draft_delete_all", { docId });
+  }
+
+  // Project Drafts
+  async createProjectDraft(projectId: number, name: string, content: string): Promise<ProjectDraft> {
+    return invoke<ProjectDraft>("project_draft_create", { projectId, payload: { name, content } });
+  }
+
+  async getProjectDraft(id: number): Promise<ProjectDraft | null> {
+    return invoke<ProjectDraft | null>("project_draft_get", { id });
+  }
+
+  async listProjectDrafts(projectId: number): Promise<ProjectDraft[]> {
+    return invoke<ProjectDraft[]>("project_draft_list", { projectId });
+  }
+
+  async updateProjectDraft(id: number, changes: Partial<ProjectDraftUpdate> & { name?: string | null; content?: string | null }): Promise<ProjectDraft> {
+    const payload = { name: changes.name ?? null, content: changes.content ?? null } as ProjectDraftUpdate;
+    return invoke<ProjectDraft>("project_draft_update", { id, payload });
+  }
+
+  async deleteProjectDraft(id: number): Promise<void> {
+    return invoke<void>("project_draft_delete", { id });
+  }
+
+  async deleteAllProjectDrafts(projectId: number): Promise<void> {
+    return invoke<void>("project_draft_delete_all", { projectId });
+  }
+
+  // Folder (Doc Group) Drafts
+  async createFolderDraft(docGroupId: number, name: string, content: string): Promise<FolderDraft> {
+    return invoke<FolderDraft>("folder_draft_create", { docGroupId, payload: { name, content } });
+  }
+
+  async getFolderDraft(id: number): Promise<FolderDraft | null> {
+    return invoke<FolderDraft | null>("folder_draft_get", { id });
+  }
+
+  async listFolderDrafts(docGroupId: number): Promise<FolderDraft[]> {
+    return invoke<FolderDraft[]>("folder_draft_list", { docGroupId });
+  }
+
+  async updateFolderDraft(id: number, changes: Partial<FolderDraftUpdate> & { name?: string | null; content?: string | null }): Promise<FolderDraft> {
+    const payload = { name: changes.name ?? null, content: changes.content ?? null } as FolderDraftUpdate;
+    return invoke<FolderDraft>("folder_draft_update", { id, payload });
+  }
+
+  async deleteFolderDraft(id: number): Promise<void> {
+    return invoke<void>("folder_draft_delete", { id });
+  }
+
+  async deleteAllFolderDrafts(docGroupId: number): Promise<void> {
+    return invoke<void>("folder_draft_delete_all", { docGroupId });
   }
 
   // Import .txt files into a target folder

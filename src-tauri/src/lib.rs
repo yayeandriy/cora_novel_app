@@ -7,6 +7,8 @@ mod services {
     pub mod events;
     pub mod doc_groups;
     pub mod drafts;
+    pub mod project_drafts;
+    pub mod folder_drafts;
     pub mod timelines;
 }
 mod commands;
@@ -68,6 +70,18 @@ pub fn run() {
             commands::draft_delete,
             commands::draft_restore,
             commands::draft_delete_all,
+            commands::project_draft_create,
+            commands::project_draft_get,
+            commands::project_draft_list,
+            commands::project_draft_update,
+            commands::project_draft_delete,
+            commands::project_draft_delete_all,
+            commands::folder_draft_create,
+            commands::folder_draft_get,
+            commands::folder_draft_list,
+            commands::folder_draft_update,
+            commands::folder_draft_delete,
+            commands::folder_draft_delete_all,
             commands::timeline_create,
             commands::timeline_get,
             commands::timeline_get_by_entity,

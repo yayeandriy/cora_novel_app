@@ -34,6 +34,11 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges {
   @Input() drafts: Draft[] = [];
   @Input() draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
   @Input() selectedDraftId: number | null = null;
+  // External draft mode (e.g., folder draft shown in split while editing a doc)
+  @Input() externalMode: boolean = false;
+  @Input() externalDraftId: number | null = null;
+  @Input() externalDraftName: string | null = null;
+  @Input() externalDraftContent: string = '';
   
   @Output() draftAdd = new EventEmitter<void>();
   @Output() draftSelect = new EventEmitter<number | null>();
@@ -121,6 +126,14 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges {
         this.cdr.markForCheck();
       }
     }
+    // If external mode requested, ensure split is expanded
+    if (changes['externalMode'] && this.externalMode) {
+      if (this.isSplitCollapsed) {
+        this.isSplitCollapsed = false;
+        try { localStorage.setItem(this.getCollapseKey(), 'false'); } catch {}
+        setTimeout(() => this.adjustWidthToContainer(), 0);
+      }
+    }
   }
 
   ngOnDestroy(): void {
@@ -133,6 +146,9 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges {
 
   // Draft helpers
   get selectedDraft() {
+    if (this.externalMode && this.externalDraftId != null) {
+      return { id: this.externalDraftId, name: this.externalDraftName ?? 'Draft', content: this.externalDraftContent } as any;
+    }
     return this.drafts.find(d => d.id === this.selectedDraftId) || null;
   }
 
