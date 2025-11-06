@@ -72,6 +72,28 @@
           }
         </div>
       </div>
+
+      <!-- Folder name row (under project name) -->
+      @if (selectedGroup || currentGroup) {
+      <div class="folder-title-bar">
+        <div class="folder-title-center">
+          @if (getFolderIndexLabel()) { <span class="header-index" style="margin-right: 1rem;">{{ getFolderIndexLabel() }}.</span> }
+          @if (!editingFolderName) {
+            <div class="project-name">
+              <span class="cursor-text" title="Click to rename folder" (click)="startEditFolderName($event)">{{ (selectedGroup || currentGroup)?.name }}</span>
+            </div>
+          } @else {
+            <input
+              #folderNameInput
+              class="project-name-input folder-name-input"
+              [(ngModel)]="folderNameEdit"
+              (blur)="saveFolderName()"
+              (keydown)="onFolderNameKeydown($event)"
+              placeholder="Folder name" />
+          }
+        </div>
+      </div>
+      }
       <!-- Document editor -->
       @if (selectedDoc && !selectedGroup) {
       <app-document-editor 
@@ -82,6 +104,7 @@
         [drafts]="drafts"
         [draftSyncStatus]="draftSyncStatus"
         [selectedDraftId]="selectedDraftId"
+        [docIndexLabel]="getDocIndexLabel()"
         (docNameChange)="renameDoc($event)"
         (docTextChange)="onDocumentTextChange()"
         (docSaved)="saveDoc()"

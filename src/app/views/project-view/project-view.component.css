@@ -208,11 +208,30 @@ app-doc-tree {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  padding: 2.5rem 1.5rem;
+  padding: 2.5rem .75rem;
   
 }
 
 /* Reuse .project-name and .project-name-input styles already defined above */
+/* Index chip in headers */
+.header-index { color: #6b7280; font-size: 0.8125rem; padding: 0.25rem 0.25rem 0.25rem 0; }
+
+/* Folder title row under project name */
+.folder-title-bar {
+  flex-shrink: 0;
+  background: white;
+  border-bottom: none;
+}
+
+.folder-title-center {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 0 1.5rem 1rem 1.5rem;
+  margin-top: -1rem;
+}
+
+.folder-name-input { /* hook for focus */ }
 
 app-document-editor {
   display: flex;
@@ -353,3 +372,23 @@ app-right-sidebar {
   opacity: 0.6;
   cursor: not-allowed;
 }
+.w-full{} 
+ 
+.flex{} 
+ 
+.w-full{} 
+ 
+.grow{} 
+ 
+.mb-2{} 
+ 
+.text-sm{} 
+ 
+.text-gray-600{} 
+ 
+.mt-3{} 
+ 
+.text-xs{} 
+ 
+.text-gray-500{} 
+ 

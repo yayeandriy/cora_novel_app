@@ -26,6 +26,7 @@ export interface Doc {
 })
 export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges {
   @Input() selectedDoc: Doc | null = null;
+  @Input() docIndexLabel: string | null = null;
   @Input() showSaveStatus: boolean = false;
   @Input() hasUnsavedChanges: boolean = false;
   @Input() allProjectDocs: Doc[] = [];

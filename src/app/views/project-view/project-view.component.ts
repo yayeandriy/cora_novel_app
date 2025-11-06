@@ -133,6 +133,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
   private focusedDraftId: number | null = null;
   selectedDraftId: number | null = null;
+
+  // Inline edit state for folder (doc group)
+  editingFolderName = false;
+  folderNameEdit: string = '';
   
   private getDraftSelectionKey(docId: number): string {
     return `cora-draft-selected-${this.projectId}-${docId}`;
@@ -166,6 +170,59 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         el.select();
       }
     }, 0);
+  }
+
+  // Folder name editing
+  startEditFolderName(event?: MouseEvent) {
+    if (event) event.stopPropagation();
+    const group = this.selectedGroup || this.currentGroup;
+    if (!group) return;
+    this.editingFolderName = true;
+    this.folderNameEdit = group.name || '';
+    setTimeout(() => {
+      const el = document.querySelector<HTMLInputElement>('input.folder-name-input');
+      if (el) { el.focus(); el.select(); }
+    }, 0);
+  }
+
+  async saveFolderName() {
+    if (!this.editingFolderName) return;
+    const group = this.selectedGroup || this.currentGroup;
+    if (!group) { this.editingFolderName = false; return; }
+    const newName = (this.folderNameEdit || '').trim();
+    this.editingFolderName = false;
+    if (!newName || newName === group.name) {
+      this.folderNameEdit = group.name || '';
+      return;
+    }
+    try {
+      await this.projectService.renameDocGroup(group.id, newName);
+      // Update local state
+      const found = this.findGroupById(this.docGroups, group.id);
+      if (found) found.name = newName;
+      if (this.selectedGroup && this.selectedGroup.id === group.id) this.selectedGroup.name = newName;
+      if (this.currentGroup && this.currentGroup.id === group.id) this.currentGroup.name = newName;
+      this.folderNameEdit = newName;
+      // Optional: reload tree to keep ordering stable
+      await this.loadProject(true);
+    } catch (error) {
+      console.error('Failed to rename folder:', error);
+      alert('Failed to rename folder: ' + error);
+      // revert input
+      this.folderNameEdit = group.name || '';
+    }
+  }
+
+  onFolderNameKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.saveFolderName();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      this.editingFolderName = false;
+      const group = this.selectedGroup || this.currentGroup;
+      this.folderNameEdit = group?.name || '';
+    }
   }
 
   async saveProjectName() {
@@ -1992,6 +2049,58 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     if (status === 'pending') {
       this.syncDraftToBackend(draftId);
     }
+  }
+
+  // ======== Index labels for headers ========
+  getFolderIndexLabel(): string | null {
+    const group = this.selectedGroup || this.currentGroup;
+    if (!group) return null;
+    const path = this.findGroupIndexPath(group.id);
+    return path ? path.join('.') : null;
+  }
+
+  getDocIndexLabel(): string | null {
+    const doc = this.selectedDoc;
+    if (!doc) return null;
+    const res = this.findDocIndexPath(doc.id);
+    if (!res) return null;
+    const { groupPath, docIndex } = res;
+    return [...groupPath, docIndex + 1].join('.');
+  }
+
+  private findGroupIndexPath(targetId: number): number[] | null {
+    const dfs = (groups: DocGroup[], prefix: number[]): number[] | null => {
+      for (let i = 0; i < groups.length; i++) {
+        const g = groups[i];
+        const path = [...prefix, i + 1];
+        if (g.id === targetId) return path;
+        if (g.groups && g.groups.length) {
+          const child = dfs(g.groups, path);
+          if (child) return child;
+        }
+      }
+      return null;
+    };
+    return dfs(this.docGroups, []);
+  }
+
+  private findDocIndexPath(docId: number): { groupPath: number[]; docIndex: number } | null {
+    const dfs = (groups: DocGroup[], prefix: number[]): { groupPath: number[]; docIndex: number } | null => {
+      for (let i = 0; i < groups.length; i++) {
+        const g = groups[i];
+        // Docs directly in this group
+        const dIdx = g.docs.findIndex(d => d.id === docId);
+        if (dIdx !== -1) {
+          return { groupPath: [...prefix, i + 1], docIndex: dIdx };
+        }
+        if (g.groups && g.groups.length) {
+          const child = dfs(g.groups, [...prefix, i + 1]);
+          if (child) return child;
+        }
+      }
+      return null;
+    };
+    return dfs(this.docGroups, []);
   }
 
   private async syncDraftToBackend(draftId: number, cursorPosition?: number): Promise<void> {
