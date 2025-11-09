@@ -54,41 +54,36 @@ export class CharactersPanelComponent {
   onAddClick(event: MouseEvent) {
     event.stopPropagation();
     
-    if (this.selectedDoc) {
-      // Toggle select mode when doc is selected
-      this.isSelectMode = !this.isSelectMode;
-      
-      if (this.isSelectMode) {
-        // Create a new character card in edit mode
-        this.newCharacter = {
-          id: -1, // Temporary ID for new character
-          name: '',
-          desc: '',
-        };
-      } else {
-        // Clear the new character when exiting select mode
-        this.newCharacter = null;
-      }
+    // Toggle select mode (works for all tabs)
+    this.isSelectMode = !this.isSelectMode;
+    
+    if (this.isSelectMode) {
+      // Create a new character card in edit mode
+      this.newCharacter = {
+        id: -1, // Temporary ID for new character
+        name: '',
+        desc: '',
+      };
     } else {
-      // Create new character when no doc is selected (Project tab)
-      this.add.emit();
+      // Clear the new character when exiting select mode
+      this.newCharacter = null;
     }
   }
 
   onNewCharacterSave(data: { id: number; name: string; desc: string }) {
-    // Only proceed if name is provided
-    if (data.name.trim()) {
-      // Emit create event with the character data
-      this.createCharacter.emit({ name: data.name, desc: data.desc });
-    }
-    // Clear the new character card
+    // Create character with the provided data (or defaults if empty)
+    const name = data.name.trim() || 'New Character';
+    const desc = data.desc || '';
+    this.createCharacter.emit({ name, desc });
+    
+    // Clear the new character card and exit select mode
     this.newCharacter = null;
-    // Exit select mode
     this.isSelectMode = false;
   }
 
   onNewCharacterCancel() {
-    // Just clear the new character card without saving
+    // Just clear without creating
     this.newCharacter = null;
+    this.isSelectMode = false;
   }
 }

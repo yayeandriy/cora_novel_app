@@ -56,44 +56,39 @@ export class EventsPanelComponent {
   onAddClick(event: MouseEvent) {
     event.stopPropagation();
     
-    if (this.selectedDoc) {
-      // Toggle select mode when doc is selected
-      this.isSelectMode = !this.isSelectMode;
-      
-      if (this.isSelectMode) {
-        // Create a new event card in edit mode
-        this.newEvent = {
-          id: -1, // Temporary ID for new event
-          name: '',
-          desc: '',
-          start_date: null,
-          end_date: null,
-        };
-      } else {
-        // Clear the new event when exiting select mode
-        this.newEvent = null;
-      }
+    // Toggle select mode (works for all tabs)
+    this.isSelectMode = !this.isSelectMode;
+    
+    if (this.isSelectMode) {
+      // Create a new event card in edit mode
+      this.newEvent = {
+        id: -1, // Temporary ID for new event
+        name: '',
+        desc: '',
+        start_date: null,
+        end_date: null,
+      };
     } else {
-      // Create new event when no doc is selected (Project tab)
-      this.add.emit();
+      // Clear the new event when exiting select mode
+      this.newEvent = null;
     }
   }
 
   onNewEventSave(data: { id: number; name: string; desc: string; start_date: string | null; end_date: string | null }) {
-    // Only proceed if name is provided
-    if (data.name.trim()) {
-      // Emit create event with the provided data
-      this.createEvent.emit({ name: data.name, desc: data.desc, start_date: data.start_date, end_date: data.end_date });
-    }
-    // Clear the new event card
+    // Create event with the provided data (or defaults if empty)
+    const name = data.name.trim() || 'New Event';
+    const desc = data.desc || '';
+    this.createEvent.emit({ name, desc, start_date: data.start_date, end_date: data.end_date });
+    
+    // Clear the new event card and exit select mode
     this.newEvent = null;
-    // Exit select mode
     this.isSelectMode = false;
   }
 
   onNewEventCancel() {
-    // Just clear the new event card without saving
+    // Just clear without creating
     this.newEvent = null;
+    this.isSelectMode = false;
   }
 
   onTimelineToggleClick(event: MouseEvent) {
