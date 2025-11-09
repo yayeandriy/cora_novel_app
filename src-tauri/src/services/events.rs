@@ -120,10 +120,25 @@ pub fn detach_from_doc(pool: &DbPool, doc_id: i64, event_id: i64) -> anyhow::Res
     Ok(())
 }
 
-/// List event ids attached to a doc group
+/// List event ids attached to a doc group (directly attached to the folder)
 pub fn list_for_doc_group(pool: &DbPool, doc_group_id: i64) -> anyhow::Result<Vec<i64>> {
     let conn = get_conn(pool)?;
     let mut stmt = conn.prepare("SELECT event_id FROM doc_group_events WHERE doc_group_id = ?1 ORDER BY event_id")?;
+    let ids = stmt.query_map(rusqlite::params![doc_group_id], |row| row.get(0))?.collect::<Result<Vec<i64>, _>>()?;
+    Ok(ids)
+}
+
+/// List all distinct event ids used in docs within a doc group (mirrored from docs)
+/// This returns events attached to any document in the folder
+pub fn list_from_docs_in_group(pool: &DbPool, doc_group_id: i64) -> anyhow::Result<Vec<i64>> {
+    let conn = get_conn(pool)?;
+    let mut stmt = conn.prepare(
+        "SELECT DISTINCT de.event_id 
+         FROM doc_events de
+         INNER JOIN docs d ON de.doc_id = d.id
+         WHERE d.doc_group_id = ?1
+         ORDER BY de.event_id"
+    )?;
     let ids = stmt.query_map(rusqlite::params![doc_group_id], |row| row.get(0))?.collect::<Result<Vec<i64>, _>>()?;
     Ok(ids)
 }

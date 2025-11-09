@@ -2234,7 +2234,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   private async loadDocGroupCharacters(docGroupId: number): Promise<void> {
     try {
-      const ids = await this.projectService.listDocGroupCharacters(docGroupId);
+      // Load characters mirrored from all docs within this folder
+      const ids = await this.projectService.listDocGroupCharactersFromDocs(docGroupId);
       this.docGroupCharacterIds = new Set(ids);
     } catch (error) {
       console.error('Failed to load doc group characters:', error);
@@ -2244,7 +2245,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   private async loadDocGroupEvents(docGroupId: number): Promise<void> {
     try {
-      const ids = await this.projectService.listDocGroupEvents(docGroupId);
+      // Load events mirrored from all docs within this folder
+      const ids = await this.projectService.listDocGroupEventsFromDocs(docGroupId);
       this.docGroupEventIds = new Set(ids);
     } catch (error) {
       console.error('Failed to load doc group events:', error);
@@ -2279,6 +2281,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.selectedDoc) {
         await this.projectService.attachCharacterToDoc(this.selectedDoc.id, created.id);
         this.docCharacterIds = new Set([...this.docCharacterIds, created.id]);
+        
+        // Refresh parent folder's character list (union of all docs)
+        if (this.currentGroup) {
+          await this.loadDocGroupCharacters(this.currentGroup.id);
+        }
       }
       // If we have a selected group, attach the new character to it
       else if (this.selectedGroup) {
@@ -2370,9 +2377,25 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     try {
       await this.projectService.deleteEvent(id);
       this.events = this.events.filter(e => e.id !== id);
-      if (this.docEventIds.has(id)) {
+      
+      // Track if we need to refresh folder list
+      const wasInDocEvents = this.docEventIds.has(id);
+      const wasInGroupEvents = this.docGroupEventIds.has(id);
+      
+      if (wasInDocEvents) {
         this.docEventIds.delete(id);
         this.docEventIds = new Set(this.docEventIds);
+      }
+      
+      // Remove from folder selection if present
+      if (wasInGroupEvents) {
+        this.docGroupEventIds.delete(id);
+        this.docGroupEventIds = new Set(this.docGroupEventIds);
+      }
+      
+      // Refresh parent folder's event list if the event was used in any doc
+      if (this.currentGroup && (wasInDocEvents || wasInGroupEvents)) {
+        await this.loadDocGroupEvents(this.currentGroup.id);
       }
     } catch (error) {
       console.error('Failed to delete event:', error);
@@ -2392,6 +2415,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.docEventIds.delete(eventId);
       }
       this.docEventIds = new Set(this.docEventIds);
+      
+      // Refresh parent folder's event list (union of all docs)
+      if (this.currentGroup) {
+        await this.loadDocGroupEvents(this.currentGroup.id);
+      }
     } catch (error) {
       console.error('Failed to update event relation:', error);
     }
@@ -2403,10 +2431,26 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     try {
       await this.projectService.deleteCharacter(id);
       this.characters = this.characters.filter(c => c.id !== id);
+      
+      // Track if we need to refresh folder list
+      const wasInDocCharacters = this.docCharacterIds.has(id);
+      const wasInGroupCharacters = this.docGroupCharacterIds.has(id);
+      
       // Ensure it is also removed from current doc selection
-      if (this.docCharacterIds.has(id)) {
+      if (wasInDocCharacters) {
         this.docCharacterIds.delete(id);
         this.docCharacterIds = new Set(this.docCharacterIds);
+      }
+      
+      // Remove from folder selection if present
+      if (wasInGroupCharacters) {
+        this.docGroupCharacterIds.delete(id);
+        this.docGroupCharacterIds = new Set(this.docGroupCharacterIds);
+      }
+      
+      // Refresh parent folder's character list if the character was used in any doc
+      if (this.currentGroup && (wasInDocCharacters || wasInGroupCharacters)) {
+        await this.loadDocGroupCharacters(this.currentGroup.id);
       }
     } catch (error) {
       console.error('Failed to delete character:', error);
@@ -2427,6 +2471,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
       // Reassign to trigger OnPush consumers
       this.docCharacterIds = new Set(this.docCharacterIds);
+      
+      // Refresh parent folder's character list (union of all docs)
+      if (this.currentGroup) {
+        await this.loadDocGroupCharacters(this.currentGroup.id);
+      }
     } catch (error) {
       console.error('Failed to update character relation:', error);
     }

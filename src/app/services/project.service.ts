@@ -142,6 +142,10 @@ export class ProjectService {
     return invoke<number[]>("doc_group_character_list", { docGroupId });
   }
 
+  async listDocGroupCharactersFromDocs(docGroupId: number): Promise<number[]> {
+    return invoke<number[]>("doc_group_characters_from_docs", { docGroupId });
+  }
+
   async attachCharacterToDocGroup(docGroupId: number, characterId: number): Promise<void> {
     return invoke<void>("doc_group_character_attach", { docGroupId, characterId });
   }
@@ -183,6 +187,10 @@ export class ProjectService {
 
   async listDocGroupEvents(docGroupId: number): Promise<number[]> {
     return invoke<number[]>("doc_group_event_list", { docGroupId });
+  }
+
+  async listDocGroupEventsFromDocs(docGroupId: number): Promise<number[]> {
+    return invoke<number[]>("doc_group_events_from_docs", { docGroupId });
   }
 
   async attachEventToDocGroup(docGroupId: number, eventId: number): Promise<void> {

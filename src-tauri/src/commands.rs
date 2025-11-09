@@ -222,6 +222,12 @@ pub async fn doc_group_character_list(state: State<'_, AppState>, doc_group_id: 
 }
 
 #[tauri::command]
+pub async fn doc_group_characters_from_docs(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<i64>, String> {
+    let pool = &state.pool;
+    crate::services::characters::list_from_docs_in_group(pool, doc_group_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn doc_group_character_attach(state: State<'_, AppState>, doc_group_id: i64, character_id: i64) -> Result<(), String> {
     let pool = &state.pool;
     crate::services::characters::attach_to_doc_group(pool, doc_group_id, character_id).map_err(|e| e.to_string())
@@ -283,6 +289,12 @@ pub async fn doc_event_detach(state: State<'_, AppState>, doc_id: i64, event_id:
 pub async fn doc_group_event_list(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<i64>, String> {
     let pool = &state.pool;
     crate::services::events::list_for_doc_group(pool, doc_group_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_group_events_from_docs(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<i64>, String> {
+    let pool = &state.pool;
+    crate::services::events::list_from_docs_in_group(pool, doc_group_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
