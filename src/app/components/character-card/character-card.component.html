@@ -1,29 +1,58 @@
-<div class="character-card">
-  <div class="card-row">
-    <input type="checkbox" [disabled]="!canToggle" [checked]="checked ?? false" (change)="onToggleChange($event)" />
-
-    @if (!isEditing) {
-      <div class="content">
-        <div class="name">{{ character.name }}</div>
-        @if (character.desc) { <div class="desc">{{ character.desc }}</div> }
-      </div>
-    } @else {
-      <div class="edit-form">
-        <input class="name-input" [(ngModel)]="localName" placeholder="Name" />
-        <textarea class="desc-input" [(ngModel)]="localDesc" placeholder="Description..."></textarea>
-      </div>
-    }
+<!-- VIEW STATE -->
+@if (!isEditing && mode === 'view') {
+  <div class="character-card view-mode" (dblclick)="startEdit()">
+    <div class="card-content">
+      <div class="name">{{ character.name }}</div>
+      @if (character.desc) { 
+        <div class="desc">{{ character.desc }}</div> 
+      }
+    </div>
   </div>
+}
 
-  @if (!isEditing) {
-    <div class="actions">
-      <button class="btn" (click)="startEdit()">Edit</button>
-      <button class="btn btn-danger" (click)="onDelete()">Delete</button>
+<!-- SELECTABLE STATE -->
+@if (!isEditing && mode === 'selectable') {
+  <div 
+    class="character-card selectable-mode" 
+    [class.selected]="checked"
+    (click)="onSelectToggle()">
+    <div class="card-content">
+      <div class="name">{{ character.name }}</div>
+      @if (character.desc) { 
+        <div class="desc">{{ character.desc }}</div> 
+      }
     </div>
-  } @else {
-    <div class="actions">
-      <button class="btn" (click)="saveEdit()">Save</button>
-      <button class="btn" (click)="cancelEdit()">Cancel</button>
+  </div>
+}
+
+<!-- EDIT STATE -->
+@if (isEditing) {
+  <div class="character-card edit-mode">
+    <div class="edit-header">
+      @if (canToggle) {
+        <input 
+          type="checkbox" 
+          class="edit-checkbox"
+          [checked]="checked ?? false" 
+          (change)="onToggleChange($event)" />
+      }
+      <input 
+        class="name-input" 
+        [(ngModel)]="localName" 
+        placeholder="Character name"
+        (keydown.enter)="saveEdit()"
+        (keydown.escape)="cancelEdit()" />
     </div>
-  }
-</div>
+    
+    <textarea 
+      class="desc-input" 
+      [(ngModel)]="localDesc" 
+      placeholder="Description..."
+      rows="3"></textarea>
+    
+    <div class="edit-actions">
+      <button class="btn btn-save" (click)="saveEdit()">Save</button>
+      <button class="btn btn-delete" (click)="onDelete()">Delete</button>
+    </div>
+  </div>
+}

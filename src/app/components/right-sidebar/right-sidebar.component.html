@@ -36,7 +36,8 @@
       [expanded]="charactersExpanded"
       [editingCharacterId]="editingCharacterId"
       (expandedChange)="onCharactersToggle()"
-  (add)="onCharacterAdd()"
+      (add)="onCharacterAdd()"
+      (createCharacter)="onCharacterCreate($event)"
       (update)="onCharacterUpdate($event)"
       (remove)="onCharacterDelete($event)"
       (toggle)="characterToggle.emit($event)">
@@ -89,11 +90,12 @@
       <app-characters-panel
         [characters]="characters"
         [docCharacterIds]="docGroupCharacterIds"
-        [selectedDoc]="null"
+        [selectedDoc]="selectedDocGroup"
         [expanded]="charactersExpanded"
         [editingCharacterId]="editingCharacterId"
         (expandedChange)="onCharactersToggle()"
         (add)="onCharacterAdd()"
+        (createCharacter)="onCharacterCreate($event)"
         (update)="onCharacterUpdate($event)"
         (remove)="onCharacterDelete($event)"
         (toggle)="onDocGroupCharacterToggle($event.characterId, $event)">

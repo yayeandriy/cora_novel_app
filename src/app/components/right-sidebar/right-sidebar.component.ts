@@ -107,6 +107,7 @@ export class RightSidebarComponent {
   @Output() timelineHeaderToggle = new EventEmitter<void>();
   // Character events
   @Output() characterAdd = new EventEmitter<void>();
+  @Output() characterCreate = new EventEmitter<{ name: string; desc: string }>();
   @Output() characterNameChange = new EventEmitter<{ id: number; name: string }>();
   @Output() characterDescChange = new EventEmitter<{ id: number; desc: string }>();
   @Output() characterUpdate = new EventEmitter<{ id: number; name: string; desc: string }>();
@@ -204,6 +205,11 @@ export class RightSidebarComponent {
   // ===== Characters UI handlers =====
   onCharacterAdd() {
     this.characterAdd.emit();
+  }
+
+  onCharacterCreate(data: { name: string; desc: string }) {
+    // Emit character creation with the provided data
+    this.characterCreate.emit(data);
   }
 
   onCharacterNameChange(char: Character, name: string) {

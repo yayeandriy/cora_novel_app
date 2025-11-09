@@ -2267,6 +2267,30 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  async onSidebarCharacterCreate(data: { name: string; desc: string }): Promise<void> {
+    try {
+      // Ensure panel is opened
+      this.charactersExpanded = true;
+      // Create character with the provided data
+      const created = await this.projectService.createCharacter(this.projectId, data.name, data.desc);
+      this.characters = [...this.characters, { id: created.id, name: created.name, desc: created.desc ?? '' }];
+      
+      // If we have a selected doc, attach the new character to it
+      if (this.selectedDoc) {
+        await this.projectService.attachCharacterToDoc(this.selectedDoc.id, created.id);
+        this.docCharacterIds = new Set([...this.docCharacterIds, created.id]);
+      }
+      // If we have a selected group, attach the new character to it
+      else if (this.selectedGroup) {
+        await this.projectService.attachCharacterToDocGroup(this.selectedGroup.id, created.id);
+        this.docGroupCharacterIds = new Set([...this.docGroupCharacterIds, created.id]);
+      }
+    } catch (error) {
+      console.error('Failed to create character:', error);
+      alert('Failed to create character: ' + error);
+    }
+  }
+
   async onSidebarCharacterNameChange(payload: { id: number; name: string }): Promise<void> {
     try {
       await this.projectService.updateCharacter(payload.id, { name: payload.name });
