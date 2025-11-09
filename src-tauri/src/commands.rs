@@ -279,6 +279,24 @@ pub async fn doc_event_detach(state: State<'_, AppState>, doc_id: i64, event_id:
     crate::services::events::detach_from_doc(pool, doc_id, event_id).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub async fn doc_group_event_list(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<i64>, String> {
+    let pool = &state.pool;
+    crate::services::events::list_for_doc_group(pool, doc_group_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_group_event_attach(state: State<'_, AppState>, doc_group_id: i64, event_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::events::attach_to_doc_group(pool, doc_group_id, event_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_group_event_detach(state: State<'_, AppState>, doc_group_id: i64, event_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::events::detach_from_doc_group(pool, doc_group_id, event_id).map_err(|e| e.to_string())
+}
+
 // Draft Commands
 #[tauri::command]
 pub async fn draft_create(state: State<'_, AppState>, doc_id: i64, payload: DraftCreate) -> Result<Draft, String> {

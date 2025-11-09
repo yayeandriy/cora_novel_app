@@ -181,6 +181,18 @@ export class ProjectService {
     return invoke<void>("doc_event_detach", { docId, eventId });
   }
 
+  async listDocGroupEvents(docGroupId: number): Promise<number[]> {
+    return invoke<number[]>("doc_group_event_list", { docGroupId });
+  }
+
+  async attachEventToDocGroup(docGroupId: number, eventId: number): Promise<void> {
+    return invoke<void>("doc_group_event_attach", { docGroupId, eventId });
+  }
+
+  async detachEventFromDocGroup(docGroupId: number, eventId: number): Promise<void> {
+    return invoke<void>("doc_group_event_detach", { docGroupId, eventId });
+  }
+
   // Drafts
   async createDraft(docId: number, name: string, content: string): Promise<Draft> {
     return invoke<Draft>("draft_create", { docId, payload: { name, content } });

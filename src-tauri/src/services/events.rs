@@ -120,6 +120,34 @@ pub fn detach_from_doc(pool: &DbPool, doc_id: i64, event_id: i64) -> anyhow::Res
     Ok(())
 }
 
+/// List event ids attached to a doc group
+pub fn list_for_doc_group(pool: &DbPool, doc_group_id: i64) -> anyhow::Result<Vec<i64>> {
+    let conn = get_conn(pool)?;
+    let mut stmt = conn.prepare("SELECT event_id FROM doc_group_events WHERE doc_group_id = ?1 ORDER BY event_id")?;
+    let ids = stmt.query_map(rusqlite::params![doc_group_id], |row| row.get(0))?.collect::<Result<Vec<i64>, _>>()?;
+    Ok(ids)
+}
+
+/// Attach an event to a doc group (idempotent)
+pub fn attach_to_doc_group(pool: &DbPool, doc_group_id: i64, event_id: i64) -> anyhow::Result<()> {
+    let conn = get_conn(pool)?;
+    conn.execute(
+        "INSERT OR IGNORE INTO doc_group_events (doc_group_id, event_id) VALUES (?1, ?2)",
+        rusqlite::params![doc_group_id, event_id],
+    )?;
+    Ok(())
+}
+
+/// Detach an event from a doc group (idempotent)
+pub fn detach_from_doc_group(pool: &DbPool, doc_group_id: i64, event_id: i64) -> anyhow::Result<()> {
+    let conn = get_conn(pool)?;
+    conn.execute(
+        "DELETE FROM doc_group_events WHERE doc_group_id = ?1 AND event_id = ?2",
+        rusqlite::params![doc_group_id, event_id],
+    )?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -151,3 +179,7 @@ mod tests {
         assert_eq!(got.project_id, project_id);
     }
 }
+
+#[cfg(test)]
+#[path = "doc_group_events.tests.rs"]
+mod doc_group_events_tests;
