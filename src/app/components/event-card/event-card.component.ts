@@ -110,4 +110,47 @@ export class EventCardComponent implements OnChanges, AfterViewInit {
   onDelete() {
     this.remove.emit(this.event.id);
   }
+
+  getFormattedDateRange(): string {
+    if (!this.event.start_date && !this.event.end_date) {
+      return '';
+    }
+    
+    if (!this.event.end_date || this.event.start_date === this.event.end_date) {
+      // Single date
+      return this.formatDate(this.event.start_date || this.event.end_date!);
+    }
+
+    const start = new Date(this.event.start_date!);
+    const end = new Date(this.event.end_date);
+
+    const startDay = start.getDate();
+    const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+    const startYear = start.getFullYear();
+
+    const endDay = end.getDate();
+    const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+    const endYear = end.getFullYear();
+
+    // Same year, same month, different days
+    if (startYear === endYear && startMonth === endMonth) {
+      return `${startDay} — ${endDay} ${startMonth} ${startYear}`;
+    }
+
+    // Same year, different months
+    if (startYear === endYear) {
+      return `${startDay} ${startMonth} — ${endDay} ${endMonth} ${startYear}`;
+    }
+
+    // Different years - show full dates
+    return `${startDay} ${startMonth} ${startYear} — ${endDay} ${endMonth} ${endYear}`;
+  }
+
+  private formatDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    const day = date.getDate();
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+  }
 }

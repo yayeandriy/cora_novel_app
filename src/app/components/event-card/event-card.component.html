@@ -2,17 +2,15 @@
 @if (!isEditing && mode === 'view') {
   <div class="event-card view-mode" (dblclick)="startEdit()">
     <div class="card-content">
-      <div class="name">{{ event.name }}</div>
-      @if (event.desc) { 
-        <div class="desc">{{ event.desc }}</div> 
-      }
+      <div>
+
+        <div class="name">{{ event.name }}</div>
+        @if (event.desc) { 
+          <div class="desc">{{ event.desc }}</div> 
+        }
+      </div>
       @if (event.start_date || event.end_date) {
-        <div class="date">
-          {{ event.start_date || '—' }}
-          @if (event.end_date && event.end_date !== event.start_date) { 
-            <span> — {{ event.end_date }}</span> 
-          }
-        </div>
+        <div class="date">{{ getFormattedDateRange() }}</div>
       }
     </div>
   </div>
@@ -30,12 +28,7 @@
         <div class="desc">{{ event.desc }}</div> 
       }
       @if (event.start_date || event.end_date) {
-        <div class="date">
-          {{ event.start_date || '—' }}
-          @if (event.end_date && event.end_date !== event.start_date) { 
-            <span> — {{ event.end_date }}</span> 
-          }
-        </div>
+        <div class="date">{{ getFormattedDateRange() }}</div>
       }
     </div>
   </div>
