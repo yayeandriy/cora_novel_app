@@ -193,7 +193,8 @@
         (folderDraftBlurred)="onFolderDraftBlur($event)"
         (groupNameChange)="renameGroup($event)"
         (createDocRequested)="createDoc()"
-        (focusTreeRequested)="focusTree()">
+        (focusTreeRequested)="focusTree()"
+        (notesChanged)="onDocGroupNotesChange()">
       </app-group-view>
       }
       
@@ -213,8 +214,11 @@
   @if (!rightCollapsed) {
   <app-right-sidebar
       [selectedDoc]="selectedDoc"
+      [selectedDocGroup]="selectedGroup || currentGroup"
+      [project]="projectData"
       [characters]="characters"
       [docCharacterIds]="docCharacterIds"
+      [docGroupCharacterIds]="docGroupCharacterIds"
       [events]="events"
       [drafts]="drafts"
       [draftSyncStatus]="draftSyncStatus"
@@ -225,6 +229,7 @@
       [timelineHeaderVisible]="timelineHeaderVisible"
   [editingCharacterId]="editingCharacterId"
   [docEventIds]="docEventIds"
+  [docGroupEventIds]="docGroupEventIds"
   [editingEventId]="editingEventId"
       [style.width.px]="rightWidth"
       (charactersExpandedChange)="charactersExpanded = $event"
@@ -239,11 +244,15 @@
       (characterDescChange)="onSidebarCharacterDescChange($event)"
       (characterDelete)="onSidebarCharacterDelete($event)"
       (characterToggle)="onSidebarCharacterToggle($event)"
+      (docGroupCharacterToggle)="onSidebarDocGroupCharacterToggle($event)"
   (eventAdd)="onSidebarEventAdd()"
   (eventUpdate)="onSidebarEventUpdate($event)"
   (eventDelete)="onSidebarEventDelete($event)"
   (eventToggle)="onSidebarEventToggle($event)"
-      (notesChanged)="onDocumentNotesChange()"
+      (docGroupEventToggle)="onSidebarDocGroupEventToggle($event)"
+      (docNotesChanged)="onDocumentNotesChange()"
+      (docGroupNotesChanged)="onDocGroupNotesChange()"
+      (projectNotesChanged)="onProjectNotesChange()"
       (draftCreated)="createDraft()"
       (draftChanged)="onDraftChange($event.draftId, $event.content, $event.cursorPosition)"
       (draftBlurred)="onDraftBlur($event)"

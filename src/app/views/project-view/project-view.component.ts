@@ -18,6 +18,7 @@ interface DocGroup {
   project_id: number;
   parent_id?: number | null;
   sort_order?: number | null;
+  notes?: string | null;
   expanded: boolean;
   docs: Doc[];
   groups?: DocGroup[];
@@ -115,6 +116,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   notesExpanded = true;
   draftsExpanded = true;
   
+  projectData: import('../../shared/models').Project | null = null;
   characters: Character[] = [];
   events: Event[] = [];
   drafts: any[] = [];
@@ -142,12 +144,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private focusedProjectDraftId: number | null = null;
   private projectDraftClickTimer: any;
   private folderDraftClickTimer: any;
-  // Characters per-doc selection
+  // Characters per-doc and per-doc-group selection
   docCharacterIds: Set<number> = new Set();
+  docGroupCharacterIds: Set<number> = new Set();
   // Editing state for character cards
   editingCharacterId: number | null = null;
-  // Events per-doc selection and editing
+  // Events per-doc and per-doc-group selection and editing
   docEventIds: Set<number> = new Set();
+  docGroupEventIds: Set<number> = new Set();
   editingEventId: number | null = null;
   
   // Draft local caching and syncing
@@ -456,6 +460,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       const project = await this.projectService.getProject(this.projectId);
       if (project) {
         this.projectName = project.name;
+        this.projectData = project;
       }
       
       // Load project timeline for parent component (needed for doc timeline click calculations)
@@ -654,6 +659,15 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   await this.loadDocCharacters(this.selectedDoc.id);
   // Load events attached to this doc
   await this.loadDocEvents(this.selectedDoc.id);
+  
+  // Load parent folder characters and events for Folder tab
+  if (this.currentGroup) {
+    await this.loadDocGroupCharacters(this.currentGroup.id);
+    await this.loadDocGroupEvents(this.currentGroup.id);
+  } else {
+    this.docGroupCharacterIds = new Set();
+    this.docGroupEventIds = new Set();
+  }
     
     // Save selection to localStorage
     this.saveSelection();
@@ -717,6 +731,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // Clear doc-specific character selection when no doc is selected
     this.docCharacterIds = new Set();
     this.docEventIds = new Set();
+
+    // Load doc group characters and events
+    this.loadDocGroupCharacters(group.id);
+    this.loadDocGroupEvents(group.id);
 
     // Load folder drafts if the drafts panel is expanded
     if (this.folderDraftsExpanded) {
@@ -1399,6 +1417,55 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.loadProject(true);
     } catch (error) {
       console.error('Failed to save doc notes:', error);
+    }
+  }
+
+  onDocGroupNotesChange() {
+    // Auto-save doc group notes after 2 seconds of inactivity
+    if (this.autoSaveNotesTimeout) {
+      clearTimeout(this.autoSaveNotesTimeout);
+    }
+    
+    this.autoSaveNotesTimeout = setTimeout(() => {
+      this.saveDocGroupNotes();
+    }, 2000);
+  }
+
+  async saveDocGroupNotes() {
+    if (!this.selectedGroup) return;
+
+    try {
+      const notes = this.selectedGroup.notes || '';
+      await this.projectService.updateDocGroupNotes(this.selectedGroup.id, notes);
+      console.log('Doc group notes saved successfully');
+      
+      // Reload to keep in sync
+      await this.loadProject(true);
+    } catch (error) {
+      console.error('Failed to save doc group notes:', error);
+    }
+  }
+
+  onProjectNotesChange() {
+    // Auto-save project notes after 2 seconds of inactivity
+    if (this.autoSaveNotesTimeout) {
+      clearTimeout(this.autoSaveNotesTimeout);
+    }
+    
+    this.autoSaveNotesTimeout = setTimeout(() => {
+      this.saveProjectNotes();
+    }, 2000);
+  }
+
+  async saveProjectNotes() {
+    if (!this.projectData) return;
+
+    try {
+      const notes = this.projectData.notes || '';
+      await this.projectService.updateProject(this.projectId, { notes });
+      console.log('Project notes saved successfully');
+    } catch (error) {
+      console.error('Failed to save project notes:', error);
     }
   }
 
@@ -2165,6 +2232,26 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  private async loadDocGroupCharacters(docGroupId: number): Promise<void> {
+    try {
+      const ids = await this.projectService.listDocGroupCharacters(docGroupId);
+      this.docGroupCharacterIds = new Set(ids);
+    } catch (error) {
+      console.error('Failed to load doc group characters:', error);
+      this.docGroupCharacterIds = new Set();
+    }
+  }
+
+  private async loadDocGroupEvents(docGroupId: number): Promise<void> {
+    try {
+      const ids = await this.projectService.listDocGroupEvents(docGroupId);
+      this.docGroupEventIds = new Set(ids);
+    } catch (error) {
+      console.error('Failed to load doc group events:', error);
+      this.docGroupEventIds = new Set();
+    }
+  }
+
   // ===== Characters sidebar handlers =====
   async onSidebarCharacterAdd(): Promise<void> {
     try {
@@ -2318,6 +2405,42 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.docCharacterIds = new Set(this.docCharacterIds);
     } catch (error) {
       console.error('Failed to update character relation:', error);
+    }
+  }
+
+  async onSidebarDocGroupCharacterToggle(payload: { characterId: number; checked: boolean }): Promise<void> {
+    if (!this.selectedGroup) return;
+    const { characterId, checked } = payload;
+    try {
+      if (checked) {
+        await this.projectService.attachCharacterToDocGroup(this.selectedGroup.id, characterId);
+        this.docGroupCharacterIds.add(characterId);
+      } else {
+        await this.projectService.detachCharacterFromDocGroup(this.selectedGroup.id, characterId);
+        this.docGroupCharacterIds.delete(characterId);
+      }
+      // Reassign to trigger OnPush consumers
+      this.docGroupCharacterIds = new Set(this.docGroupCharacterIds);
+    } catch (error) {
+      console.error('Failed to update doc group character relation:', error);
+    }
+  }
+
+  async onSidebarDocGroupEventToggle(payload: { eventId: number; checked: boolean }): Promise<void> {
+    if (!this.selectedGroup) return;
+    const { eventId, checked } = payload;
+    try {
+      if (checked) {
+        await this.projectService.attachEventToDocGroup(this.selectedGroup.id, eventId);
+        this.docGroupEventIds.add(eventId);
+      } else {
+        await this.projectService.detachEventFromDocGroup(this.selectedGroup.id, eventId);
+        this.docGroupEventIds.delete(eventId);
+      }
+      // Reassign to trigger OnPush consumers
+      this.docGroupEventIds = new Set(this.docGroupEventIds);
+    } catch (error) {
+      console.error('Failed to update doc group event relation:', error);
     }
   }
 

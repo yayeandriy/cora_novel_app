@@ -1,8 +1,6 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DraftsPanelComponent } from '../drafts-panel/drafts-panel.component';
-import { CharacterCardComponent } from '../character-card/character-card.component';
 import { CharactersPanelComponent } from '../characters-panel/characters-panel.component';
 import { EventsPanelComponent } from '../events-panel/events-panel.component';
 
@@ -39,24 +37,51 @@ export interface Doc {
   timeline_id?: number | null;
 }
 
+export interface DocGroup {
+  id: number;
+  name: string;
+  project_id: number;
+  parent_id?: number | null;
+  sort_order?: number | null;
+  notes?: string | null;
+}
+
+export interface Project {
+  id: number;
+  name: string;
+  desc?: string | null;
+  path?: string | null;
+  notes?: string | null;
+  timeline_start?: string | null;
+  timeline_end?: string | null;
+}
+
+type TabType = 'doc' | 'folder' | 'project';
+
 @Component({
   selector: 'app-right-sidebar',
   standalone: true,
-  imports: [CommonModule, FormsModule, DraftsPanelComponent, CharacterCardComponent, CharactersPanelComponent, EventsPanelComponent],
+  imports: [CommonModule, FormsModule, CharactersPanelComponent, EventsPanelComponent],
   templateUrl: './right-sidebar.component.html',
   styleUrls: ['./right-sidebar.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RightSidebarComponent {
   @Input() selectedDoc: Doc | null = null;
+  @Input() selectedDocGroup: DocGroup | null = null;
+  @Input() project: Project | null = null;
   @Input() characters: Character[] = [];
   @Input() events: Event[] = [];
   @Input() drafts: Draft[] = [];
   @Input() draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
   @Input() docCharacterIds: Set<number> | null = null;
+  @Input() docGroupCharacterIds: Set<number> | null = null;
   @Input() editingCharacterId: number | null = null;
   @Input() docEventIds: Set<number> | null = null;
+  @Input() docGroupEventIds: Set<number> | null = null;
   @Input() editingEventId: number | null = null;
+  
+  activeTab: TabType = 'doc';
   
   @Input() charactersExpanded: boolean = true;
   @Input() eventsExpanded: boolean = true;
@@ -69,7 +94,9 @@ export class RightSidebarComponent {
   @Output() notesExpandedChange = new EventEmitter<boolean>();
   @Output() draftsExpandedChange = new EventEmitter<boolean>();
   
-  @Output() notesChanged = new EventEmitter<void>();
+  @Output() docNotesChanged = new EventEmitter<void>();
+  @Output() docGroupNotesChanged = new EventEmitter<void>();
+  @Output() projectNotesChanged = new EventEmitter<void>();
   @Output() draftCreated = new EventEmitter<void>();
   @Output() draftChanged = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();
   @Output() draftBlurred = new EventEmitter<number>();
@@ -85,14 +112,20 @@ export class RightSidebarComponent {
   @Output() characterUpdate = new EventEmitter<{ id: number; name: string; desc: string }>();
   @Output() characterDelete = new EventEmitter<number>();
   @Output() characterToggle = new EventEmitter<{ characterId: number; checked: boolean }>();
+  @Output() docGroupCharacterToggle = new EventEmitter<{ characterId: number; checked: boolean }>();
   // Event outputs
   @Output() eventAdd = new EventEmitter<void>();
   @Output() eventUpdate = new EventEmitter<{ id: number; name: string; desc: string; start_date: string | null; end_date: string | null }>();
   @Output() eventDelete = new EventEmitter<number>();
   @Output() eventToggle = new EventEmitter<{ eventId: number; checked: boolean }>();
+  @Output() docGroupEventToggle = new EventEmitter<{ eventId: number; checked: boolean }>();
   
   rightWidth = 300; // internal tracker for live drag; host width comes from parent binding
   isResizing = false;
+
+  switchTab(tab: TabType) {
+    this.activeTab = tab;
+  }
 
   onCharactersToggle() {
     this.charactersExpandedChange.emit(!this.charactersExpanded);
@@ -106,8 +139,16 @@ export class RightSidebarComponent {
     this.notesExpandedChange.emit(!this.notesExpanded);
   }
 
-  onNotesChange() {
-    this.notesChanged.emit();
+  onDocNotesChange() {
+    this.docNotesChanged.emit();
+  }
+
+  onDocGroupNotesChange() {
+    this.docGroupNotesChanged.emit();
+  }
+
+  onProjectNotesChange() {
+    this.projectNotesChanged.emit();
   }
 
   onDraftsToggle(expanded: boolean) {
@@ -185,6 +226,24 @@ export class RightSidebarComponent {
     const input = event?.target as HTMLInputElement;
     const checked = !!input?.checked;
     this.characterToggle.emit({ characterId: id, checked });
+  }
+
+  onDocGroupCharacterToggle(id: number, event: any) {
+    const input = event?.target as HTMLInputElement;
+    const checked = !!input?.checked;
+    this.docGroupCharacterToggle.emit({ characterId: id, checked });
+  }
+
+  onEventToggle(id: number, event: any) {
+    const input = event?.target as HTMLInputElement;
+    const checked = !!input?.checked;
+    this.eventToggle.emit({ eventId: id, checked });
+  }
+
+  onDocGroupEventToggle(id: number, event: any) {
+    const input = event?.target as HTMLInputElement;
+    const checked = !!input?.checked;
+    this.docGroupEventToggle.emit({ eventId: id, checked });
   }
 
   onTimelineHeaderToggle() {

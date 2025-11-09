@@ -18,6 +18,27 @@
       </button>
     </div>
   </div>
+
+  <!-- Folder Notes Section -->
+  <div class="notes-section">
+    <div class="notes-header" (click)="toggleNotes()">
+      <div class="notes-title">
+        <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="notesExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+        <span>Folder Notes</span>
+      </div>
+    </div>
+    @if (notesExpanded) {
+      <div class="notes-content">
+        <textarea 
+          class="notes-textarea" 
+          [(ngModel)]="selectedGroup.notes"
+          (input)="onNotesChange()"
+          placeholder="Add folder notes..."></textarea>
+      </div>
+    }
+  </div>
   
   @if (!selectedFolderDraftId) {
     <div class="group-content">

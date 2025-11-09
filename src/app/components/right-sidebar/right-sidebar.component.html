@@ -3,9 +3,33 @@
     <span class="divider-grip"></span>
   </div>
   
+  <!-- Tabs Navigation -->
+  <div class="tabs-nav">
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'doc'"
+      (click)="switchTab('doc')">
+      Doc
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'folder'"
+      (click)="switchTab('folder')">
+      Folder
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'project'"
+      (click)="switchTab('project')">
+      Project
+    </button>
+  </div>
+
   <div class="sidebar-content">
-    <!-- Characters Section (separate component) -->
-    <app-characters-panel
+    <!-- DOC TAB CONTENT -->
+    @if (activeTab === 'doc') {
+      <!-- Characters Section (separate component) -->
+      <app-characters-panel
       [characters]="characters"
       [docCharacterIds]="docCharacterIds"
       [selectedDoc]="selectedDoc"
@@ -51,13 +75,127 @@
             <textarea 
               class="notes-textarea" 
               [(ngModel)]="selectedDoc.notes"
-              (input)="onNotesChange()"
+              (input)="onDocNotesChange()"
               placeholder="Add notes..."></textarea>
           }
         </div>
       }
     </div>
+    }
 
-    <!-- Drafts Section removed: moved to Document Editor header and split view -->
+    <!-- FOLDER TAB CONTENT -->
+    @if (activeTab === 'folder') {
+      <!-- Characters Section for Folder -->
+      <app-characters-panel
+        [characters]="characters"
+        [docCharacterIds]="docGroupCharacterIds"
+        [selectedDoc]="null"
+        [expanded]="charactersExpanded"
+        [editingCharacterId]="editingCharacterId"
+        (expandedChange)="onCharactersToggle()"
+        (add)="onCharacterAdd()"
+        (update)="onCharacterUpdate($event)"
+        (remove)="onCharacterDelete($event)"
+        (toggle)="onDocGroupCharacterToggle($event.characterId, $event)">
+      </app-characters-panel>
+
+      <!-- Events Section for Folder -->
+      <app-events-panel
+        [events]="events"
+        [docEventIds]="docGroupEventIds"
+        [selectedDoc]="null"
+        [expanded]="eventsExpanded"
+        [editingEventId]="editingEventId"
+        [timelineHeaderVisible]="timelineHeaderVisible"
+        (expandedChange)="onEventsToggle()"
+        (add)="eventAdd.emit()"
+        (update)="eventUpdate.emit($event)"
+        (remove)="eventDelete.emit($event)"
+        (toggle)="onDocGroupEventToggle($event.eventId, $event)"
+        (timelineHeaderToggle)="onTimelineHeaderToggle()">
+      </app-events-panel>
+
+      <!-- Notes Section for Folder -->
+      <div class="sidebar-section">
+        <div class="section-header" (click)="onNotesToggle()">
+          <div class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="notesExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+            <span>Folder Notes</span>
+          </div>
+        </div>
+        
+        @if (notesExpanded && selectedDocGroup) {
+          <div class="section-content">
+            <textarea 
+              class="notes-textarea" 
+              [(ngModel)]="selectedDocGroup.notes"
+              (input)="onDocGroupNotesChange()"
+              placeholder="Add folder notes..."></textarea>
+          </div>
+        }
+        @if (notesExpanded && !selectedDocGroup) {
+          <div class="section-content">
+            <p style="font-size: 0.875rem; color: #9ca3af; padding: 0.5rem;">Select a folder to add notes</p>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- PROJECT TAB CONTENT -->
+    @if (activeTab === 'project') {
+      <!-- Characters Section for Project -->
+      <app-characters-panel
+        [characters]="characters"
+        [docCharacterIds]="null"
+        [selectedDoc]="null"
+        [expanded]="charactersExpanded"
+        [editingCharacterId]="editingCharacterId"
+        (expandedChange)="onCharactersToggle()"
+        (add)="onCharacterAdd()"
+        (update)="onCharacterUpdate($event)"
+        (remove)="onCharacterDelete($event)">
+      </app-characters-panel>
+
+      <!-- Events Section for Project -->
+      <app-events-panel
+        [events]="events"
+        [docEventIds]="null"
+        [selectedDoc]="null"
+        [expanded]="eventsExpanded"
+        [editingEventId]="editingEventId"
+        [timelineHeaderVisible]="timelineHeaderVisible"
+        (expandedChange)="onEventsToggle()"
+        (add)="eventAdd.emit()"
+        (update)="eventUpdate.emit($event)"
+        (remove)="eventDelete.emit($event)"
+        (timelineHeaderToggle)="onTimelineHeaderToggle()">
+      </app-events-panel>
+
+      <!-- Notes Section for Project -->
+      <div class="sidebar-section">
+        <div class="section-header" (click)="onNotesToggle()">
+          <div class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="notesExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+            <span>Project Notes</span>
+          </div>
+        </div>
+        
+        @if (notesExpanded) {
+          <div class="section-content">
+            @if (project) {
+              <textarea 
+                class="notes-textarea" 
+                [(ngModel)]="project.notes"
+                (input)="onProjectNotesChange()"
+                placeholder="Add project notes..."></textarea>
+            }
+          </div>
+        }
+      </div>
+    }
   </div>
 </aside>

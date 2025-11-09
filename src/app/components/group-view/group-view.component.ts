@@ -32,6 +32,7 @@ export class GroupViewComponent implements OnInit, OnChanges {
   @Output() groupNameChange = new EventEmitter<DocGroup>();
   @Output() createDocRequested = new EventEmitter<void>();
   @Output() focusTreeRequested = new EventEmitter<void>();
+  @Output() notesChanged = new EventEmitter<void>();
   
   @ViewChild('groupNameInput') groupNameInput?: ElementRef<HTMLInputElement>;
   @ViewChild('folderDraftTextarea') folderDraftTextarea?: ElementRef<HTMLTextAreaElement>;
@@ -39,14 +40,27 @@ export class GroupViewComponent implements OnInit, OnChanges {
   // Split state (mirrors document editor, but scoped for folders per project)
   isSplitCollapsed: boolean = true;
   draftPaneWidth: number = 360;
+  notesExpanded: boolean = true;
   private resizing = false;
   private moveListener?: (e: MouseEvent) => void;
   private upListener?: (e: MouseEvent) => void;
   private readonly WIDTH_KEY_GLOBAL = 'cora-folder-split-width';
   private readonly COLLAPSE_KEY_GLOBAL = 'cora-folder-split-collapsed';
+  private readonly NOTES_EXPANDED_KEY = 'cora-folder-notes-expanded';
 
   onNameChange(group: DocGroup) {
     this.groupNameChange.emit(group);
+  }
+
+  toggleNotes() {
+    this.notesExpanded = !this.notesExpanded;
+    try {
+      localStorage.setItem(this.NOTES_EXPANDED_KEY, String(this.notesExpanded));
+    } catch {}
+  }
+
+  onNotesChange() {
+    this.notesChanged.emit();
   }
 
   onCreateDoc() {
@@ -80,6 +94,8 @@ export class GroupViewComponent implements OnInit, OnChanges {
       }
       const savedCollapsed = localStorage.getItem(this.COLLAPSE_KEY_GLOBAL);
       if (savedCollapsed) this.isSplitCollapsed = savedCollapsed === 'true';
+      const savedNotesExpanded = localStorage.getItem(this.NOTES_EXPANDED_KEY);
+      if (savedNotesExpanded != null) this.notesExpanded = savedNotesExpanded === 'true';
     } catch {}
   }
 
