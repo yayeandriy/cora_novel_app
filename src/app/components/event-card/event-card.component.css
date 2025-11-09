@@ -5,9 +5,7 @@
   margin-bottom: 0.5rem;
   background: #fff;
   transition: all 150ms;
-  display: flex;
-  justify-content: space-between;
-    flex-direction: row;
+  display: block; /* block in base to allow edit mode vertical layout */
 }
 
 .event-card.view-mode {
@@ -125,11 +123,13 @@
 .dates {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap; /* allow stacking on small widths */
   margin-bottom: 0.5rem;
 }
 
 .date-input {
   flex: 1;
+  min-width: 10rem; /* prevent cramped date pickers */
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
   padding: 0.375rem 0.5rem;
