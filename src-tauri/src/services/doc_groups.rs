@@ -5,7 +5,7 @@ use anyhow::Result;
 pub fn list_doc_groups(pool: &DbPool, project_id: i64) -> Result<Vec<DocGroup>> {
     let conn = get_conn(pool)?;
     let mut stmt = conn.prepare(
-        "SELECT id, project_id, name, parent_id, sort_order 
+        "SELECT id, project_id, name, parent_id, sort_order, notes 
          FROM doc_groups 
          WHERE project_id = ?1 
          ORDER BY COALESCE(parent_id, 0), sort_order"
@@ -18,6 +18,7 @@ pub fn list_doc_groups(pool: &DbPool, project_id: i64) -> Result<Vec<DocGroup>> 
             name: row.get(2)?,
             parent_id: row.get(3)?,
             sort_order: row.get(4)?,
+            notes: row.get(5)?,
         })
     })?
     .collect::<std::result::Result<Vec<_>, _>>()?;
@@ -48,6 +49,7 @@ pub fn create_doc_group(pool: &DbPool, project_id: i64, name: &str, parent_id: O
         name: name.to_string(),
         parent_id,
         sort_order: Some(next_order),
+        notes: None,
     })
 }
 
@@ -77,6 +79,7 @@ pub fn create_doc_group_after(pool: &DbPool, project_id: i64, name: &str, parent
         name: name.to_string(),
         parent_id,
         sort_order: Some(next_order),
+        notes: None,
     })
 }
 
@@ -136,5 +139,11 @@ pub fn reorder_doc_group(pool: &DbPool, id: i64, direction: &str) -> Result<()> 
 pub fn rename_doc_group(pool: &DbPool, id: i64, new_name: &str) -> Result<()> {
     let conn = get_conn(pool)?;
     conn.execute("UPDATE doc_groups SET name = ?1 WHERE id = ?2", rusqlite::params![new_name, id])?;
+    Ok(())
+}
+
+pub fn update_doc_group_notes(pool: &DbPool, id: i64, notes: &str) -> Result<()> {
+    let conn = get_conn(pool)?;
+    conn.execute("UPDATE doc_groups SET notes = ?1 WHERE id = ?2", rusqlite::params![notes, id])?;
     Ok(())
 }

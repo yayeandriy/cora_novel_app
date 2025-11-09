@@ -2,6 +2,7 @@ export interface ProjectCreate {
   name: string;
   desc?: string | null;
   path?: string | null;
+  notes?: string | null;
 }
 
 export interface Project {
@@ -9,6 +10,7 @@ export interface Project {
   name: string;
   desc?: string | null;
   path?: string | null;
+  notes?: string | null;
   timeline_start?: string | null;
   timeline_end?: string | null;
 }

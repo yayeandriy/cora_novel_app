@@ -6,13 +6,13 @@ use anyhow::Context;
 pub fn create(pool: &DbPool, payload: ProjectCreate) -> anyhow::Result<Project> {
     let conn = get_conn(pool)?;
     conn.execute(
-        "INSERT INTO projects (name, desc, path) VALUES (?1, ?2, ?3)",
-        rusqlite::params![payload.name, payload.desc, payload.path],
+        "INSERT INTO projects (name, desc, path, notes) VALUES (?1, ?2, ?3, ?4)",
+        rusqlite::params![payload.name, payload.desc, payload.path, payload.notes],
     )
     .context("inserting project")?;
 
     let id = conn.last_insert_rowid();
-    let mut stmt = conn.prepare("SELECT id, name, desc, path, timeline_start, timeline_end FROM projects WHERE id = ?1")?;
+    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end FROM projects WHERE id = ?1")?;
     let project = stmt
         .query_row(rusqlite::params![id], |row| {
             Ok(Project {
@@ -20,8 +20,9 @@ pub fn create(pool: &DbPool, payload: ProjectCreate) -> anyhow::Result<Project> 
                 name: row.get(1)?,
                 desc: row.get(2)?,
                 path: row.get(3)?,
-                timeline_start: row.get(4)?,
-                timeline_end: row.get(5)?,
+                notes: row.get(4)?,
+                timeline_start: row.get(5)?,
+                timeline_end: row.get(6)?,
             })
         })
         .context("querying created project")?;
@@ -31,15 +32,16 @@ pub fn create(pool: &DbPool, payload: ProjectCreate) -> anyhow::Result<Project> 
 
 pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<Project>> {
     let conn = get_conn(pool)?;
-    let mut stmt = conn.prepare("SELECT id, name, desc, path, timeline_start, timeline_end FROM projects WHERE id = ?1")?;
+    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end FROM projects WHERE id = ?1")?;
     let res = stmt.query_row(rusqlite::params![id], |row| {
         Ok(Project {
             id: row.get(0)?,
             name: row.get(1)?,
             desc: row.get(2)?,
             path: row.get(3)?,
-            timeline_start: row.get(4)?,
-            timeline_end: row.get(5)?,
+            notes: row.get(4)?,
+            timeline_start: row.get(5)?,
+            timeline_end: row.get(6)?,
         })
     }).optional()?;
 
@@ -48,15 +50,16 @@ pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<Project>> {
 
 pub fn list(pool: &DbPool) -> anyhow::Result<Vec<Project>> {
     let conn = get_conn(pool)?;
-    let mut stmt = conn.prepare("SELECT id, name, desc, path, timeline_start, timeline_end FROM projects ORDER BY id")?;
+    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end FROM projects ORDER BY id")?;
     let rows = stmt.query_map([], |row| {
         Ok(Project {
             id: row.get(0)?,
             name: row.get(1)?,
             desc: row.get(2)?,
             path: row.get(3)?,
-            timeline_start: row.get(4)?,
-            timeline_end: row.get(5)?,
+            notes: row.get(4)?,
+            timeline_start: row.get(5)?,
+            timeline_end: row.get(6)?,
         })
     })?;
 
@@ -67,7 +70,7 @@ pub fn list(pool: &DbPool) -> anyhow::Result<Vec<Project>> {
     Ok(out)
 }
 
-pub fn update(pool: &DbPool, id: i64, name: Option<String>, desc: Option<String>, path: Option<String>) -> anyhow::Result<Project> {
+pub fn update(pool: &DbPool, id: i64, name: Option<String>, desc: Option<String>, path: Option<String>, notes: Option<String>) -> anyhow::Result<Project> {
     // Ensure project exists
     let existing = get(pool, id)?;
     let existing = existing.ok_or_else(|| anyhow::anyhow!("project not found"))?;
@@ -82,10 +85,11 @@ pub fn update(pool: &DbPool, id: i64, name: Option<String>, desc: Option<String>
     }
     let new_desc = desc.or(existing.desc);
     let new_path = path.or(existing.path);
+    let new_notes = notes.or(existing.notes);
 
     tx.execute(
-        "UPDATE projects SET name = ?1, desc = ?2, path = ?3 WHERE id = ?4",
-        rusqlite::params![new_name, new_desc, new_path, id],
+        "UPDATE projects SET name = ?1, desc = ?2, path = ?3, notes = ?4 WHERE id = ?5",
+        rusqlite::params![new_name, new_desc, new_path, new_notes, id],
     )?;
 
     tx.commit()?;

@@ -42,7 +42,8 @@ pub async fn project_update(state: State<'_, AppState>, id: i64, changes: Option
     let name = changes.as_ref().and_then(|c| c.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let desc = changes.as_ref().and_then(|c| c.get("desc").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let path = changes.as_ref().and_then(|c| c.get("path").and_then(|v| v.as_str()).map(|s| s.to_string()));
-    project_service::update(pool, id, name, desc, path).map_err(|e| e.to_string())
+    let notes = changes.as_ref().and_then(|c| c.get("notes").and_then(|v| v.as_str()).map(|s| s.to_string()));
+    project_service::update(pool, id, name, desc, path, notes).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -89,6 +90,12 @@ pub async fn doc_group_reorder(state: State<'_, AppState>, id: i64, direction: S
 pub async fn doc_group_rename(state: State<'_, AppState>, id: i64, new_name: String) -> Result<(), String> {
     let pool = &state.pool;
     crate::services::doc_groups::rename_doc_group(pool, id, &new_name).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_group_update_notes(state: State<'_, AppState>, id: i64, notes: String) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::doc_groups::update_doc_group_notes(pool, id, &notes).map_err(|e| e.to_string())
 }
 
 // Docs Commands
@@ -517,7 +524,7 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
 
         // Create project (prefer metadata project name)
         let project_name = parsed.project.name.clone();
-        let payload = crate::models::ProjectCreate { name: project_name, desc: parsed.project.desc.clone(), path: Some(folder_path.clone()) };
+    let payload = crate::models::ProjectCreate { name: project_name, desc: parsed.project.desc.clone(), path: Some(folder_path.clone()), notes: parsed.project.notes.clone() };
         let new_project = crate::services::projects::create(pool, payload).map_err(|e| e.to_string())?;
 
         use std::collections::HashMap;
@@ -630,7 +637,7 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
 fn legacy_import_folder(pool: &crate::db::DbPool, base: &Path, folder_path: &str) -> Result<serde_json::Value, String> {
         // Project name from folder basename
         let project_name = base.file_name().and_then(|s| s.to_str()).unwrap_or("Imported Project").to_string();
-        let payload = crate::models::ProjectCreate { name: project_name.clone(), desc: None, path: Some(folder_path.to_string()) };
+    let payload = crate::models::ProjectCreate { name: project_name.clone(), desc: None, path: Some(folder_path.to_string()), notes: None };
         let project = crate::services::projects::create(pool, payload).map_err(|e| e.to_string())?;
 
         // Read entries and partition into subdirs and root .txt files

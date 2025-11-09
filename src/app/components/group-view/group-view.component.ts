@@ -8,6 +8,7 @@ export interface DocGroup {
   project_id: number;
   parent_id?: number | null;
   sort_order?: number | null;
+  notes?: string | null;
   expanded: boolean;
   docs: any[];
   groups?: DocGroup[];

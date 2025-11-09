@@ -6,6 +6,7 @@ pub struct Project {
     pub name: String,
     pub desc: Option<String>,
     pub path: Option<String>,
+    pub notes: Option<String>,
     pub timeline_start: Option<String>,
     pub timeline_end: Option<String>,
 }
@@ -15,6 +16,7 @@ pub struct ProjectCreate {
     pub name: String,
     pub desc: Option<String>,
     pub path: Option<String>,
+    pub notes: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,6 +26,7 @@ pub struct DocGroup {
     pub name: String,
     pub parent_id: Option<i64>,
     pub sort_order: Option<i64>,
+    pub notes: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

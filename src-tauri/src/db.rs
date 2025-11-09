@@ -71,6 +71,24 @@ pub fn init_pool() -> anyhow::Result<DbPool> {
         conn.execute_batch(include_str!("../migrations/007_add_project_folder_drafts.sql")).context("running migrations 007")?;
     }
 
+    // Conditionally run 008: add notes column to projects
+    let mut stmt = conn.prepare("PRAGMA table_info(projects)")?;
+    let cols = stmt.query_map([], |row| Ok::<String, rusqlite::Error>(row.get(1)?))?;
+    let mut has_notes = false;
+    for c in cols { let name = c?; if name == "notes" { has_notes = true; break; } }
+    if !has_notes {
+        conn.execute_batch(include_str!("../migrations/008_add_project_notes.sql")).context("running migrations 008")?;
+    }
+
+    // Conditionally run 009: add notes column to doc_groups
+    let mut stmt = conn.prepare("PRAGMA table_info(doc_groups)")?;
+    let cols = stmt.query_map([], |row| Ok::<String, rusqlite::Error>(row.get(1)?))?;
+    let mut has_group_notes = false;
+    for c in cols { let name = c?; if name == "notes" { has_group_notes = true; break; } }
+    if !has_group_notes {
+        conn.execute_batch(include_str!("../migrations/009_add_doc_group_notes.sql")).context("running migrations 009")?;
+    }
+
     Ok(pool)
 }
 

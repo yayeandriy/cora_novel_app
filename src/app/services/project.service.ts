@@ -12,7 +12,7 @@ import type {
 export class ProjectService {
   async createProject(payload: ProjectCreate): Promise<Project> {
     // Normalize optional fields so the invoke payload is consistent
-    const normalized = { name: payload.name, desc: payload.desc ?? null, path: payload.path ?? null };
+    const normalized = { name: payload.name, desc: payload.desc ?? null, path: payload.path ?? null, notes: payload.notes ?? null };
     return invoke<Project>("project_create", { payload: normalized });
   }
 
@@ -55,6 +55,10 @@ export class ProjectService {
 
   async renameDocGroup(id: number, newName: string): Promise<void> {
     return invoke<void>("doc_group_rename", { id, newName });
+  }
+
+  async updateDocGroupNotes(id: number, notes: string): Promise<void> {
+    return invoke<void>("doc_group_update_notes", { id, notes });
   }
 
   // Docs

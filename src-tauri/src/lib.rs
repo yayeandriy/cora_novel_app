@@ -58,6 +58,7 @@ pub fn run() {
             commands::doc_group_delete,
             commands::doc_group_reorder,
             commands::doc_group_rename,
+            commands::doc_group_update_notes,
             commands::character_create,
             commands::character_list,
             commands::character_update,

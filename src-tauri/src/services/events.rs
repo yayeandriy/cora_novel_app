@@ -136,6 +136,12 @@ mod tests {
         let pool = make_pool();
         let conn = pool.get().unwrap();
         conn.execute_batch(include_str!("../../migrations/001_create_schema.sql")).unwrap();
+        // Add start/end date columns if not present (migration 005)
+        let mut stmt = conn.prepare("PRAGMA table_info(events)").unwrap();
+        let cols = stmt.query_map([], |row| Ok::<String, rusqlite::Error>(row.get(1)?)).unwrap();
+        let mut has_start = false; let mut has_end = false;
+        for c in cols { let name = c.unwrap(); if name == "start_date" { has_start = true; } if name == "end_date" { has_end = true; } }
+        if !(has_start && has_end) { conn.execute_batch(include_str!("../../migrations/005_add_event_start_end.sql")).unwrap(); }
 
         conn.execute("INSERT INTO projects (name) VALUES (?1)", rusqlite::params!["P"]).unwrap();
         let project_id = conn.last_insert_rowid();
