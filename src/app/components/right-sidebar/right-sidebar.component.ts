@@ -116,6 +116,7 @@ export class RightSidebarComponent {
   @Output() docGroupCharacterToggle = new EventEmitter<{ characterId: number; checked: boolean }>();
   // Event outputs
   @Output() eventAdd = new EventEmitter<void>();
+  @Output() eventCreate = new EventEmitter<{ name: string; desc: string; start_date: string | null; end_date: string | null }>();
   @Output() eventUpdate = new EventEmitter<{ id: number; name: string; desc: string; start_date: string | null; end_date: string | null }>();
   @Output() eventDelete = new EventEmitter<number>();
   @Output() eventToggle = new EventEmitter<{ eventId: number; checked: boolean }>();
@@ -238,6 +239,10 @@ export class RightSidebarComponent {
     const input = event?.target as HTMLInputElement;
     const checked = !!input?.checked;
     this.docGroupCharacterToggle.emit({ characterId: id, checked });
+  }
+
+  onEventCreate(data: { name: string; desc: string; start_date: string | null; end_date: string | null }) {
+    this.eventCreate.emit(data);
   }
 
   onEventToggle(id: number, event: any) {

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, EventEmitter, Input, Output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, EventEmitter, Input, Output, OnChanges, SimpleChanges, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -18,29 +18,46 @@ export interface EventVm {
   styleUrls: ['./event-card.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class EventCardComponent {
+export class EventCardComponent implements OnChanges, AfterViewInit {
   @Input() event!: EventVm;
   @Input() checked: boolean | null = null;
   @Input() canToggle: boolean = true;
   @Input() editing: boolean = false;
+  @Input() mode: 'view' | 'selectable' = 'view';
 
   @Output() toggle = new EventEmitter<{ id: number; checked: boolean }>();
   @Output() update = new EventEmitter<{ id: number; name: string; desc: string; start_date: string | null; end_date: string | null }>();
   @Output() remove = new EventEmitter<number>();
 
-  isEditing = false;
-  name = '';
-  desc = '';
-  start_date: string | null = null;
-  end_date: string | null = null;
+  @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
-  ngOnChanges() {
-    this.isEditing = !!this.editing;
-    if (this.isEditing) {
-      this.name = this.event?.name ?? '';
-      this.desc = this.event?.desc ?? '';
-      this.start_date = this.event?.start_date ?? null;
-      this.end_date = this.event?.end_date ?? null;
+  isEditing = false;
+  localName = '';
+  localDesc = '';
+  localStartDate: string | null = null;
+  localEndDate: string | null = null;
+  
+  private shouldFocusOnNextRender = false;
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['editing'] && this.editing) {
+      this.startEdit();
+    }
+    if (changes['event'] || changes['editing']) {
+      if (this.isEditing) {
+        this.localName = this.event?.name ?? '';
+        this.localDesc = this.event?.desc ?? '';
+        this.localStartDate = this.event?.start_date ?? null;
+        this.localEndDate = this.event?.end_date ?? null;
+      }
+    }
+  }
+
+  ngAfterViewInit() {
+    if (this.shouldFocusOnNextRender && this.nameInput) {
+      this.nameInput.nativeElement.focus();
+      this.nameInput.nativeElement.select();
+      this.shouldFocusOnNextRender = false;
     }
   }
 
@@ -49,20 +66,48 @@ export class EventCardComponent {
     this.toggle.emit({ id: this.event.id, checked: !!input?.checked });
   }
 
-  startEdit() { this.isEditing = true; this.ngOnChanges(); }
-  cancelEdit() { this.isEditing = false; }
+  onSelectToggle() {
+    // In selectable mode, clicking toggles the selection
+    const newChecked = !this.checked;
+    this.toggle.emit({ id: this.event.id, checked: newChecked });
+  }
+
+  startEdit() {
+    this.isEditing = true;
+    this.localName = this.event?.name ?? '';
+    this.localDesc = this.event?.desc ?? '';
+    this.localStartDate = this.event?.start_date ?? null;
+    this.localEndDate = this.event?.end_date ?? null;
+    this.shouldFocusOnNextRender = true;
+    // Focus will happen after the view updates
+    setTimeout(() => {
+      const nameInput = document.querySelector('.name-input') as HTMLInputElement;
+      if (nameInput) {
+        nameInput.focus();
+        nameInput.select();
+      }
+    }, 0);
+  }
+
+  cancelEdit() {
+    this.isEditing = false;
+  }
 
   saveEdit() {
+    const name = this.localName?.trim() || 'New Event';
+    const desc = this.localDesc ?? '';
     const payload = {
       id: this.event.id,
-      name: (this.name || 'New Event').trim(),
-      desc: this.desc ?? '',
-      start_date: this.start_date ?? null,
-      end_date: this.end_date ?? null,
+      name,
+      desc,
+      start_date: this.localStartDate ?? null,
+      end_date: this.localEndDate ?? null,
     };
     this.update.emit(payload);
     this.isEditing = false;
   }
 
-  onDelete() { this.remove.emit(this.event.id); }
+  onDelete() {
+    this.remove.emit(this.event.id);
+  }
 }

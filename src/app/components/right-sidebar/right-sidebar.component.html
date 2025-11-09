@@ -53,6 +53,7 @@
       [timelineHeaderVisible]="timelineHeaderVisible"
       (expandedChange)="onEventsToggle()"
       (add)="eventAdd.emit()"
+      (createEvent)="onEventCreate($event)"
       (update)="eventUpdate.emit($event)"
       (remove)="eventDelete.emit($event)"
       (toggle)="eventToggle.emit($event)"
@@ -111,6 +112,7 @@
         [timelineHeaderVisible]="timelineHeaderVisible"
         (expandedChange)="onEventsToggle()"
         (add)="eventAdd.emit()"
+        (createEvent)="onEventCreate($event)"
         (update)="eventUpdate.emit($event)"
         (remove)="eventDelete.emit($event)"
         (toggle)="onDocGroupEventToggle($event.eventId, $event)"
@@ -170,6 +172,7 @@
         [timelineHeaderVisible]="timelineHeaderVisible"
         (expandedChange)="onEventsToggle()"
         (add)="eventAdd.emit()"
+        (createEvent)="onEventCreate($event)"
         (update)="eventUpdate.emit($event)"
         (remove)="eventDelete.emit($event)"
         (timelineHeaderToggle)="onTimelineHeaderToggle()">

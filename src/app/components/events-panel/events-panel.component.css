@@ -6,5 +6,22 @@
 .toggle-icon.expanded{transform:rotate(90deg)}
 .add-button{display:flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;background:transparent;border:none;border-radius:.25rem;color:#6b7280;cursor:pointer;transition:all 150ms}
 .add-button:hover{background:#f3f4f6;color:#111827}
-.add-button svg{width:.875rem;height:.875rem}
+.add-button.active{background:#2563eb;color:#ffffff}
+.add-button.active:hover{background:#1d4ed8}
+.add-button svg{width:.875rem;height:.875rem;transition:transform 150ms}
+.add-button.active svg{transform:rotate(45deg)}
+.icon-button-small{display:flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;background:transparent;border:none;border-radius:.25rem;color:#6b7280;cursor:pointer;transition:all 150ms}
+.icon-button-small:hover{background:#f3f4f6;color:#111827}
+.icon-button-small svg{width:.875rem;height:.875rem}
 .section-content{margin-top:.75rem}
+.empty-state{padding:1.5rem 1rem;text-align:center;color:#9ca3af;font-size:.875rem;line-height:1.5}
+.h-3.5{} 
+ 
+.w-3.5{} 
+ 
+.h-3.5{} 
+ 
+.w-3.5{} 
+ 
+.hint{} 
+ 

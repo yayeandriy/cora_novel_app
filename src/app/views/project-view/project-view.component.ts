@@ -2355,6 +2355,35 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  async onSidebarEventCreate(data: { name: string; desc: string; start_date: string | null; end_date: string | null }): Promise<void> {
+    try {
+      // Ensure panel is opened
+      this.eventsExpanded = true;
+      // Create event with the provided data
+      const created = await this.projectService.createEvent(this.projectId, data.name, data.desc, data.start_date, data.end_date);
+      this.events = [...this.events, { id: created.id, name: created.name, desc: created.desc ?? '', start_date: created.start_date ?? null, end_date: created.end_date ?? null }];
+      
+      // If we have a selected doc, attach the new event to it
+      if (this.selectedDoc) {
+        await this.projectService.attachEventToDoc(this.selectedDoc.id, created.id);
+        this.docEventIds = new Set([...this.docEventIds, created.id]);
+        
+        // Refresh parent folder's event list (union of all docs)
+        if (this.currentGroup) {
+          await this.loadDocGroupEvents(this.currentGroup.id);
+        }
+      }
+      // If we have a selected group, attach the new event to it
+      else if (this.selectedGroup) {
+        await this.projectService.attachEventToDocGroup(this.selectedGroup.id, created.id);
+        this.docGroupEventIds = new Set([...this.docGroupEventIds, created.id]);
+      }
+    } catch (error) {
+      console.error('Failed to create event:', error);
+      alert('Failed to create event: ' + error);
+    }
+  }
+
   async onSidebarEventUpdate(payload: { id: number; name: string; desc: string; start_date: string | null; end_date: string | null }): Promise<void> {
     try {
       await this.projectService.updateEvent(payload.id, { name: payload.name, desc: payload.desc, start_date: payload.start_date, end_date: payload.end_date });

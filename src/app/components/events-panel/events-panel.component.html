@@ -6,12 +6,16 @@
       </svg>
       <span>Events</span>
     </div>
-    <button class="icon-button-small" (click)="onTimelineToggleClick($event)" [title]="timelineHeaderVisible ? 'Hide timeline' : 'Show timeline'">
+    <!-- <button class="icon-button-small" (click)="onTimelineToggleClick($event)" [title]="timelineHeaderVisible ? 'Hide timeline' : 'Show timeline'">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3" />
       </svg>
-    </button>
-    <button class="add-button" (click)="onAddClick($event)">
+    </button> -->
+    <button 
+      class="add-button" 
+      [class.active]="isSelectMode"
+      (click)="onAddClick($event)"
+      [title]="isSelectMode ? 'Done selecting' : 'Select events'">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
       </svg>
@@ -20,16 +24,36 @@
 
   @if (expanded) {
     <div class="section-content">
-      @for (ev of events; track ev.id) {
+      @if (newEvent) {
+        <app-event-card
+          [event]="newEvent"
+          [checked]="false"
+          [canToggle]="false"
+          [editing]="true"
+          [mode]="'view'"
+          (update)="onNewEventSave($event)"
+          (remove)="onNewEventCancel()">
+        </app-event-card>
+      }
+      
+      @for (ev of visibleEvents; track ev.id) {
         <app-event-card
           [event]="ev"
           [checked]="docEventIds?.has(ev.id) || false"
           [canToggle]="!!selectedDoc"
           [editing]="editingEventId === ev.id"
+          [mode]="isSelectMode ? 'selectable' : 'view'"
           (toggle)="toggle.emit({ eventId: $event.id, checked: $event.checked })"
           (update)="update.emit($event)"
           (remove)="remove.emit($event)">
         </app-event-card>
+      }
+      
+      @if (!isSelectMode && visibleEvents.length === 0 && events.length > 0) {
+        <div class="empty-state">
+          <p>No events attached</p>
+          <p class="hint">Click + to select events</p>
+        </div>
       }
     </div>
   }
