@@ -215,7 +215,8 @@ app-doc-tree {
 
 /* Reuse .project-name and .project-name-input styles already defined above */
 /* Index chip in headers */
-.header-index { color: #6b7280; font-size: 0.8125rem; padding: 0.25rem 0.25rem 0.25rem 0; }
+.header-index { color: #6b7280; font-size: 0.8125rem;  padding: 0.25rem 0rem 0.25rem 0; margin-left: 0.5rem; 
+margin-right: 0.75rem !important;}
 
 /* Folder title row under project name */
 .folder-title-bar {

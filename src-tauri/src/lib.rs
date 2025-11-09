@@ -15,6 +15,7 @@ mod commands;
 
 use crate::db::init_pool;
 use commands::{AppState};
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -25,6 +26,14 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            // Open the main window maximized by default (not macOS fullscreen space)
+            if let Some(win) = app.get_webview_window("main") {
+                let _ = win.maximize();
+                let _ = win.set_focus();
+            }
+            Ok(())
+        })
         .manage(app_state)
         .invoke_handler(tauri::generate_handler![
             commands::project_create,
