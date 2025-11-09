@@ -31,12 +31,20 @@ export class CharactersPanelComponent {
   newCharacter: CharacterVm | null = null;
 
   get visibleCharacters(): CharacterVm[] {
-    if (this.isSelectMode || !this.selectedDoc) {
-      // Show all characters in select mode or when no doc is selected
+    if (this.isSelectMode) {
+      // Show all characters in select mode
       return this.characters;
     }
-    // Show only checked characters in normal mode when a doc is selected
-    return this.characters.filter(char => this.docCharacterIds?.has(char.id));
+    // If docCharacterIds is null (Project tab), show all characters
+    if (this.docCharacterIds === null) {
+      return this.characters;
+    }
+    // Otherwise (Doc or Folder tab), filter by docCharacterIds
+    if (this.docCharacterIds.size > 0) {
+      return this.characters.filter(char => this.docCharacterIds?.has(char.id));
+    }
+    // Empty set means no characters attached (show empty state)
+    return [];
   }
 
   onHeaderClick() {

@@ -33,12 +33,20 @@ export class EventsPanelComponent {
   newEvent: EventVm | null = null;
 
   get visibleEvents(): EventVm[] {
-    if (this.isSelectMode || !this.selectedDoc) {
-      // Show all events in select mode or when no doc is selected
+    if (this.isSelectMode) {
+      // Show all events in select mode
       return this.events;
     }
-    // Show only checked events in normal mode when a doc is selected
-    return this.events.filter(event => this.docEventIds?.has(event.id));
+    // If docEventIds is null (Project tab), show all events
+    if (this.docEventIds === null) {
+      return this.events;
+    }
+    // Otherwise (Doc or Folder tab), filter by docEventIds
+    if (this.docEventIds.size > 0) {
+      return this.events.filter(event => this.docEventIds?.has(event.id));
+    }
+    // Empty set means no events attached (show empty state)
+    return [];
   }
 
   onHeaderClick() {

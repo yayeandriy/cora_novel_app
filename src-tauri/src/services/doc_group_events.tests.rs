@@ -103,4 +103,42 @@ mod tests {
         let list = crate::services::events::list_for_doc_group(&pool, group_id).expect("list");
         assert_eq!(list.len(), 0);
     }
+
+    #[test]
+    fn test_list_from_docs_in_group() {
+        let pool = create_test_db();
+        let pid = create_test_project(&pool);
+
+        // Create folder
+        let group_id = create_test_doc_group(&pool, pid, "Chapter 1");
+
+        // Create two docs in the folder
+        let conn = pool.get().expect("get conn");
+        conn.execute("INSERT INTO docs (project_id, doc_group_id, path) VALUES (?1, ?2, ?3)", 
+            rusqlite::params![pid, group_id, "doc1.txt"]).expect("insert doc1");
+        let doc1_id = conn.last_insert_rowid();
+
+        conn.execute("INSERT INTO docs (project_id, doc_group_id, path) VALUES (?1, ?2, ?3)", 
+            rusqlite::params![pid, group_id, "doc2.txt"]).expect("insert doc2");
+        let doc2_id = conn.last_insert_rowid();
+        drop(conn);
+
+        // Create three events
+        let event1 = create_test_event(&pool, pid, "Battle");
+        let event2 = create_test_event(&pool, pid, "Meeting");
+        let event3 = create_test_event(&pool, pid, "Festival");
+
+        // Attach event1 to doc1, event2 to both docs, event3 to doc2
+        crate::services::events::attach_to_doc(&pool, doc1_id, event1).expect("attach event1 to doc1");
+        crate::services::events::attach_to_doc(&pool, doc1_id, event2).expect("attach event2 to doc1");
+        crate::services::events::attach_to_doc(&pool, doc2_id, event2).expect("attach event2 to doc2");
+        crate::services::events::attach_to_doc(&pool, doc2_id, event3).expect("attach event3 to doc2");
+
+        // List events from docs in folder - should get all three distinct events
+        let ids = crate::services::events::list_from_docs_in_group(&pool, group_id).expect("list from docs");
+        assert_eq!(ids.len(), 3);
+        assert!(ids.contains(&event1));
+        assert!(ids.contains(&event2));
+        assert!(ids.contains(&event3));
+    }
 }
