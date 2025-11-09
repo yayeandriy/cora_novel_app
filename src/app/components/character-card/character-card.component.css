@@ -44,7 +44,8 @@
 
 .card-content {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: space-between;
   gap: 0.25rem;
 }
 
@@ -120,7 +121,12 @@
 
 .edit-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.action-group {
+  display: flex;
   gap: 0.5rem;
 }
 
@@ -145,6 +151,17 @@
   border-color: #1d4ed8;
 }
 
+.btn-cancel {
+  background: white;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.btn-cancel:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
 .btn-delete {
   background: white;
   border-color: #e5e7eb;
@@ -154,4 +171,5 @@
 .btn-delete:hover {
   background: #fee2e2;
   border-color: #fecaca;
-}
+} 
+ 

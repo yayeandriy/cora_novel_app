@@ -29,13 +29,13 @@
 @if (isEditing) {
   <div class="character-card edit-mode">
     <div class="edit-header">
-      @if (canToggle) {
+      <!-- @if (canToggle) {
         <input 
           type="checkbox" 
           class="edit-checkbox"
           [checked]="checked ?? false" 
           (change)="onToggleChange($event)" />
-      }
+      } -->
       <input 
         class="name-input" 
         [(ngModel)]="localName" 
@@ -51,8 +51,11 @@
       rows="3"></textarea>
     
     <div class="edit-actions">
-      <button class="btn btn-save" (click)="saveEdit()">Save</button>
       <button class="btn btn-delete" (click)="onDelete()">Delete</button>
+      <div class="action-group">
+        <button class="btn btn-cancel" (click)="cancelEdit()">Cancel</button>
+        <button class="btn btn-save" (click)="saveEdit()">Save</button>
+      </div>
     </div>
   </div>
 }
