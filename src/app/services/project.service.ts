@@ -138,6 +138,18 @@ export class ProjectService {
     return invoke<void>("doc_character_detach", { docId, characterId });
   }
 
+  async listDocGroupCharacters(docGroupId: number): Promise<number[]> {
+    return invoke<number[]>("doc_group_character_list", { docGroupId });
+  }
+
+  async attachCharacterToDocGroup(docGroupId: number, characterId: number): Promise<void> {
+    return invoke<void>("doc_group_character_attach", { docGroupId, characterId });
+  }
+
+  async detachCharacterFromDocGroup(docGroupId: number, characterId: number): Promise<void> {
+    return invoke<void>("doc_group_character_detach", { docGroupId, characterId });
+  }
+
   // Events
   async createEvent(projectId: number, name: string, desc?: string | null, startDate?: string | null, endDate?: string | null): Promise<Event> {
     // Backend command accepts (project_id camelCase: projectId), name, desc, start_date, end_date, and a legacy 'date'

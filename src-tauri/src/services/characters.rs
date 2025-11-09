@@ -117,6 +117,34 @@ pub fn detach_from_doc(pool: &DbPool, doc_id: i64, character_id: i64) -> anyhow:
     Ok(())
 }
 
+/// List character ids attached to a doc group
+pub fn list_for_doc_group(pool: &DbPool, doc_group_id: i64) -> anyhow::Result<Vec<i64>> {
+    let conn = get_conn(pool)?;
+    let mut stmt = conn.prepare("SELECT character_id FROM doc_group_characters WHERE doc_group_id = ?1 ORDER BY character_id")?;
+    let ids = stmt.query_map(rusqlite::params![doc_group_id], |row| row.get(0))?.collect::<Result<Vec<i64>, _>>()?;
+    Ok(ids)
+}
+
+/// Attach a character to a doc group (idempotent)
+pub fn attach_to_doc_group(pool: &DbPool, doc_group_id: i64, character_id: i64) -> anyhow::Result<()> {
+    let conn = get_conn(pool)?;
+    conn.execute(
+        "INSERT OR IGNORE INTO doc_group_characters (doc_group_id, character_id) VALUES (?1, ?2)",
+        rusqlite::params![doc_group_id, character_id],
+    )?;
+    Ok(())
+}
+
+/// Detach a character from a doc group (idempotent)
+pub fn detach_from_doc_group(pool: &DbPool, doc_group_id: i64, character_id: i64) -> anyhow::Result<()> {
+    let conn = get_conn(pool)?;
+    conn.execute(
+        "DELETE FROM doc_group_characters WHERE doc_group_id = ?1 AND character_id = ?2",
+        rusqlite::params![doc_group_id, character_id],
+    )?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

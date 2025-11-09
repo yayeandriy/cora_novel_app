@@ -89,6 +89,17 @@ pub fn init_pool() -> anyhow::Result<DbPool> {
         conn.execute_batch(include_str!("../migrations/009_add_doc_group_notes.sql")).context("running migrations 009")?;
     }
 
+    // Conditionally run 010: create doc_group_characters table
+    let table_exists: bool = conn.query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='doc_group_characters'",
+        [],
+        |row| row.get(0)
+    ).unwrap_or(0) > 0;
+    
+    if !table_exists {
+        conn.execute_batch(include_str!("../migrations/010_add_doc_group_characters.sql")).context("running migrations 010")?;
+    }
+
     Ok(pool)
 }
 

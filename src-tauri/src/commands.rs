@@ -216,6 +216,24 @@ pub async fn doc_character_detach(state: State<'_, AppState>, doc_id: i64, chara
 }
 
 #[tauri::command]
+pub async fn doc_group_character_list(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<i64>, String> {
+    let pool = &state.pool;
+    crate::services::characters::list_for_doc_group(pool, doc_group_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_group_character_attach(state: State<'_, AppState>, doc_group_id: i64, character_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::characters::attach_to_doc_group(pool, doc_group_id, character_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_group_character_detach(state: State<'_, AppState>, doc_group_id: i64, character_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::characters::detach_from_doc_group(pool, doc_group_id, character_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn event_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>, start_date: Option<String>, end_date: Option<String>, date: Option<String>) -> Result<Event, String> {
     let pool = &state.pool;
     crate::services::events::create(pool, project_id, &name, desc, start_date, end_date, date).map_err(|e| e.to_string())
