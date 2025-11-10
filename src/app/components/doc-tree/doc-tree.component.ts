@@ -40,6 +40,8 @@ export class DocTreeComponent {
   @Input() projectName: string = '';
   @Input() editingProjectName: boolean = false;
   @Input() projectNameEdit: string = '';
+  @Input() groupsWithDrafts: Set<number> = new Set<number>();
+  @Input() docsWithDrafts: Set<number> = new Set<number>();
   
   @Output() groupSelected = new EventEmitter<{ group: DocGroup; event?: MouseEvent }>();
   @Output() docSelected = new EventEmitter<Doc>();

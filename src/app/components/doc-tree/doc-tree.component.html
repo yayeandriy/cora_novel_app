@@ -32,7 +32,12 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
             </svg> -->
             <span class="text-gray-400">{{ gi + 1 }}.</span>
-            <span class="tree-item-name folder-name">{{ group.name }}</span>
+            <div class="name-with-mark">
+              <span class="tree-item-name folder-name">{{ group.name }}</span>
+              @if (groupsWithDrafts.has(group.id)) {
+                <span class="draft-mark" title="Has drafts">•</span>
+              }
+            </div>
             <button class="add-doc-button" 
                     title="Add document to this folder" 
                     (click)="createDocInGroup(group, $event)">
@@ -65,7 +70,12 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                   <span class="folder-index">{{ si + 1 }}</span>
-                  <span class="tree-item-name folder-name">{{ subGroup.name }}</span>
+                  <div class="name-with-mark">
+                    <span class="tree-item-name folder-name">{{ subGroup.name }}</span>
+                    @if (groupsWithDrafts.has(subGroup.id)) {
+                      <span class="draft-mark" title="Has drafts">•</span>
+                    }
+                  </div>
                   <button class="add-doc-button" 
                           title="Add document to this folder" 
                           (click)="createDocInGroup(subGroup, $event)">
@@ -91,7 +101,12 @@
                       (click)="selectDoc(doc)">
                       <div class="tree-item-header">
                         <span class="doc-index">{{ si + 1 }}.{{ di + 1 }}</span>
-                        <span class="tree-item-name">{{ doc.name }}</span>
+                        <div class="name-with-mark">
+                          <span class="tree-item-name">{{ doc.name }}</span>
+                          @if (docsWithDrafts.has(doc.id)) {
+                            <span class="draft-mark" title="Has drafts">•</span>
+                          }
+                        </div>
                       </div>
                     </div>
                   }
@@ -108,7 +123,12 @@
                 (click)="selectDoc(doc)">
                 <div class="tree-item-header">
                   <span class="doc-index">{{ gi + 1 }}.{{ di + 1 }}</span>
-                  <span class="tree-item-name">{{ doc.name }}</span>
+                  <div class="name-with-mark">
+                    <span class="tree-item-name">{{ doc.name }}</span>
+                    @if (docsWithDrafts.has(doc.id)) {
+                      <span class="draft-mark" title="Has drafts">•</span>
+                    }
+                  </div>
                 </div>
               </div>
             }

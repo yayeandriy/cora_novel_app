@@ -109,6 +109,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   selectedGroup: DocGroup | null = null;
   currentGroup: DocGroup | null = null;
   expandedGroupIds: Set<number> = new Set();
+  // Draft markers for doc tree
+  groupsWithDrafts: Set<number> = new Set();
+  docsWithDrafts: Set<number> = new Set();
   
   // Right sidebar
   charactersExpanded = true;
@@ -483,6 +486,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
       // Build hierarchical structure
       this.docGroups = this.buildDocGroupTree(groups, docs);
+  // Populate draft markers in the background
+  this.populateInitialDraftMarkers(groups, docs).catch(err => console.warn('populateInitialDraftMarkers failed', err));
 
   // Load characters and events
   await Promise.all([this.loadCharacters(), this.loadEvents()]);
@@ -1732,6 +1737,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     try {
       this.folderDrafts = await this.projectService.listFolderDrafts(docGroupId);
       this.folderDraftsCount = this.folderDrafts.length;
+      // Update tree marker for this folder
+      if (this.folderDraftsCount > 0) {
+        this.groupsWithDrafts.add(docGroupId);
+      } else {
+        this.groupsWithDrafts.delete(docGroupId);
+      }
       // Load local cached content for each folder draft
       for (const d of this.folderDrafts) {
         const cached = this.getLocalFolderDraftContent(d.id);
@@ -1800,6 +1811,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.selectedFolderDraftId = null;
       }
       this.folderDraftsCount = this.folderDrafts.length;
+      const group = this.selectedGroup || this.currentGroup;
+      if (group) {
+        if (this.folderDraftsCount > 0) {
+          this.groupsWithDrafts.add(group.id);
+        } else {
+          this.groupsWithDrafts.delete(group.id);
+        }
+      }
     } catch (e) {
       console.error('Failed to delete folder draft:', e);
       alert('Failed to delete folder draft: ' + e);
@@ -2142,9 +2161,34 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     try {
       const drafts = await this.projectService.listFolderDrafts(groupId);
       this.folderDraftsCount = drafts.length;
+      if (this.folderDraftsCount > 0) {
+        this.groupsWithDrafts.add(groupId);
+      } else {
+        this.groupsWithDrafts.delete(groupId);
+      }
     } catch {
       this.folderDraftsCount = 0;
+      this.groupsWithDrafts.delete(groupId);
     }
+  }
+
+  // Populate draft markers for tree items (runs asynchronously after tree build)
+  private async populateInitialDraftMarkers(groupsRaw: any[], docsRaw: Doc[]): Promise<void> {
+    this.groupsWithDrafts = new Set();
+    this.docsWithDrafts = new Set();
+    const groupPromises = groupsRaw.map(g => this.projectService.listFolderDrafts(g.id)
+      .then(arr => ({ id: g.id, count: arr.length }))
+      .catch(() => ({ id: g.id, count: 0 })));
+    const docPromises = docsRaw.map(d => this.projectService.listDrafts(d.id)
+      .then(arr => ({ id: d.id, count: arr.length }))
+      .catch(() => ({ id: d.id, count: 0 })));
+    const [groupResults, docResults] = await Promise.all([
+      Promise.all(groupPromises),
+      Promise.all(docPromises)
+    ]);
+    for (const r of groupResults) if (r.count > 0) this.groupsWithDrafts.add(r.id);
+    for (const r of docResults) if (r.count > 0) this.docsWithDrafts.add(r.id);
+    this.changeDetector.markForCheck();
   }
 
   onFolderDraftChange(draftId: number, content: string, cursorPosition: number): void {
@@ -2197,6 +2241,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     try {
       this.drafts = await this.projectService.listDrafts(docId);
       console.log('Loaded drafts:', this.drafts);
+      // Update draft marker for this doc
+      if (this.drafts.length > 0) {
+        this.docsWithDrafts.add(docId);
+      } else {
+        this.docsWithDrafts.delete(docId);
+      }
       
       // Load local cached content for each draft
       for (const draft of this.drafts) {
@@ -2958,6 +3008,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       
       // Remove from drafts array
       this.drafts = this.drafts.filter(d => d.id !== draftId);
+      // Update tree marker for the current doc
+      if (this.selectedDoc) {
+        if (this.drafts.length > 0) {
+          this.docsWithDrafts.add(this.selectedDoc.id);
+        } else {
+          this.docsWithDrafts.delete(this.selectedDoc.id);
+        }
+      }
       // Clear selection if we deleted the selected draft
       if (this.selectedDraftId === draftId) {
         this.selectedDraftId = null;
