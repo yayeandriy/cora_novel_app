@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy, OnInit, OnDestroy, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy, OnInit, OnDestroy, OnChanges, SimpleChanges, AfterViewInit } from '@angular/core';
 import { ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -24,7 +24,7 @@ export interface Doc {
   styleUrls: ['./document-editor.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges {
+export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, AfterViewInit {
   @Input() selectedDoc: Doc | null = null;
   @Input() docIndexLabel: string | null = null;
   @Input() showSaveStatus: boolean = false;
@@ -133,6 +133,10 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges {
         try { localStorage.setItem(this.getCollapseKey(), 'false'); } catch {}
         setTimeout(() => this.adjustWidthToContainer(), 0);
       }
+    }
+    // Recompute textarea sizes when doc or draft context changes
+    if (changes['selectedDoc'] || changes['selectedDraftId'] || changes['externalMode'] || changes['externalDraftId']) {
+      setTimeout(() => { this.autoSizePrimary(); this.autoSizeDraft(); }, 0);
     }
   }
 
@@ -298,6 +302,7 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges {
   onDraftInput(event: Event, draftId: number) {
     const target = event.target as HTMLTextAreaElement;
     this.draftChanged.emit({ draftId, content: target.value, cursorPosition: target.selectionStart });
+    this.autoSizeDraft();
   }
 
   onDraftBlur(draftId: number) {
@@ -325,10 +330,32 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges {
 
   onTextChange() {
     this.docTextChange.emit();
+    this.autoSizePrimary();
   }
 
   onBlur() {
     this.docSaved.emit();
+  }
+
+  private autoSizePrimary() {
+    const el = this.editorTextarea?.nativeElement;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 200000) + 'px';
+  }
+
+  private autoSizeDraft() {
+    const el = this.draftTextarea?.nativeElement;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 200000) + 'px';
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.autoSizePrimary();
+      this.autoSizeDraft();
+    }, 0);
   }
 
   // Document statistics
