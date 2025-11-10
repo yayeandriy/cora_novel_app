@@ -123,6 +123,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Folder drafts UI state
   folderDraftsExpanded = false;
   folderDrafts: FolderDraft[] = [];
+  folderDraftsCount: number = 0;
   editingFolderDraftId: number | null = null;
   folderDraftNameEdit: string = '';
   selectedFolderDraftId: number | null = null;
@@ -134,6 +135,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Project drafts UI state
   projectDraftsExpanded = false;
   projectDrafts: import('../../shared/models').ProjectDraft[] = [];
+  projectDraftsCount: number = 0;
   editingProjectDraftId: number | null = null;
   projectDraftNameEdit: string = '';
   selectedProjectDraftId: number | null = null;
@@ -493,6 +495,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
           if (this.projectDraftsExpanded) {
             // Preload project drafts and optionally restore selection
             await this.loadProjectDrafts(this.projectId, /*restoreSelection*/ true);
+          } else {
+            // Ensure we still have the count when collapsed
+            await this.refreshProjectDraftsCount();
           }
         }
       } catch {}
@@ -652,7 +657,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.currentGroup = null;
     }
     
-    // Load drafts for this document
+  // Load drafts for this document
     this.selectedDraftId = null; // reset draft selection when switching docs
     await this.loadDrafts(this.selectedDoc.id);
   // Load characters attached to this doc
@@ -664,6 +669,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   if (this.currentGroup) {
     await this.loadDocGroupCharacters(this.currentGroup.id);
     await this.loadDocGroupEvents(this.currentGroup.id);
+    // If folder drafts panel is collapsed, ensure counts are available for toggler
+    if (!this.folderDraftsExpanded) {
+      this.refreshFolderDraftsCount(this.currentGroup.id);
+    }
   } else {
     this.docGroupCharacterIds = new Set();
     this.docGroupEventIds = new Set();
@@ -736,9 +745,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.loadDocGroupCharacters(group.id);
     this.loadDocGroupEvents(group.id);
 
-    // Load folder drafts if the drafts panel is expanded
+    // Load folder drafts if the drafts panel is expanded; else refresh count
     if (this.folderDraftsExpanded) {
       this.loadFolderDrafts(group.id);
+    } else {
+      this.refreshFolderDraftsCount(group.id);
     }
   }
 
@@ -1709,6 +1720,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // When expanding via the toggler, don't auto-restore a previously selected folder draft,
       // so we don't hide doc draft tools or switch external mode unexpectedly.
       this.loadFolderDrafts(group.id, /*restoreSelection*/ false);
+    } else if (group) {
+      // Collapsing: retain count indicator
+      this.refreshFolderDraftsCount(group.id);
     }
     // Persist selection visibility per group
     try { localStorage.setItem(this.getFolderDraftsExpandedKey(this.projectId), String(this.folderDraftsExpanded)); } catch {}
@@ -1717,6 +1731,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   async loadFolderDrafts(docGroupId: number, restoreSelection: boolean = true) {
     try {
       this.folderDrafts = await this.projectService.listFolderDrafts(docGroupId);
+      this.folderDraftsCount = this.folderDrafts.length;
       // Load local cached content for each folder draft
       for (const d of this.folderDrafts) {
         const cached = this.getLocalFolderDraftContent(d.id);
@@ -1756,6 +1771,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.error('Failed to load folder drafts:', e);
       this.folderDrafts = [];
+      this.folderDraftsCount = 0;
     }
   }
 
@@ -1769,6 +1785,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       const draftName = `Draft ${new Date().toLocaleTimeString()}`;
       await this.projectService.createFolderDraft(group.id, draftName, '');
       await this.loadFolderDrafts(group.id);
+      this.folderDraftsCount = this.folderDrafts.length;
     } catch (e) {
       console.error('Failed to create folder draft:', e);
       alert('Failed to create folder draft: ' + e);
@@ -1782,6 +1799,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.selectedFolderDraftId === id) {
         this.selectedFolderDraftId = null;
       }
+      this.folderDraftsCount = this.folderDrafts.length;
     } catch (e) {
       console.error('Failed to delete folder draft:', e);
       alert('Failed to delete folder draft: ' + e);
@@ -1811,6 +1829,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (idx !== -1) {
         this.folderDrafts[idx] = { ...this.folderDrafts[idx], name: (updated as any).name, updated_at: (updated as any).updated_at } as any;
         this.folderDrafts = [...this.folderDrafts];
+        this.folderDraftsCount = this.folderDrafts.length;
       }
     } catch (e) {
       console.error('Failed to rename folder draft:', e);
@@ -1880,6 +1899,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   async loadProjectDrafts(projectId: number, restoreSelection: boolean = true) {
     try {
       this.projectDrafts = await this.projectService.listProjectDrafts(projectId);
+      this.projectDraftsCount = this.projectDrafts.length;
       for (const d of this.projectDrafts) {
         const cached = this.getLocalProjectDraftContent(d.id);
         if (cached !== null) {
@@ -1914,6 +1934,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.error('Failed to load project drafts:', e);
       this.projectDrafts = [];
+      this.projectDraftsCount = 0;
     }
   }
 
@@ -1922,6 +1943,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       const draftName = `Draft ${new Date().toLocaleTimeString()}`;
       await this.projectService.createProjectDraft(this.projectId, draftName, '');
       await this.loadProjectDrafts(this.projectId);
+      this.projectDraftsCount = this.projectDrafts.length;
     } catch (e) {
       console.error('Failed to create project draft:', e);
       alert('Failed to create project draft: ' + e);
@@ -1935,6 +1957,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.selectedProjectDraftId === id) {
         this.selectedProjectDraftId = null;
       }
+      this.projectDraftsCount = this.projectDrafts.length;
     } catch (e) {
       console.error('Failed to delete project draft:', e);
       alert('Failed to delete project draft: ' + e);
@@ -1963,6 +1986,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (idx !== -1) {
         this.projectDrafts[idx] = { ...this.projectDrafts[idx], name: (updated as any).name, updated_at: (updated as any).updated_at } as any;
         this.projectDrafts = [...this.projectDrafts];
+        this.projectDraftsCount = this.projectDrafts.length;
       }
     } catch (e) {
       console.error('Failed to rename project draft:', e);
@@ -2103,6 +2127,24 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   private getFolderDraftsExpandedKey(projectId: number): string {
     return `cora-folder-drafts-expanded-${projectId}`;
+  }
+
+  private async refreshProjectDraftsCount(): Promise<void> {
+    try {
+      const drafts = await this.projectService.listProjectDrafts(this.projectId);
+      this.projectDraftsCount = drafts.length;
+    } catch {
+      this.projectDraftsCount = 0;
+    }
+  }
+
+  private async refreshFolderDraftsCount(groupId: number): Promise<void> {
+    try {
+      const drafts = await this.projectService.listFolderDrafts(groupId);
+      this.folderDraftsCount = drafts.length;
+    } catch {
+      this.folderDraftsCount = 0;
+    }
   }
 
   onFolderDraftChange(draftId: number, content: string, cursorPosition: number): void {
