@@ -43,7 +43,8 @@
           <div class="section-content">
             @if (selectedDoc) {
               <textarea 
-                class="notes-textarea" 
+                class="notes-textarea"
+                [persistTextareaHeight]="'rs:notes:doc:' + selectedDoc.project_id"
                 [(ngModel)]="selectedDoc.notes"
                 (input)="onDocNotesChange()"
                 placeholder="Add notes..."></textarea>
@@ -101,7 +102,8 @@
         @if (notesExpanded && selectedDocGroup) {
           <div class="section-content">
             <textarea 
-              class="notes-textarea" 
+              class="notes-textarea"
+              [persistTextareaHeight]="'rs:notes:folder:' + selectedDocGroup.project_id"
               [(ngModel)]="selectedDocGroup.notes"
               (input)="onDocGroupNotesChange()"
               placeholder="Add folder notes..."></textarea>
@@ -164,7 +166,8 @@
           <div class="section-content">
             @if (project) {
               <textarea 
-                class="notes-textarea" 
+                class="notes-textarea"
+                [persistTextareaHeight]="'rs:notes:project:' + project.id"
                 [(ngModel)]="project.notes"
                 (input)="onProjectNotesChange()"
                 placeholder="Add project notes..."></textarea>

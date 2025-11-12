@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CharactersPanelComponent } from '../characters-panel/characters-panel.component';
 import { EventsPanelComponent } from '../events-panel/events-panel.component';
+import { PersistTextareaHeightDirective } from '../../shared/persist-textarea-height.directive';
 
 export interface Character {
   id: number;
@@ -61,7 +62,7 @@ type TabType = 'doc' | 'folder' | 'project';
 @Component({
   selector: 'app-right-sidebar',
   standalone: true,
-  imports: [CommonModule, FormsModule, CharactersPanelComponent, EventsPanelComponent],
+  imports: [CommonModule, FormsModule, CharactersPanelComponent, EventsPanelComponent, PersistTextareaHeightDirective],
   templateUrl: './right-sidebar.component.html',
   styleUrls: ['./right-sidebar.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
