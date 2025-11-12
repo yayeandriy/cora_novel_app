@@ -78,6 +78,7 @@
       [(ngModel)]="selectedDoc.text"
       (input)="onTextChange()"
       class="editor-textarea"
+      [style.width.%]="editorWidthPct"
       (blur)="onBlur()"
       placeholder="Start writing...">
     </textarea>
@@ -89,6 +90,7 @@
           [(ngModel)]="selectedDoc.text"
           (input)="onTextChange()"
           class="editor-textarea"
+          [style.width.%]="editorWidthPct"
           (blur)="onBlur()"
           placeholder="Start writing...">
         </textarea>
@@ -108,6 +110,7 @@
             (input)="onDraftInput($event, selectedDraft!.id)"
             (blur)="onDraftBlur(selectedDraft!.id)"
             class="editor-textarea"
+            [style.width.%]="editorWidthPct"
             placeholder="Draft content...">
           </textarea>
         </div>
