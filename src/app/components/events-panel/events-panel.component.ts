@@ -58,18 +58,10 @@ export class EventsPanelComponent {
     
     // Toggle select mode (works for all tabs)
     this.isSelectMode = !this.isSelectMode;
-    
-    if (this.isSelectMode) {
-      // Create a new event card in edit mode
-      this.newEvent = {
-        id: -1, // Temporary ID for new event
-        name: '',
-        desc: '',
-        start_date: null,
-        end_date: null,
-      };
-    } else {
-      // Clear the new event when exiting select mode
+
+    // Do not auto-create an edit card on entering select mode
+    if (!this.isSelectMode) {
+      // Clear any in-progress creation when exiting select mode
       this.newEvent = null;
     }
   }
@@ -94,5 +86,17 @@ export class EventsPanelComponent {
   onTimelineToggleClick(event: MouseEvent) {
     event.stopPropagation();
     this.timelineHeaderToggle.emit();
+  }
+
+  onAddEventClick(event: MouseEvent) {
+    event.stopPropagation();
+    // Create a new event card in edit mode when the inline button is clicked
+    this.newEvent = {
+      id: -1,
+      name: '',
+      desc: '',
+      start_date: null,
+      end_date: null,
+    };
   }
 }

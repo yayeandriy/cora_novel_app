@@ -56,16 +56,10 @@ export class CharactersPanelComponent {
     
     // Toggle select mode (works for all tabs)
     this.isSelectMode = !this.isSelectMode;
-    
-    if (this.isSelectMode) {
-      // Create a new character card in edit mode
-      this.newCharacter = {
-        id: -1, // Temporary ID for new character
-        name: '',
-        desc: '',
-      };
-    } else {
-      // Clear the new character when exiting select mode
+
+    // Do not auto-create an edit card; show an explicit Add button in the list instead
+    if (!this.isSelectMode) {
+      // Clear any in-progress creation when exiting select mode
       this.newCharacter = null;
     }
   }
@@ -85,5 +79,15 @@ export class CharactersPanelComponent {
     // Just clear without creating
     this.newCharacter = null;
     this.isSelectMode = false;
+  }
+
+  onAddCharacterClick(event: MouseEvent) {
+    event.stopPropagation();
+    // Create a new character card in edit mode when the inline button is clicked
+    this.newCharacter = {
+      id: -1,
+      name: '',
+      desc: '',
+    };
   }
 }

@@ -9,7 +9,7 @@
 .add-button.active{background:#2563eb;color:#ffffff}
 .add-button.active:hover{background:#1d4ed8}
 .add-button svg{width:.875rem;height:.875rem;transition:transform 150ms}
-.add-button.active svg{transform:rotate(45deg)}
+.add-button.active svg{transform:none}
 .section-content{margin-top:.75rem}
 .empty-state{padding:1.5rem 1rem;text-align:center;color:#9ca3af;font-size:.875rem;line-height:1.5}
 .h-3.5{} 
@@ -22,3 +22,8 @@
  
 .w-3.5{} 
  
+/* Inline list add button styled to match list items spacing */
+.list-add-button{display:flex;align-items:center;gap:.5rem;width:100%;padding:.625rem .75rem;margin-bottom:.5rem;background:#f9fafb;border:1px dashed #d1d5db;border-radius:.375rem;color:#374151;cursor:pointer;transition:background-color 150ms,border-color 150ms}
+.list-add-button:hover{background:#f3f4f6;border-color:#9ca3af}
+.list-add-button .icon{width:.875rem;height:.875rem;color:#6b7280}
+
