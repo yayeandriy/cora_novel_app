@@ -211,7 +211,7 @@ app-doc-tree {
   justify-content: flex-start;
   align-items: center;
   /* Match right padding with folder row and editor toolbar so draft tools align vertically */
-  padding: 2.5rem 1.5rem;
+  padding: 1.5rem 1rem 0.5rem 1.5rem;
   
 }
 
@@ -231,8 +231,8 @@ margin-right: 0.75rem !important;}
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  padding: 0 1.5rem 1rem 1.5rem;
-  margin-top: -1rem;
+  padding: 0 1.5rem 0rem 1.5rem;
+  margin-top: 0; /* avoid overlapping previous section borders */
 }
 
 .folder-name-input { /* hook for focus */ }
