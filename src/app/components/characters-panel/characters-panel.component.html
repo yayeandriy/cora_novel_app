@@ -25,13 +25,6 @@
         </svg>
       }
     </button>
-    <button
-      class="reorder-button"
-      [class.active]="isReorderMode"
-      (click)="onReorderToggle($event)"
-      [title]="isReorderMode ? 'Done reordering' : 'Reorder cards'">
-      <img src="assets/icons/arrow.up.arrow.down.square.fill.svg" alt="Reorder" />
-    </button>
     </div>
   </div>
   <div class="section-content" [class.open]="expanded">
@@ -56,16 +49,20 @@
         </app-character-card>
       }
       
-      <div class="cards-list" cdkDropList [cdkDropListDisabled]="!isReorderMode" [cdkDropListData]="visibleCharacters" (cdkDropListDropped)="onDropCdk($event)">
+      <div class="cards-list" cdkDropList [cdkDropListData]="visibleCharacters" (cdkDropListDropped)="onDropCdk($event)">
         @for (char of visibleCharacters; track char.id; let i = $index) {
-          <div class="drag-item" [class.reorder]="isReorderMode" [class.over]="isReorderMode && hoverIndex === i" cdkDrag [cdkDragDisabled]="!isReorderMode">
+          <div class="drag-item" cdkDrag>
+            <button class="drag-handle" cdkDragHandle title="Drag to reorder" (click)="$event.stopPropagation()">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 4h6M9 8h6M9 12h6M9 16h6M9 20h6"/>
+              </svg>
+            </button>
             <app-character-card
               [character]="char"
               [checked]="docCharacterIds?.has(char.id) || false"
               [canToggle]="!!selectedDoc"
               [editing]="editingCharacterId === char.id"
               [mode]="isSelectMode ? 'selectable' : 'view'"
-              [disableInteractions]="isReorderMode"
               (toggle)="toggle.emit({ characterId: $event.id, checked: $event.checked })"
               (update)="update.emit($event)"
               (remove)="remove.emit($event)">

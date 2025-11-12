@@ -31,7 +31,6 @@ export class CharactersPanelComponent {
   @Output() reorder = new EventEmitter<number[]>();
 
   isSelectMode = false;
-  isReorderMode = false;
   newCharacter: CharacterVm | null = null;
   // Drag state (used by Angular CDK)
   hoverIndex: number | null = null;
@@ -62,10 +61,6 @@ export class CharactersPanelComponent {
     
     // Toggle select mode (works for all tabs)
     this.isSelectMode = !this.isSelectMode;
-    // Selecting and reordering are mutually exclusive
-    if (this.isSelectMode) {
-      this.isReorderMode = false;
-    }
 
     // Do not auto-create an edit card; show an explicit Add button in the list instead
     if (!this.isSelectMode) {
@@ -101,20 +96,8 @@ export class CharactersPanelComponent {
     };
   }
 
-  onReorderToggle(event: MouseEvent) {
-    event.stopPropagation();
-    this.isReorderMode = !this.isReorderMode;
-    console.log('[CharactersPanel] reorder toggle ->', this.isReorderMode);
-    if (this.isReorderMode) {
-      // Exit select mode and clear any in-progress creation
-      this.isSelectMode = false;
-      this.newCharacter = null;
-    }
-  }
-
   // ===== Drag & Drop using Angular CDK =====
   onDropCdk(event: CdkDragDrop<CharacterVm[]>) {
-    if (!this.isReorderMode) return;
     const list = [...this.visibleCharacters];
     moveItemInArray(list, event.previousIndex, event.currentIndex);
     console.log('[CharactersPanel] cdk drop', { prev: event.previousIndex, curr: event.currentIndex, order: list.map(c => c.id) });

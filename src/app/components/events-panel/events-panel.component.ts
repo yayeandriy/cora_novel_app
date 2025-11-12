@@ -21,7 +21,6 @@ export class EventsPanelComponent {
   @Input() expanded: boolean = true;
   @Input() editingEventId: number | null = null;
   @Input() timelineHeaderVisible: boolean = false;
-  @Input() reorderOnly: boolean = false;
 
   @Output() expandedChange = new EventEmitter<boolean>();
   @Output() add = new EventEmitter<void>();
@@ -34,7 +33,6 @@ export class EventsPanelComponent {
   @Output() reorder = new EventEmitter<number[]>();
 
   isSelectMode = false;
-  isReorderMode = false;
   newEvent: EventVm | null = null;
   // Drag state (CDK)
   hoverIndex: number | null = null;
@@ -65,10 +63,6 @@ export class EventsPanelComponent {
     
     // Toggle select mode (works for all tabs)
     this.isSelectMode = !this.isSelectMode;
-    // Selecting and reordering are mutually exclusive
-    if (this.isSelectMode) {
-      this.isReorderMode = false;
-    }
 
     // Do not auto-create an edit card on entering select mode
     if (!this.isSelectMode) {
@@ -111,21 +105,10 @@ export class EventsPanelComponent {
     };
   }
 
-  onReorderToggle(event: MouseEvent) {
-    event.stopPropagation();
-    this.isReorderMode = !this.isReorderMode;
-    console.log('[EventsPanel] reorder toggle ->', this.isReorderMode);
-    if (this.isReorderMode) {
-      // Exit select mode and clear any in-progress creation
-      this.isSelectMode = false;
-      this.newEvent = null;
-    }
-  }
 
   // ===== Drag & Drop (HTML5) for reordering visible list =====
   // ===== Drag & Drop using Angular CDK =====
   onDropCdk(event: CdkDragDrop<EventVm[]>) {
-    if (!this.isReorderMode) return;
     const list = [...this.visibleEvents];
     moveItemInArray(list, event.previousIndex, event.currentIndex);
     console.log('[EventsPanel] cdk drop', { prev: event.previousIndex, curr: event.currentIndex, order: list.map(e => e.id) });
