@@ -71,6 +71,7 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
 
   private readonly WIDTH_KEY_GLOBAL = 'cora-editor-split-width';
   private readonly COLLAPSE_KEY_GLOBAL = 'cora-editor-split-collapsed';
+  private readonly COLUMN_PCT_KEY_GLOBAL = 'cora-editor-column-pct';
   private loadedProjectId: number | null = null;
   // Draft controls follow split visibility (no separate collapse state)
 
@@ -82,6 +83,14 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   private getCollapseKey(): string {
     const pid = this.selectedDoc?.project_id;
     return pid ? `${this.COLLAPSE_KEY_GLOBAL}-${pid}` : this.COLLAPSE_KEY_GLOBAL;
+  }
+
+  // Visual column width for the primary (and draft) textareas as % of pane width
+  editorWidthPct: number = 100;
+
+  private getColumnPctKey(): string {
+    const pid = this.selectedDoc?.project_id;
+    return pid ? `${this.COLUMN_PCT_KEY_GLOBAL}-${pid}` : this.COLUMN_PCT_KEY_GLOBAL;
   }
 
   constructor(private cdr: ChangeDetectorRef) {}
@@ -97,6 +106,11 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
       const savedCollapsed = localStorage.getItem(this.COLLAPSE_KEY_GLOBAL);
       if (savedCollapsed) {
         this.isSplitCollapsed = savedCollapsed === 'true';
+      }
+      const savedCol = localStorage.getItem(this.COLUMN_PCT_KEY_GLOBAL);
+      if (savedCol) {
+        const pct = parseInt(savedCol, 10);
+        if (!Number.isNaN(pct)) this.editorWidthPct = Math.max(20, Math.min(100, pct));
       }
     } catch {}
   }
@@ -119,6 +133,11 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
             if (globalC != null) this.isSplitCollapsed = globalC === 'true';
           } else {
             this.isSplitCollapsed = cStr === 'true';
+          }
+          const colStr = localStorage.getItem(this.getColumnPctKey()) || localStorage.getItem(this.COLUMN_PCT_KEY_GLOBAL);
+          if (colStr) {
+            const pct = parseInt(colStr, 10);
+            if (!Number.isNaN(pct)) this.editorWidthPct = Math.max(20, Math.min(100, pct));
           }
         } catch {}
         // After view updates, ensure width fits the current container and persist if clamped
@@ -356,6 +375,14 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
       this.autoSizePrimary();
       this.autoSizeDraft();
     }, 0);
+  }
+
+  onEditorWidthChange() {
+  const pct = Math.max(20, Math.min(100, this.editorWidthPct | 0));
+    this.editorWidthPct = pct;
+    try { localStorage.setItem(this.getColumnPctKey(), String(pct)); } catch {}
+    // Textareas center via CSS; no further action needed
+    this.cdr.markForCheck();
   }
 
   // Document statistics

@@ -93,11 +93,16 @@
 .editor-split { display: flex; width: 100%; }
 .pane { flex: 1; display: flex; min-width: 0; }
 .border-l { border-left: 1px solid #e5e7eb; }
-.editor-split .editor-textarea { width: 100%; }
+.editor-split .editor-textarea { width: var(--editor-col, 100%); margin-left: auto; margin-right: auto; }
 .pane-right { flex: 0 0 auto; }
 
 .split-divider {
   flex: 0 0 6px;
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+}
 
 /* Numeric count badge for document drafts */
 .drafts-count {
@@ -127,11 +132,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-  width: 6px;
-  cursor: col-resize;
-  background: transparent;
-  position: relative;
 }
 .split-divider:hover { background: rgba(0,0,0,0.04); }
 .split-divider.collapsed { background: rgba(0,0,0,0.03); }
@@ -224,7 +224,9 @@
   line-height: 1.75;
   color: #111827;
   resize: none; /* we'll auto-resize via TS */
-  width: 100%;
+  width: var(--editor-col, 100%);
+  margin-left: auto;
+  margin-right: auto;
   overflow: hidden; /* prevent internal scrollbars */
   height: auto; /* grow with content via JS */
   min-height: 50vh; /* comfortable initial height */
@@ -269,6 +271,44 @@
 .stat-project {
   color: #9ca3af;
   font-size: 0.7rem;
+}
+
+.width-control { gap: 0.35rem; }
+.width-slider {
+  width: 6rem;
+  opacity: 0.6;
+  transition: opacity 120ms ease-in-out;
+}
+.width-slider:hover,
+.width-slider:focus {
+  opacity: 0.9;
+}
+/* Subtle neutral styling for range input */
+.width-slider::-webkit-slider-runnable-track {
+  height: 2px;
+  background: #e5e7eb;
+  border-radius: 999px;
+}
+.width-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  margin-top: -4px; /* center thumb on 2px track */
+  background: #9ca3af;
+  border-radius: 50%;
+  border: none;
+}
+.width-slider::-moz-range-track {
+  height: 2px;
+  background: #e5e7eb;
+  border-radius: 999px;
+}
+.width-slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  background: #9ca3af;
+  border: none;
+  border-radius: 50%;
 }
 
 .page-icon {

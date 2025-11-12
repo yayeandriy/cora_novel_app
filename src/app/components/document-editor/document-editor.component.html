@@ -1,5 +1,5 @@
 @if (selectedDoc) {
-<div class="editor-container">
+<div class="editor-container" [style.--editor-col]="editorWidthPct + '%'">
   <div class="editor-toolbar">
     <div class="title-group">
       @if (docIndexLabel) { <span class="header-index">{{ docIndexLabel }}.</span> }
@@ -133,6 +133,15 @@
         </svg>
         <span class="stat-value">{{ getDocPageCount() }}</span>
         <span class="stat-project">({{ getProjectPageCount() }})</span>
+      </span>
+      <span class="stat-item width-control">
+  <input type="range" min="20" max="100" step="1"
+               [(ngModel)]="editorWidthPct"
+               (input)="onEditorWidthChange()"
+     class="width-slider"
+     aria-label="Editor width"
+     title="Editor width" />
+        <span class="stat-project">{{ editorWidthPct }}%</span>
       </span>
     </div>
   </div>
