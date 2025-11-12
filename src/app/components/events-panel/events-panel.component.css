@@ -1,7 +1,7 @@
 .sidebar-section{border-bottom:1px solid #e5e7eb;padding-bottom:1rem;margin-bottom:1rem}
 .section-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:.5rem 0;transition:background-color 150ms;border-radius:.375rem;user-select:none}
 .section-header:hover{background:#f3f4f6}
-.section-title{display:flex;align-items:center;gap:.375rem;font-size:.875rem;font-weight:500;color:#374151}
+.section-title{display:flex;align-items:center;gap:.375rem;font-size:.875rem;font-weight:400;color:#374151}
 .toggle-icon{width:.875rem;height:.875rem;color:#4b5563;transition:transform 150ms;flex-shrink:0}
 .toggle-icon.expanded{transform:rotate(90deg)}
 .add-button{display:flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;background:transparent;border:none;border-radius:.25rem;color:#6b7280;cursor:pointer;transition:all 150ms}
