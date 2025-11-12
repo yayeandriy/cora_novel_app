@@ -57,7 +57,7 @@
     <!-- Editor -->
     <main class="editor-area">
       <!-- Project title moved to the middle section on top of the doc header -->
-      <div class="project-title-bar">
+      <div class="project-title-bar" (click)="onProjectHeaderClick($event)">
         <div class="project-title-center">
           @if (!editingProjectName) {
             <div class="project-name">
@@ -110,9 +110,19 @@
         </div>
       </div>
 
+      @if (projectHeaderExpanded && projectData) {
+        <div class="header-notes">
+          <textarea class="header-notes-textarea"
+                    [persistTextareaHeight]="'pv:notes:project:' + projectId"
+                    [(ngModel)]="projectData.notes"
+                    (input)="onProjectNotesChange()"
+                    placeholder="Add project notes..."></textarea>
+        </div>
+      }
+
       <!-- Folder name row (under project name) -->
       @if (selectedGroup || currentGroup) {
-      <div class="folder-title-bar">
+      <div class="folder-title-bar" (click)="onFolderHeaderClick($event)">
         <div class="folder-title-center">
           @if (getFolderIndexLabel()) { <span class="header-index" style="margin-right: 1rem;">{{ getFolderIndexLabel() }}.</span> }
           @if (!editingFolderName) {
@@ -165,6 +175,15 @@
           </div>
         </div>
       </div>
+      @if (folderHeaderExpanded && (selectedGroup || currentGroup)) {
+        <div class="header-notes">
+          <textarea class="header-notes-textarea"
+                    [persistTextareaHeight]="'pv:notes:folder:' + projectId"
+                    [(ngModel)]="folderNotes"
+                    (input)="onDocGroupNotesChange()"
+                    placeholder="Add folder notes..."></textarea>
+        </div>
+      }
       }
       <!-- Document editor -->
       @if (selectedDoc && !selectedGroup) {

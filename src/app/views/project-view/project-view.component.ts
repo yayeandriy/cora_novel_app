@@ -11,6 +11,7 @@ import { GroupViewComponent } from '../../components/group-view/group-view.compo
 import { RightSidebarComponent } from '../../components/right-sidebar/right-sidebar.component';
 import { ProjectTimelineComponent } from '../../components/project-timeline/project-timeline.component';
 import type { Timeline, FolderDraft } from '../../shared/models';
+import { PersistTextareaHeightDirective } from '../../shared/persist-textarea-height.directive';
 
 interface DocGroup {
   id: number;
@@ -60,7 +61,8 @@ interface Event {
     DocumentEditorComponent,
     GroupViewComponent,
     RightSidebarComponent,
-    ProjectTimelineComponent
+    ProjectTimelineComponent,
+    PersistTextareaHeightDirective
   ],
   templateUrl: './project-view.component.html',
   styleUrls: ['./project-view.component.css'],
@@ -190,6 +192,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   pendingImportFolders: string[] = [];
   importTargetGroupId: number | null = null;
   flattenedGroups: Array<{ id: number; label: string }> = [];
+  // Header notes expansion state
+  projectHeaderExpanded = false;
+  folderHeaderExpanded = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -212,6 +217,36 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         el.select();
       }
     }, 0);
+  }
+
+  // Toggle project header expansion (show/hide project notes editor)
+  onProjectHeaderClick(event: MouseEvent) {
+    if (this.isInteractiveHeaderClick(event)) return;
+    this.projectHeaderExpanded = !this.projectHeaderExpanded;
+  }
+
+  // Toggle folder header expansion (show/hide folder notes editor)
+  onFolderHeaderClick(event: MouseEvent) {
+    if (this.isInteractiveHeaderClick(event)) return;
+    this.folderHeaderExpanded = !this.folderHeaderExpanded;
+  }
+
+  // Guard: avoid toggling when clicking inputs/buttons/controls inside header rows
+  private isInteractiveHeaderClick(event: MouseEvent): boolean {
+    const el = event.target as HTMLElement | null;
+    if (!el) return false;
+    const interactiveSelector = 'input, textarea, button, .drafts-row, .draft-add-btn, .drafts-toggle, .draft-delete-btn, .draft-name-input, .project-name-input, .folder-name-input, a, [role="button"]';
+    return !!el.closest(interactiveSelector);
+  }
+
+  // Two-way proxy for folder notes binding regardless of selected vs current group
+  get folderNotes(): string {
+    const g: any = this.selectedGroup || this.currentGroup;
+    return (g?.notes ?? '') as string;
+  }
+  set folderNotes(val: string) {
+    const g: any = this.selectedGroup || this.currentGroup;
+    if (g) g.notes = val;
   }
 
   // Folder name editing
@@ -1448,11 +1483,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   async saveDocGroupNotes() {
-    if (!this.selectedGroup) return;
+    const grp = this.selectedGroup || this.currentGroup;
+    if (!grp) return;
 
     try {
-      const notes = this.selectedGroup.notes || '';
-      await this.projectService.updateDocGroupNotes(this.selectedGroup.id, notes);
+      const notes = grp.notes || '';
+      await this.projectService.updateDocGroupNotes(grp.id, notes);
       console.log('Doc group notes saved successfully');
       
       // Reload to keep in sync
