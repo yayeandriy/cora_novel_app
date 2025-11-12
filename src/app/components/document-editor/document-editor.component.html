@@ -1,5 +1,5 @@
 @if (selectedDoc) {
-<div class="editor-container" [style.--editor-col]="editorWidthPct + '%'">
+<div class="editor-container">
   <div class="editor-toolbar">
     <div class="title-group">
       @if (docIndexLabel) { <span class="header-index">{{ docIndexLabel }}.</span> }
@@ -110,7 +110,6 @@
             (input)="onDraftInput($event, selectedDraft!.id)"
             (blur)="onDraftBlur(selectedDraft!.id)"
             class="editor-textarea"
-            [style.width.%]="editorWidthPct"
             placeholder="Draft content...">
           </textarea>
         </div>
