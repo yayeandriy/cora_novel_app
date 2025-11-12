@@ -25,9 +25,7 @@
       }
     </button>
   </div>
-
-  @if (expanded) {
-    <div class="section-content">
+  <div class="section-content" [class.open]="expanded">
       @if (isSelectMode && !newCharacter) {
         <button class="list-add-button" (click)="onAddCharacterClick($event)">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon">
@@ -68,6 +66,5 @@
           <p class="hint">Click + to select characters</p>
         </div>
       }
-    </div>
-  }
+  </div>
 </div>

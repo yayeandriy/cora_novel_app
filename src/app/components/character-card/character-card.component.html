@@ -15,7 +15,8 @@
   <div 
     class="character-card selectable-mode" 
     [class.selected]="checked"
-    (click)="onSelectToggle()">
+    (click)="onSelectToggle($event)"
+    (dblclick)="startEdit()">
     <div class="card-content">
       <div class="name">{{ character.name }}</div>
       @if (character.desc) { 

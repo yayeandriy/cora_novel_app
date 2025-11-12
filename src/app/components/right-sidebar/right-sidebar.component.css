@@ -12,7 +12,7 @@
 
 /* Tabs Navigation */
 .tabs-nav {
-  display: flex;
+  display: none; /* hidden per request */
   border-bottom: 1px solid #e5e7eb;
   background: #f9fafb;
   padding: 0;

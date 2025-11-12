@@ -38,6 +38,7 @@ export class EventCardComponent implements OnChanges, AfterViewInit {
   localEndDate: string | null = null;
   
   private shouldFocusOnNextRender = false;
+  private singleClickTimer: any = null;
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['editing'] && this.editing) {
@@ -66,13 +67,25 @@ export class EventCardComponent implements OnChanges, AfterViewInit {
     this.toggle.emit({ id: this.event.id, checked: !!input?.checked });
   }
 
-  onSelectToggle() {
-    // In selectable mode, clicking toggles the selection
-    const newChecked = !this.checked;
-    this.toggle.emit({ id: this.event.id, checked: newChecked });
+  onSelectToggle(ev: MouseEvent) {
+    // Defer toggle slightly to allow double-click to cancel
+    if (this.singleClickTimer) {
+      clearTimeout(this.singleClickTimer);
+      this.singleClickTimer = null;
+    }
+    this.singleClickTimer = setTimeout(() => {
+      const newChecked = !this.checked;
+      this.toggle.emit({ id: this.event.id, checked: newChecked });
+      this.singleClickTimer = null;
+    }, 200);
   }
 
   startEdit() {
+    // Cancel any pending single-click toggle
+    if (this.singleClickTimer) {
+      clearTimeout(this.singleClickTimer);
+      this.singleClickTimer = null;
+    }
     this.isEditing = true;
     this.localName = this.event?.name ?? '';
     this.localDesc = this.event?.desc ?? '';

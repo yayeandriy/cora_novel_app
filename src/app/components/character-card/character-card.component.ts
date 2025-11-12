@@ -33,6 +33,7 @@ export class CharacterCardComponent implements OnChanges, AfterViewInit {
   localName = '';
   localDesc = '';
   private shouldFocusOnNextRender = false;
+  private singleClickTimer: any = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['editing']) {
@@ -54,6 +55,11 @@ export class CharacterCardComponent implements OnChanges, AfterViewInit {
   }
 
   startEdit() {
+    // Cancel any pending single-click toggle
+    if (this.singleClickTimer) {
+      clearTimeout(this.singleClickTimer);
+      this.singleClickTimer = null;
+    }
     this.isEditing = true;
     this.localName = this.character?.name ?? '';
     this.localDesc = this.character?.desc ?? '';
@@ -84,10 +90,17 @@ export class CharacterCardComponent implements OnChanges, AfterViewInit {
     this.toggle.emit({ id: this.character.id, checked: !!input?.checked });
   }
 
-  onSelectToggle() {
-    // In selectable mode, clicking toggles the selection
-    const newChecked = !this.checked;
-    this.toggle.emit({ id: this.character.id, checked: newChecked });
+  onSelectToggle(ev: MouseEvent) {
+    // Defer toggle slightly so a possible double-click can cancel it
+    if (this.singleClickTimer) {
+      clearTimeout(this.singleClickTimer);
+      this.singleClickTimer = null;
+    }
+    this.singleClickTimer = setTimeout(() => {
+      const newChecked = !this.checked;
+      this.toggle.emit({ id: this.character.id, checked: newChecked });
+      this.singleClickTimer = null;
+    }, 200);
   }
 
   onDelete() {

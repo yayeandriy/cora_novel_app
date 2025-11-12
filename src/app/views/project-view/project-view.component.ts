@@ -2493,8 +2493,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   async onSidebarEventDelete(id: number): Promise<void> {
-    const confirmed = await confirm('Delete this event?', { title: 'Confirm Delete', kind: 'warning' });
-    if (!confirmed) return;
     try {
       await this.projectService.deleteEvent(id);
       this.events = this.events.filter(e => e.id !== id);
@@ -2547,8 +2545,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   async onSidebarCharacterDelete(id: number): Promise<void> {
-    const confirmed = await confirm('Delete this character?', { title: 'Confirm Delete', kind: 'warning' });
-    if (!confirmed) return;
     try {
       await this.projectService.deleteCharacter(id);
       this.characters = this.characters.filter(c => c.id !== id);

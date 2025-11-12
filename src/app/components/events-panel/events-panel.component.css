@@ -13,7 +13,8 @@
 .icon-button-small{display:flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;background:transparent;border:none;border-radius:.25rem;color:#6b7280;cursor:pointer;transition:all 150ms}
 .icon-button-small:hover{background:#f3f4f6;color:#111827}
 .icon-button-small svg{width:.875rem;height:.875rem}
-.section-content{margin-top:.75rem}
+.section-content{max-height:0;opacity:0;overflow:hidden;transition:max-height 220ms ease,opacity 180ms ease;margin-top:0}
+.section-content.open{max-height:1000px;opacity:1;margin-top:.75rem}
 .empty-state{padding:1.5rem 1rem;text-align:center;color:#9ca3af;font-size:.875rem;line-height:1.5}
 .h-3.5{} 
  

@@ -30,9 +30,7 @@
       }
     </button>
   </div>
-
-  @if (expanded) {
-    <div class="section-content">
+  <div class="section-content" [class.open]="expanded">
       @if (isSelectMode && !newEvent) {
         <button class="list-add-button" (click)="onAddEventClick($event)">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon">
@@ -73,6 +71,5 @@
           <p class="hint">Click + to select events</p>
         </div>
       }
-    </div>
-  }
+  </div>
 </div>
