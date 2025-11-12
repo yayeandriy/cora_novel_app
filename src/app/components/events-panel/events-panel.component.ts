@@ -2,13 +2,14 @@ import { Component, ChangeDetectionStrategy, EventEmitter, Input, Output } from 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EventCardComponent, EventVm } from '../event-card/event-card.component';
+import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
 export interface DocRef { id: number; }
 
 @Component({
   selector: 'app-events-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule, EventCardComponent],
+  imports: [CommonModule, FormsModule, EventCardComponent, DragDropModule],
   templateUrl: './events-panel.component.html',
   styleUrls: ['./events-panel.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -20,6 +21,7 @@ export class EventsPanelComponent {
   @Input() expanded: boolean = true;
   @Input() editingEventId: number | null = null;
   @Input() timelineHeaderVisible: boolean = false;
+  @Input() reorderOnly: boolean = false;
 
   @Output() expandedChange = new EventEmitter<boolean>();
   @Output() add = new EventEmitter<void>();
@@ -28,9 +30,14 @@ export class EventsPanelComponent {
   @Output() remove = new EventEmitter<number>();
   @Output() toggle = new EventEmitter<{ eventId: number; checked: boolean }>();
   @Output() timelineHeaderToggle = new EventEmitter<void>();
+  // Emits the ordered list of IDs as they appear in the visible list after a drag-drop reordering
+  @Output() reorder = new EventEmitter<number[]>();
 
   isSelectMode = false;
+  isReorderMode = false;
   newEvent: EventVm | null = null;
+  // Drag state (CDK)
+  hoverIndex: number | null = null;
 
   get visibleEvents(): EventVm[] {
     if (this.isSelectMode) {
@@ -58,6 +65,10 @@ export class EventsPanelComponent {
     
     // Toggle select mode (works for all tabs)
     this.isSelectMode = !this.isSelectMode;
+    // Selecting and reordering are mutually exclusive
+    if (this.isSelectMode) {
+      this.isReorderMode = false;
+    }
 
     // Do not auto-create an edit card on entering select mode
     if (!this.isSelectMode) {
@@ -98,5 +109,42 @@ export class EventsPanelComponent {
       start_date: null,
       end_date: null,
     };
+  }
+
+  onReorderToggle(event: MouseEvent) {
+    event.stopPropagation();
+    this.isReorderMode = !this.isReorderMode;
+    console.log('[EventsPanel] reorder toggle ->', this.isReorderMode);
+    if (this.isReorderMode) {
+      // Exit select mode and clear any in-progress creation
+      this.isSelectMode = false;
+      this.newEvent = null;
+    }
+  }
+
+  // ===== Drag & Drop (HTML5) for reordering visible list =====
+  // ===== Drag & Drop using Angular CDK =====
+  onDropCdk(event: CdkDragDrop<EventVm[]>) {
+    if (!this.isReorderMode) return;
+    const list = [...this.visibleEvents];
+    moveItemInArray(list, event.previousIndex, event.currentIndex);
+    console.log('[EventsPanel] cdk drop', { prev: event.previousIndex, curr: event.currentIndex, order: list.map(e => e.id) });
+    // Optimistically reorder local events for snappy UI
+    this.events = this.applyOrder(this.events, list.map(e => e.id));
+    // Emit new order for parent persistence
+    this.reorder.emit(list.map(e => e.id));
+  }
+
+  private applyOrder<T extends { id: number }>(items: T[], orderIds: number[]): T[] {
+    if (!orderIds || orderIds.length === 0) return [...items];
+    const idToItem = new Map(items.map(i => [i.id, i] as const));
+    const seen = new Set<number>();
+    const inOrder: T[] = [];
+    for (const id of orderIds) {
+      const item = idToItem.get(id);
+      if (item) { inOrder.push(item); seen.add(id); }
+    }
+    const remainder = items.filter(i => !seen.has(i.id));
+    return [...inOrder, ...remainder];
   }
 }

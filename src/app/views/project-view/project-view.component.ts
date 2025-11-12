@@ -185,6 +185,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private getLocalProjectDraftKey(draftId: number): string {
     return `cora-project-draft-${draftId}`;
   }
+  // Local ordering keys for characters/events (until backend sort_order exists)
+  private getCharactersOrderKey(projectId: number): string {
+    return `cora-characters-order-${projectId}`;
+  }
+  private getEventsOrderKey(projectId: number): string {
+    return `cora-events-order-${projectId}`;
+  }
 
   // Import flow state
   showImportDialog = false;
@@ -2330,7 +2337,19 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private async loadCharacters(): Promise<void> {
     try {
   const chars = await this.projectService.listCharacters(this.projectId);
-  this.characters = chars.map(c => ({ id: c.id, name: c.name, desc: c.desc ?? '' }));
+  const list = chars.map(c => ({ id: c.id, name: c.name, desc: c.desc ?? '' }));
+  // Apply any locally persisted order (temporary until backend field exists)
+  try {
+    const saved = localStorage.getItem(this.getCharactersOrderKey(this.projectId));
+    if (saved) {
+      const order: number[] = JSON.parse(saved);
+      this.characters = this.applyOrder(list, order);
+    } else {
+      this.characters = list;
+    }
+  } catch {
+    this.characters = list;
+  }
     } catch (error) {
       console.error('Failed to load characters:', error);
       this.characters = [];
@@ -2341,7 +2360,19 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     try {
       const evs = await this.projectService.listEvents(this.projectId);
       // Normalize to local interface (desc empty string default)
-      this.events = evs.map(e => ({ id: e.id, name: e.name, desc: e.desc ?? '', start_date: e.start_date ?? null, end_date: e.end_date ?? null } as any));
+      const list = evs.map(e => ({ id: e.id, name: e.name, desc: e.desc ?? '', start_date: e.start_date ?? null, end_date: e.end_date ?? null } as any));
+      // Apply any locally persisted order
+      try {
+        const saved = localStorage.getItem(this.getEventsOrderKey(this.projectId));
+        if (saved) {
+          const order: number[] = JSON.parse(saved);
+          this.events = this.applyOrder(list, order);
+        } else {
+          this.events = list;
+        }
+      } catch {
+        this.events = list;
+      }
     } catch (error) {
       console.error('Failed to load events:', error);
       this.events = [];
@@ -2676,6 +2707,38 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Failed to update doc group event relation:', error);
     }
+  }
+
+  // ===== Reordering from sidebar (temporary local persistence) =====
+  onSidebarCharactersReorder(orderIds: number[]): void {
+    this.characters = this.applyOrder(this.characters, orderIds);
+    try {
+      localStorage.setItem(this.getCharactersOrderKey(this.projectId), JSON.stringify(orderIds));
+    } catch {}
+  }
+
+  onSidebarEventsReorder(orderIds: number[]): void {
+    this.events = this.applyOrder(this.events, orderIds);
+    try {
+      localStorage.setItem(this.getEventsOrderKey(this.projectId), JSON.stringify(orderIds));
+    } catch {}
+  }
+
+  // Stable reorder helper: items present in orderIds are sorted accordingly; others keep relative order and are appended
+  private applyOrder<T extends { id: number }>(items: T[], orderIds: number[]): T[] {
+    if (!Array.isArray(orderIds) || orderIds.length === 0) return [...items];
+    const idToItem = new Map(items.map(i => [i.id, i] as const));
+    const inOrder: T[] = [];
+    const seen = new Set<number>();
+    for (const id of orderIds) {
+      const item = idToItem.get(id);
+      if (item) {
+        inOrder.push(item);
+        seen.add(id);
+      }
+    }
+    const remainder = items.filter(i => !seen.has(i.id));
+    return [...inOrder, ...remainder];
   }
 
   toggleLeftSidebar() {

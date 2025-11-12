@@ -22,6 +22,7 @@ export class CharacterCardComponent implements OnChanges, AfterViewInit {
   @Input() canToggle: boolean = true;
   @Input() editing: boolean = false;
   @Input() mode: 'view' | 'selectable' = 'view';
+  @Input() disableInteractions: boolean = false;
 
   @Output() toggle = new EventEmitter<{ id: number; checked: boolean }>();
   @Output() update = new EventEmitter<{ id: number; name: string; desc: string }>();
@@ -55,6 +56,7 @@ export class CharacterCardComponent implements OnChanges, AfterViewInit {
   }
 
   startEdit() {
+    if (this.disableInteractions) return;
     // Cancel any pending single-click toggle
     if (this.singleClickTimer) {
       clearTimeout(this.singleClickTimer);
@@ -75,10 +77,12 @@ export class CharacterCardComponent implements OnChanges, AfterViewInit {
   }
 
   cancelEdit() {
+    if (this.disableInteractions) return;
     this.isEditing = false;
   }
 
   saveEdit() {
+    if (this.disableInteractions) return;
     const name = this.localName?.trim() || 'New Character';
     const desc = this.localDesc ?? '';
     this.update.emit({ id: this.character.id, name, desc });
@@ -86,11 +90,13 @@ export class CharacterCardComponent implements OnChanges, AfterViewInit {
   }
 
   onToggleChange(ev: Event) {
+    if (this.disableInteractions) return;
     const input = ev.target as HTMLInputElement;
     this.toggle.emit({ id: this.character.id, checked: !!input?.checked });
   }
 
   onSelectToggle(ev: MouseEvent) {
+    if (this.disableInteractions) return;
     // Defer toggle slightly so a possible double-click can cancel it
     if (this.singleClickTimer) {
       clearTimeout(this.singleClickTimer);
@@ -104,6 +110,7 @@ export class CharacterCardComponent implements OnChanges, AfterViewInit {
   }
 
   onDelete() {
+    if (this.disableInteractions) return;
     this.remove.emit(this.character.id);
   }
 }

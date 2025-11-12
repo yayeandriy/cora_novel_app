@@ -267,6 +267,8 @@
       (draftsExpandedChange)="draftsExpanded = $event"
   (collapseToggle)="toggleRightSidebar()"
       (timelineHeaderToggle)="toggleTimelineHeader()"
+    (charactersReorder)="onSidebarCharactersReorder($event)"
+    (eventsReorder)="onSidebarEventsReorder($event)"
   (characterUpdate)="onSidebarCharacterUpdate($event)"
       (characterAdd)="onSidebarCharacterAdd()"
       (characterCreate)="onSidebarCharacterCreate($event)"

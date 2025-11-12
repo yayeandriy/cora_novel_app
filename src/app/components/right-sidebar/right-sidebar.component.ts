@@ -122,6 +122,9 @@ export class RightSidebarComponent {
   @Output() eventDelete = new EventEmitter<number>();
   @Output() eventToggle = new EventEmitter<{ eventId: number; checked: boolean }>();
   @Output() docGroupEventToggle = new EventEmitter<{ eventId: number; checked: boolean }>();
+  // Reorder outputs (visible-list order of IDs)
+  @Output() charactersReorder = new EventEmitter<number[]>();
+  @Output() eventsReorder = new EventEmitter<number[]>();
   
   rightWidth = 300; // internal tracker for live drag; host width comes from parent binding
   isResizing = false;

@@ -65,7 +65,8 @@
       (createCharacter)="onCharacterCreate($event)"
       (update)="onCharacterUpdate($event)"
       (remove)="onCharacterDelete($event)"
-      (toggle)="characterToggle.emit($event)">
+      (toggle)="characterToggle.emit($event)"
+      (reorder)="charactersReorder.emit($event)">
     </app-characters-panel>
 
     <!-- Events Section (separate component) -->
@@ -82,6 +83,7 @@
       (update)="eventUpdate.emit($event)"
       (remove)="eventDelete.emit($event)"
       (toggle)="eventToggle.emit($event)"
+      (reorder)="eventsReorder.emit($event)"
       (timelineHeaderToggle)="onTimelineHeaderToggle()">
     </app-events-panel>
     }
@@ -128,7 +130,8 @@
         (createCharacter)="onCharacterCreate($event)"
         (update)="onCharacterUpdate($event)"
         (remove)="onCharacterDelete($event)"
-        (toggle)="onDocGroupCharacterToggle($event.characterId, $event)">
+        (toggle)="onDocGroupCharacterToggle($event.characterId, $event)"
+        (reorder)="charactersReorder.emit($event)">
       </app-characters-panel>
 
       <!-- Events Section for Folder -->
@@ -145,6 +148,7 @@
         (update)="eventUpdate.emit($event)"
         (remove)="eventDelete.emit($event)"
         (toggle)="onDocGroupEventToggle($event.eventId, $event)"
+        (reorder)="eventsReorder.emit($event)"
         (timelineHeaderToggle)="onTimelineHeaderToggle()">
       </app-events-panel>
     }
@@ -186,7 +190,8 @@
         (expandedChange)="onCharactersToggle()"
         (add)="onCharacterAdd()"
         (update)="onCharacterUpdate($event)"
-        (remove)="onCharacterDelete($event)">
+        (remove)="onCharacterDelete($event)"
+        (reorder)="charactersReorder.emit($event)">
       </app-characters-panel>
 
       <!-- Events Section for Project -->
@@ -202,6 +207,7 @@
         (createEvent)="onEventCreate($event)"
         (update)="eventUpdate.emit($event)"
         (remove)="eventDelete.emit($event)"
+        (reorder)="eventsReorder.emit($event)"
         (timelineHeaderToggle)="onTimelineHeaderToggle()">
       </app-events-panel>
     }

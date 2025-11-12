@@ -6,6 +6,7 @@
       </svg>
       <span>Characters</span>
     </div>
+    <div class="header-actions">
     <button 
       class="add-button" 
       [class.active]="isSelectMode"
@@ -24,6 +25,14 @@
         </svg>
       }
     </button>
+    <button
+      class="reorder-button"
+      [class.active]="isReorderMode"
+      (click)="onReorderToggle($event)"
+      [title]="isReorderMode ? 'Done reordering' : 'Reorder cards'">
+      <img src="assets/icons/arrow.up.arrow.down.square.fill.svg" alt="Reorder" />
+    </button>
+    </div>
   </div>
   <div class="section-content" [class.open]="expanded">
       @if (isSelectMode && !newCharacter) {
@@ -47,18 +56,23 @@
         </app-character-card>
       }
       
-      @for (char of visibleCharacters; track char.id) {
-        <app-character-card
-          [character]="char"
-          [checked]="docCharacterIds?.has(char.id) || false"
-          [canToggle]="!!selectedDoc"
-          [editing]="editingCharacterId === char.id"
-          [mode]="isSelectMode ? 'selectable' : 'view'"
-          (toggle)="toggle.emit({ characterId: $event.id, checked: $event.checked })"
-          (update)="update.emit($event)"
-          (remove)="remove.emit($event)">
-        </app-character-card>
-      }
+      <div class="cards-list" cdkDropList [cdkDropListDisabled]="!isReorderMode" [cdkDropListData]="visibleCharacters" (cdkDropListDropped)="onDropCdk($event)">
+        @for (char of visibleCharacters; track char.id; let i = $index) {
+          <div class="drag-item" [class.reorder]="isReorderMode" [class.over]="isReorderMode && hoverIndex === i" cdkDrag [cdkDragDisabled]="!isReorderMode">
+            <app-character-card
+              [character]="char"
+              [checked]="docCharacterIds?.has(char.id) || false"
+              [canToggle]="!!selectedDoc"
+              [editing]="editingCharacterId === char.id"
+              [mode]="isSelectMode ? 'selectable' : 'view'"
+              [disableInteractions]="isReorderMode"
+              (toggle)="toggle.emit({ characterId: $event.id, checked: $event.checked })"
+              (update)="update.emit($event)"
+              (remove)="remove.emit($event)">
+            </app-character-card>
+          </div>
+        }
+      </div>
       
       @if (!isSelectMode && visibleCharacters.length === 0 && characters.length > 0) {
         <div class="empty-state">

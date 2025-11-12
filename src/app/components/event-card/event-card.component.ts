@@ -24,6 +24,7 @@ export class EventCardComponent implements OnChanges, AfterViewInit {
   @Input() canToggle: boolean = true;
   @Input() editing: boolean = false;
   @Input() mode: 'view' | 'selectable' = 'view';
+  @Input() disableInteractions: boolean = false;
 
   @Output() toggle = new EventEmitter<{ id: number; checked: boolean }>();
   @Output() update = new EventEmitter<{ id: number; name: string; desc: string; start_date: string | null; end_date: string | null }>();
@@ -63,11 +64,13 @@ export class EventCardComponent implements OnChanges, AfterViewInit {
   }
 
   onToggleChange(ev: Event) {
+    if (this.disableInteractions) return;
     const input = ev.target as HTMLInputElement;
     this.toggle.emit({ id: this.event.id, checked: !!input?.checked });
   }
 
   onSelectToggle(ev: MouseEvent) {
+    if (this.disableInteractions) return;
     // Defer toggle slightly to allow double-click to cancel
     if (this.singleClickTimer) {
       clearTimeout(this.singleClickTimer);
@@ -81,6 +84,7 @@ export class EventCardComponent implements OnChanges, AfterViewInit {
   }
 
   startEdit() {
+    if (this.disableInteractions) return;
     // Cancel any pending single-click toggle
     if (this.singleClickTimer) {
       clearTimeout(this.singleClickTimer);
@@ -103,10 +107,12 @@ export class EventCardComponent implements OnChanges, AfterViewInit {
   }
 
   cancelEdit() {
+    if (this.disableInteractions) return;
     this.isEditing = false;
   }
 
   saveEdit() {
+    if (this.disableInteractions) return;
     const name = this.localName?.trim() || 'New Event';
     const desc = this.localDesc ?? '';
     const payload = {
@@ -121,6 +127,7 @@ export class EventCardComponent implements OnChanges, AfterViewInit {
   }
 
   onDelete() {
+    if (this.disableInteractions) return;
     this.remove.emit(this.event.id);
   }
 
