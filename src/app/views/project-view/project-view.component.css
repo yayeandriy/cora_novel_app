@@ -204,8 +204,13 @@ app-doc-tree {
   flex-shrink: 0;
   background: white;
   border-bottom: none;
+  cursor: pointer;
+  padding: 6px 0;
 }
+.project-title-bar:hover {
+  background: rgb(244, 244, 244);
 
+}
 .project-title-center {
   display: flex;
   justify-content: flex-start;
@@ -225,6 +230,12 @@ margin-right: 0.75rem !important;}
   flex-shrink: 0;
   background: white;
   border-bottom: none;
+  cursor: pointer;
+  padding: 6px 0;
+}
+.folder-title-bar:hover {
+  background: rgb(244, 244, 244);
+
 }
 
 .folder-title-center {
@@ -387,8 +398,9 @@ margin-right: 0.75rem !important;}
 /* Header notes expansion area under project/folder headers */
 .header-notes {
   background: white;
-  padding: 0 1.5rem 1rem 1.5rem;
+  padding: 1rem 1.5rem;
   border-bottom: 1px solid #e5e7eb;
+
 }
 .header-notes-textarea {
   width: 100%;
