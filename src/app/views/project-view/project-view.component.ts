@@ -10,6 +10,7 @@ import { DocumentEditorComponent } from '../../components/document-editor/docume
 import { GroupViewComponent } from '../../components/group-view/group-view.component';
 import { RightSidebarComponent } from '../../components/right-sidebar/right-sidebar.component';
 import { ProjectTimelineComponent } from '../../components/project-timeline/project-timeline.component';
+import { AppFooterComponent } from '../../components/app-footer/app-footer.component';
 import type { Timeline, FolderDraft } from '../../shared/models';
 import { PersistTextareaHeightDirective } from '../../shared/persist-textarea-height.directive';
 
@@ -61,7 +62,8 @@ interface Event {
     DocumentEditorComponent,
     GroupViewComponent,
     RightSidebarComponent,
-    ProjectTimelineComponent,
+  ProjectTimelineComponent,
+  AppFooterComponent,
     PersistTextareaHeightDirective
   ],
   templateUrl: './project-view.component.html',
@@ -90,6 +92,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   leftWidth = 250;
   rightWidth = 300;
   timelineHeaderVisible = false;
+  // Editor width (moved from editor footer)
+  editorWidthPct: number = 100;
   
   // Deletion state
   isDeletingItem = false;
@@ -224,6 +228,18 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         el.select();
       }
     }, 0);
+  }
+
+  // Called when global footer width slider changes
+  onFooterEditorWidthChange(pct: number) {
+    this.editorWidthPct = pct;
+    // Propagate to editor component if present
+    if (this.documentEditorComponent) {
+      (this.documentEditorComponent as any).editorWidthPct = pct;
+      if (typeof (this.documentEditorComponent as any).onEditorWidthChange === 'function') {
+        (this.documentEditorComponent as any).onEditorWidthChange();
+      }
+    }
   }
 
   // Toggle project header expansion (show/hide project notes editor)

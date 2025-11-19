@@ -323,4 +323,15 @@
       </div>
     </div>
   }
+  <!-- Global footer component -->
+  <app-footer
+    [selectedDoc]="selectedDoc"
+    [allDocs]="getAllDocs()"
+    [editorWidthPct]="editorWidthPct"
+    (createGroup)="createGroup()"
+    (importFolders)="onImportFoldersRequested()"
+    (importFiles)="onImportFilesRequested()"
+    (exportProject)="onExportProjectRequested()"
+    (editorWidthPctChange)="onFooterEditorWidthChange($event)"
+  ></app-footer>
 </div>
