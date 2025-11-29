@@ -138,50 +138,42 @@
               (keydown)="onFolderNameKeydown($event)"
               placeholder="Folder name" />
           }
-          <div class="drafts-row">
-            @if (folderDraftsExpanded) {
-              <div class="drafts-list">
-                @for (fd of folderDrafts; track fd.id) {
-                  <div class="draft-chip" [class.active]="selectedFolderDraftId === fd.id" (click)="onFolderDraftChipClick(fd, $event)" (dblclick)="startEditFolderDraft(fd)" title="Click to select, double-click to rename">
-                    @if (editingFolderDraftId === fd.id) {
-                      <input class="draft-name-input"
-                             [(ngModel)]="folderDraftNameEdit"
-                             (blur)="saveFolderDraftName()"
-                             (keydown.enter)="saveFolderDraftName()"
-                             (keydown.escape)="cancelFolderDraftEdit()"
-                             placeholder="Draft name" />
-                      <button class="draft-delete-btn" title="Delete draft" (click)="deleteFolderDraft(fd.id); $event.stopPropagation();">🗑</button>
-                    } @else {
-                      <span class="draft-name">{{ fd.name }}</span>
-                    }
-                  </div>
-                }
-                <button class="draft-add-btn" (click)="createFolderDraft()" aria-label="Add folder draft" title="Add draft">
-                  <svg class="icon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/>
+          @if (folderHeaderExpanded) {
+            <div class="folder-header-buttons">
+              @if (focusedFolderDraftId !== null) {
+                <button class="delete-draft-btn" 
+                  (mousedown)="onDeleteDraftClick($event)"
+                  (click)="onDeleteDraftClick($event)" 
+                  title="Delete draft">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon-trash" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 7h12v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7zm3-4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1h4a1 1 0 1 1 0 2H5a1 1 0 0 1 0-2h4V3z"/>
                   </svg>
                 </button>
-              </div>
-            }
-            <button class="drafts-toggle toggle-uniform" (click)="toggleFolderDrafts()" [class.active]="folderDraftsExpanded" aria-label="Folder drafts" title="Folder drafts">
-              @if (folderDraftsCount > 0) {
-                <span class="drafts-count">{{ folderDraftsCount }}</span>
-              } @else {
-                <svg class="icon-drafts" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M7 7h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm0-2a2 2 0 0 0-2 2v1h12a2 2 0 0 1 2 2V7a2 2 0 0 0-2-2H7z"/>
-                </svg>
               }
-            </button>
-          </div>
+              <button class="create-draft-btn" (click)="createFolderDraft(); $event.stopPropagation()" title="Create new draft">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon-plus" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/>
+                </svg>
+              </button>
+            </div>
+          }
         </div>
       </div>
       @if (folderHeaderExpanded && (selectedGroup || currentGroup)) {
-        <div class="header-notes">
-          <textarea class="header-notes-textarea"
-                    [persistTextareaHeight]="'pv:notes:folder:' + projectId"
-                    [(ngModel)]="folderNotes"
-                    (input)="onDocGroupNotesChange()"
-                    placeholder="Add folder notes..."></textarea>
+        <div class="folder-expanded-content">
+          @if (folderDrafts.length > 0) {
+            @for (draft of folderDrafts; track draft.id) {
+              <textarea 
+                class="folder-draft-textarea"
+                [(ngModel)]="draft.content"
+                (ngModelChange)="onFolderDraftChange(draft.id, draft.content || '', 0)"
+                (focus)="onDraftFocus(draft.id)"
+                (blur)="onFolderDraftBlur(draft.id)"
+                [placeholder]="draft.name"></textarea>
+            }
+          } @else {
+            <div class="no-drafts-placeholder">No drafts</div>
+          }
         </div>
       }
       }
@@ -195,10 +187,10 @@
         [drafts]="drafts"
         [draftSyncStatus]="draftSyncStatus"
         [selectedDraftId]="selectedDraftId"
-    [externalMode]="selectedFolderDraftId != null || selectedProjectDraftId != null"
-    [externalDraftId]="selectedFolderDraftId ?? selectedProjectDraftId"
-  [externalDraftName]="selectedFolderDraftId ? (getSelectedFolderDraftName() ?? 'Draft') : (selectedProjectDraftId ? (getSelectedProjectDraftName() ?? 'Draft') : null)"
-    [externalDraftContent]="selectedFolderDraftId ? getFolderDraftLocalContent(selectedFolderDraftId) : (selectedProjectDraftId ? getProjectDraftLocalContent(selectedProjectDraftId) : '')"
+    [externalMode]="selectedProjectDraftId != null"
+    [externalDraftId]="selectedProjectDraftId"
+  [externalDraftName]="selectedProjectDraftId ? (getSelectedProjectDraftName() ?? 'Draft') : null"
+    [externalDraftContent]="selectedProjectDraftId ? getProjectDraftLocalContent(selectedProjectDraftId) : ''"
         [docIndexLabel]="getDocIndexLabel()"
         (docNameChange)="renameDoc($event)"
         (docTextChange)="onDocumentTextChange()"
@@ -216,10 +208,6 @@
       @if (selectedGroup && !selectedDoc) {
       <app-group-view 
         [selectedGroup]="selectedGroup"
-        [selectedFolderDraftId]="selectedFolderDraftId"
-        [selectedFolderDraftContent]="selectedFolderDraftId ? getFolderDraftLocalContent(selectedFolderDraftId) : ''"
-        (folderDraftChanged)="onFolderDraftChange($event.draftId, $event.content, $event.cursorPosition)"
-        (folderDraftBlurred)="onFolderDraftBlur($event)"
         (groupNameChange)="renameGroup($event)"
         (createDocRequested)="createDoc()"
         (focusTreeRequested)="focusTree()"

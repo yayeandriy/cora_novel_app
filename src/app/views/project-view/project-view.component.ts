@@ -140,7 +140,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private folderDraftAutoSaveTimeouts: Map<number, any> = new Map();
   private folderDraftSyncedClearTimeouts: Map<number, any> = new Map();
   folderDraftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
-  private focusedFolderDraftId: number | null = null;
+  focusedFolderDraftId: number | null = null;
   // Project drafts UI state
   projectDraftsExpanded = false;
   projectDrafts: import('../../shared/models').ProjectDraft[] = [];
@@ -252,13 +252,50 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   onFolderHeaderClick(event: MouseEvent) {
     if (this.isInteractiveHeaderClick(event)) return;
     this.folderHeaderExpanded = !this.folderHeaderExpanded;
+    
+    // Load drafts when expanding the header
+    if (this.folderHeaderExpanded) {
+      const group = this.selectedGroup || this.currentGroup;
+      if (group) {
+        this.loadFolderDrafts(group.id);
+      }
+    }
+  }
+
+  onDraftFocus(draftId: number) {
+    console.log('Draft focused, id:', draftId);
+    this.focusedFolderDraftId = draftId;
+    console.log('focusedFolderDraftId set to:', this.focusedFolderDraftId);
+    console.log('Delete button should now be visible. Checking...');
+    this.changeDetector.detectChanges();
+    setTimeout(() => {
+      const deleteBtn = document.querySelector('.delete-draft-btn');
+      console.log('Delete button exists in DOM:', !!deleteBtn);
+      if (deleteBtn) {
+        console.log('Delete button is:', deleteBtn);
+      }
+    }, 100);
+  }
+
+  onDeleteDraftClick(event: MouseEvent) {
+    console.log('Delete button clicked!');
+    console.log('focusedFolderDraftId:', this.focusedFolderDraftId);
+    event.stopPropagation();
+    event.preventDefault();
+    
+    if (this.focusedFolderDraftId !== null) {
+      console.log('Calling deleteFolderDraft with id:', this.focusedFolderDraftId);
+      this.deleteFolderDraft(this.focusedFolderDraftId);
+    } else {
+      console.log('No focused draft to delete!');
+    }
   }
 
   // Guard: avoid toggling when clicking inputs/buttons/controls inside header rows
   private isInteractiveHeaderClick(event: MouseEvent): boolean {
     const el = event.target as HTMLElement | null;
     if (!el) return false;
-    const interactiveSelector = 'input, textarea, button, .drafts-row, .draft-add-btn, .drafts-toggle, .draft-delete-btn, .draft-name-input, .project-name-input, .folder-name-input, a, [role="button"]';
+    const interactiveSelector = 'input, textarea, button, .drafts-row, .draft-add-btn, .drafts-toggle, .draft-delete-btn, .delete-draft-btn, .create-draft-btn, .draft-name-input, .project-name-input, .folder-name-input, a, [role="button"]';
     return !!el.closest(interactiveSelector);
   }
 
@@ -1871,12 +1908,43 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   async deleteFolderDraft(id: number) {
+    console.log('deleteFolderDraft called with id:', id);
     try {
       await this.projectService.deleteFolderDraft(id);
-      this.folderDrafts = this.folderDrafts.filter(d => d.id !== id);
+      console.log('Draft deleted from backend, updating UI...');
+      
+      // Remove from local storage
+      try {
+        localStorage.removeItem(this.getLocalFolderDraftKey(id));
+      } catch {}
+      
+      // Filter out the deleted draft - create new array reference for change detection
+      const filteredDrafts = this.folderDrafts.filter(d => d.id !== id);
+      this.folderDrafts = [...filteredDrafts];
+      
       if (this.selectedFolderDraftId === id) {
         this.selectedFolderDraftId = null;
       }
+      if (this.focusedFolderDraftId === id) {
+        this.focusedFolderDraftId = null;
+      }
+      
+      // Clear any pending timeouts
+      const timeout = this.folderDraftAutoSaveTimeouts.get(id);
+      if (timeout) {
+        clearTimeout(timeout);
+        this.folderDraftAutoSaveTimeouts.delete(id);
+      }
+      const clearTimeout2 = this.folderDraftSyncedClearTimeouts.get(id);
+      if (clearTimeout2) {
+        clearTimeout(clearTimeout2);
+        this.folderDraftSyncedClearTimeouts.delete(id);
+      }
+      
+      // Clean up local content
+      this.folderDraftLocalContent.delete(id);
+      delete this.folderDraftSyncStatus[id];
+      
       this.folderDraftsCount = this.folderDrafts.length;
       const group = this.selectedGroup || this.currentGroup;
       if (group) {
@@ -1886,6 +1954,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
           this.groupsWithDrafts.delete(group.id);
         }
       }
+      
+      console.log('Draft deleted successfully, drafts remaining:', this.folderDrafts.length);
+      this.changeDetector.markForCheck();
     } catch (e) {
       console.error('Failed to delete folder draft:', e);
       alert('Failed to delete folder draft: ' + e);
