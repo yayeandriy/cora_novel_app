@@ -287,12 +287,6 @@ margin-right: 0.75rem !important;}
   color: #111827;
 }
 
-/* Hide drafts toggler buttons in the main editor for Project and Folder headers */
-.project-title-bar .drafts-toggle,
-.folder-title-bar .drafts-toggle {
-  display: none !important;
-}
-
 .icon-drafts {
   width: 1rem;
   height: 1rem;
