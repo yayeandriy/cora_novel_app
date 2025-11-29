@@ -28,31 +28,6 @@
   <div class="sidebar-content">
     <!-- DOC TAB CONTENT -->
     @if (activeTab === 'doc') {
-      <!-- Notes Section (first) -->
-      <div class="sidebar-section">
-        <div class="section-header" (click)="onNotesToggle()">
-          <div class="section-title">
-            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="notesExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-            <span>Notes</span>
-          </div>
-        </div>
-        
-        @if (notesExpanded) {
-          <div class="section-content">
-            @if (selectedDoc) {
-              <textarea 
-                class="notes-textarea"
-                [persistTextareaHeight]="'rs:notes:doc:' + selectedDoc.project_id"
-                [(ngModel)]="selectedDoc.notes"
-                (input)="onDocNotesChange()"
-                placeholder="Add notes..."></textarea>
-            }
-          </div>
-        }
-      </div>
-
       <!-- Characters Section (separate component) -->
       <app-characters-panel
       [characters]="characters"
