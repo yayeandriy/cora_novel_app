@@ -57,7 +57,7 @@
     <!-- Editor -->
     <main class="editor-area">
       <!-- Project title moved to the middle section on top of the doc header -->
-      <div class="project-title-bar" (click)="onProjectHeaderClick($event)">
+      <div class="project-title-bar">
         <div class="project-title-center">
           @if (!editingProjectName) {
             <div class="project-name">
@@ -72,53 +72,8 @@
               (keydown)="onProjectNameKeydown($event)"
               placeholder="Project name" />
           }
-          <div class="drafts-row">
-            @if (projectDraftsExpanded) {
-              <div class="drafts-list">
-                @for (pd of projectDrafts; track pd.id) {
-                  <div class="draft-chip" [class.active]="selectedProjectDraftId === pd.id" (click)="onProjectDraftChipClick(pd, $event)" (dblclick)="startEditProjectDraft(pd)" title="Click to select, double-click to rename">
-                    @if (editingProjectDraftId === pd.id) {
-                      <input class="draft-name-input"
-                             [(ngModel)]="projectDraftNameEdit"
-                             (blur)="saveProjectDraftName()"
-                             (keydown.enter)="saveProjectDraftName()"
-                             (keydown.escape)="cancelProjectDraftEdit()"
-                             placeholder="Draft name" />
-                      <button class="draft-delete-btn" title="Delete draft" (click)="deleteProjectDraft(pd.id); $event.stopPropagation();">🗑</button>
-                    } @else {
-                      <span class="draft-name">{{ pd.name }}</span>
-                    }
-                  </div>
-                }
-                <button class="draft-add-btn" (click)="createProjectDraft()" aria-label="Add project draft" title="Add draft">
-                  <svg class="icon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/>
-                  </svg>
-                </button>
-              </div>
-            }
-            <button class="drafts-toggle toggle-uniform" (click)="toggleProjectDrafts()" [class.active]="projectDraftsExpanded" aria-label="Project drafts" title="Project drafts">
-              @if (projectDraftsCount > 0) {
-                <span class="drafts-count">{{ projectDraftsCount }}</span>
-              } @else {
-                <svg class="icon-drafts" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M7 7h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm0-2a2 2 0 0 0-2 2v1h12a2 2 0 0 1 2 2V7a2 2 0 0 0-2-2H7z"/>
-                </svg>
-              }
-            </button>
-          </div>
         </div>
       </div>
-
-      @if (projectHeaderExpanded && projectData) {
-        <div class="header-notes">
-          <textarea class="header-notes-textarea"
-                    [persistTextareaHeight]="'pv:notes:project:' + projectId"
-                    [(ngModel)]="projectData.notes"
-                    (input)="onProjectNotesChange()"
-                    placeholder="Add project notes..."></textarea>
-        </div>
-      }
 
       <!-- Folder name row (under project name) -->
       @if (selectedGroup || currentGroup) {
