@@ -1,21 +1,5 @@
 <footer class="app-footer">
   <div class="footer-left">
-    <button class="icon-button-small" [class.active]="!leftCollapsed" title="Toggle tree (⌘1)" (click)="toggleLeft.emit()">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h6" />
-      </svg>
-    </button>
-    <button class="icon-button-small" [class.active]="!rightCollapsed" title="Toggle sidebar (⌘2)" (click)="toggleRight.emit()">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M10 12h10M14 18h6" />
-      </svg>
-    </button>
-    <button class="icon-button-small" [class.active]="isFullWidth" title="Full width (⌘.)" (click)="toggleAll.emit()">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" />
-      </svg>
-    </button>
-    <span class="footer-divider"></span>
     <button class="icon-button-small" title="New folder" (click)="createGroup.emit()">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
@@ -61,5 +45,22 @@
         <span class="stat-project">{{ editorWidthPct }}%</span>
       </span>
     </div>
+  </div>
+  <div class="footer-toggles">
+    <button class="icon-button-small" [class.active]="!leftCollapsed" title="Toggle tree (⌘1)" (click)="toggleLeft.emit()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h6" />
+      </svg>
+    </button>
+    <button class="icon-button-small" [class.active]="isFullWidth" title="Full width (⌘2)" (click)="toggleAll.emit()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" />
+      </svg>
+    </button>
+    <button class="icon-button-small" [class.active]="!rightCollapsed" title="Toggle sidebar (⌘3)" (click)="toggleRight.emit()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M10 12h10M14 18h6" />
+      </svg>
+    </button>
   </div>
 </footer>

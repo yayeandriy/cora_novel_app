@@ -1028,14 +1028,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Cmd+. to toggle both sidebars
-    if ((event.key === '.' || event.code === 'Period') && event.metaKey) {
-      event.preventDefault();
-      this.toggleLeftSidebar();
-      this.toggleRightSidebar();
-      return;
-    }
-
     // Cmd+1 to toggle left sidebar (tree)
     if ((event.key === '1' || event.code === 'Digit1') && event.metaKey) {
       event.preventDefault();
@@ -1043,8 +1035,15 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Cmd+2 to toggle right sidebar
+    // Cmd+2 to toggle both sidebars (full width)
     if ((event.key === '2' || event.code === 'Digit2') && event.metaKey) {
+      event.preventDefault();
+      this.toggleBothSidebars();
+      return;
+    }
+
+    // Cmd+3 to toggle right sidebar
+    if ((event.key === '3' || event.code === 'Digit3') && event.metaKey) {
       event.preventDefault();
       this.toggleRightSidebar();
       return;

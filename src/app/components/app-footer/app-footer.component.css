@@ -16,6 +16,7 @@
 }
 .footer-left { display: flex; align-items: center; gap: 0.25rem; }
 .footer-right { display: flex; align-items: center; }
+.footer-toggles { display: flex; align-items: center; gap: 0.25rem; }
 .icon-button-small { display: flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; background: transparent; border: none; border-radius: 0.25rem; color: #6b7280; cursor: pointer; transition: all 150ms; }
 .icon-button-small:hover { background: #f3f4f6; color: #111827; }
 .icon-button-small.active { background: #e5e7eb; color: #111827; }
