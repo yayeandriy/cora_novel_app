@@ -77,7 +77,7 @@
 
       <!-- Folder name row (under project name) -->
       @if (selectedGroup || currentGroup) {
-      <div class="folder-title-bar" (click)="onFolderHeaderClick($event)">
+      <div class="folder-title-bar" (click)="selectedDoc ? onFolderHeaderClick($event) : null">
         <div class="folder-title-center">
           @if (getFolderIndexLabel()) { <span class="header-index" style="margin-right: 1rem;">{{ getFolderIndexLabel() }}.</span> }
           @if (!editingFolderName) {
@@ -95,7 +95,7 @@
           }
         </div>
       </div>
-      @if (folderHeaderExpanded && (selectedGroup || currentGroup)) {
+      @if (folderHeaderExpanded && (selectedGroup || currentGroup) && selectedDoc) {
         <app-folder-drafts
           [drafts]="folderDrafts"
           (draftCreate)="createFolderDraft()"
