@@ -53,8 +53,8 @@
 /* Inline list add button styled to match list items spacing */
 .list-add-button{display:flex;align-items:center;gap:.5rem;width:100%;padding:.625rem .75rem;margin-bottom:.5rem;background:#f9fafb;border:1px dashed #d1d5db;border-radius:.375rem;color:#374151;cursor:pointer;transition:background-color 150ms,border-color 150ms}
 .list-add-button:hover{background:#f3f4f6;border-color:#9ca3af}
-.cards-list { display: block; }
-.drag-item{ display:flex; align-items: stretch; gap:.5rem; }
+.cards-list { display: block; width: 100%; }
+.drag-item{ display:flex; align-items: stretch; gap:.5rem; width: 100%; }
 .drag-item:active { cursor: grabbing; }
 .drag-handle{ display:flex; align-items:center; justify-content:center; width:1.25rem; height:100%; color:#9ca3af; cursor:grab; background:transparent; border:none; padding:0; }
 .drag-handle:hover{ color:#6b7280; }

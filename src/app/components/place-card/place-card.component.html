@@ -2,10 +2,12 @@
 @if (!isEditing && mode === 'view') {
   <div class="place-card view-mode" (dblclick)="startEdit()">
     <div class="card-content">
-      <div class="name">{{ place.name }}</div>
-      @if (place.desc) { 
-        <div class="desc">{{ place.desc }}</div> 
-      }
+      <div>
+        <div class="name">{{ place.name }}</div>
+        @if (place.desc) { 
+          <div class="desc">{{ place.desc }}</div> 
+        }
+      </div>
     </div>
   </div>
 }

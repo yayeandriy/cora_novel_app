@@ -5,7 +5,8 @@
   margin-bottom: 0.5rem;
   background: #fff;
   transition: all 150ms;
-  display: block; /* block in base to allow edit mode vertical layout */
+  display: block;
+  flex: 1;
 }
 
 .event-card.view-mode {

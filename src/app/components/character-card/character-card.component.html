@@ -2,10 +2,12 @@
 @if (!isEditing && mode === 'view') {
   <div class="character-card view-mode" (dblclick)="startEdit()">
     <div class="card-content">
-      <div class="name">{{ character.name }}</div>
-      @if (character.desc) { 
-        <div class="desc">{{ character.desc }}</div> 
-      }
+      <div>
+        <div class="name">{{ character.name }}</div>
+        @if (character.desc) { 
+          <div class="desc">{{ character.desc }}</div> 
+        }
+      </div>
     </div>
   </div>
 }
