@@ -262,10 +262,15 @@
     [selectedDoc]="selectedDoc"
     [allDocs]="getAllDocs()"
     [editorWidthPct]="editorWidthPct"
+    [leftCollapsed]="leftCollapsed"
+    [rightCollapsed]="rightCollapsed"
     (createGroup)="createGroup()"
     (importFolders)="onImportFoldersRequested()"
     (importFiles)="onImportFilesRequested()"
     (exportProject)="onExportProjectRequested()"
     (editorWidthPctChange)="onFooterEditorWidthChange($event)"
+    (toggleLeft)="toggleLeftSidebar()"
+    (toggleRight)="toggleRightSidebar()"
+    (toggleAll)="toggleBothSidebars()"
   ></app-footer>
 </div>

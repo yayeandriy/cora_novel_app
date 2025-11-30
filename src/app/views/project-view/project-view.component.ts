@@ -3047,6 +3047,18 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.saveLayoutState();
   }
 
+  toggleBothSidebars() {
+    // If both are collapsed, expand both; otherwise collapse both
+    if (this.leftCollapsed && this.rightCollapsed) {
+      this.leftCollapsed = false;
+      this.rightCollapsed = false;
+    } else {
+      this.leftCollapsed = true;
+      this.rightCollapsed = true;
+    }
+    this.saveLayoutState();
+  }
+
   toggleTimelineHeader() {
     this.timelineHeaderVisible = !this.timelineHeaderVisible;
     this.saveLayoutState();

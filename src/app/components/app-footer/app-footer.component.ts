@@ -21,6 +21,8 @@ export class AppFooterComponent {
   @Input() selectedDoc: Doc | null = null;
   @Input() allDocs: Doc[] = [];
   @Input() editorWidthPct: number = 100;
+  @Input() leftCollapsed: boolean = false;
+  @Input() rightCollapsed: boolean = false;
 
   // Action outputs (migrated from doc tree & editor footers)
   @Output() createGroup = new EventEmitter<void>();
@@ -28,6 +30,13 @@ export class AppFooterComponent {
   @Output() importFiles = new EventEmitter<void>();
   @Output() exportProject = new EventEmitter<void>();
   @Output() editorWidthPctChange = new EventEmitter<number>();
+  @Output() toggleLeft = new EventEmitter<void>();
+  @Output() toggleRight = new EventEmitter<void>();
+  @Output() toggleAll = new EventEmitter<void>();
+
+  get isFullWidth(): boolean {
+    return this.leftCollapsed && this.rightCollapsed;
+  }
 
   // === Stats (mirroring previous editor footer logic) ===
   private clampWidth(pct: number): number { return Math.max(20, Math.min(100, pct | 0)); }
