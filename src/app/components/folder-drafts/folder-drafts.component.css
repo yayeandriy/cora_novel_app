@@ -89,20 +89,73 @@ color: #374151;
   overflow-y: hidden;
 }
 
-.folder-draft-textarea {
+/* Draft card - container for header + textarea */
+.draft-card {
   flex: 0 0 auto;
   min-width: 240px;
   max-width: 400px;
   width: 320px;
   height: 100%;
-  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
+  background: white;
+  overflow: hidden;
+}
+
+.draft-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.draft-name {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draft-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  background: transparent;
+  color: #9ca3af;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: color 150ms, background 150ms;
+  flex-shrink: 0;
+}
+
+.draft-delete-btn:hover {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.draft-delete-btn .icon-trash {
+  width: 1rem;
+  height: 1rem;
+}
+
+.folder-draft-textarea {
+  flex: 1;
+  width: 100%;
+  padding: 0.75rem;
+  border: none;
   font-size: 0.875rem;
   font-family: "PT Mono", "Courier New", Courier, monospace;
   resize: none;
   outline: none;
-  transition: border-color 150ms;
   box-sizing: border-box;
 }
 

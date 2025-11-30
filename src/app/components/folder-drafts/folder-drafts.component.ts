@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ViewChild, ElementRef, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -17,15 +17,36 @@ export interface FolderDraft {
   styleUrls: ['./folder-drafts.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class FolderDraftsComponent {
+export class FolderDraftsComponent implements OnChanges {
+  @ViewChild('scrollContainer') scrollContainer?: ElementRef<HTMLDivElement>;
+
   @Input() drafts: FolderDraft[] = [];
-  @Input() focusedDraftId: number | null = null;
 
   @Output() draftCreate = new EventEmitter<void>();
   @Output() draftChange = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();
-  @Output() draftFocus = new EventEmitter<number>();
-  @Output() draftBlur = new EventEmitter<number>();
-  @Output() draftDelete = new EventEmitter<MouseEvent>();
+  @Output() draftDelete = new EventEmitter<number>();
+
+  private previousDraftsLength = 0;
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['drafts']) {
+      if (this.drafts.length > this.previousDraftsLength) {
+        // New draft added - scroll to the end and focus the new textarea
+        setTimeout(() => {
+          const el = this.scrollContainer?.nativeElement;
+          if (el) {
+            el.scrollTo({ left: el.scrollWidth, behavior: 'smooth' });
+            // Focus the last textarea (newest draft)
+            const textareas = el.querySelectorAll<HTMLTextAreaElement>('.folder-draft-textarea');
+            if (textareas.length > 0) {
+              textareas[textareas.length - 1].focus();
+            }
+          }
+        }, 50);
+      }
+    }
+    this.previousDraftsLength = this.drafts.length;
+  }
 
   createDraft(event: MouseEvent) {
     event.stopPropagation();
@@ -36,16 +57,9 @@ export class FolderDraftsComponent {
     this.draftChange.emit({ draftId, content, cursorPosition });
   }
 
-  onDraftFocus(draftId: number) {
-    this.draftFocus.emit(draftId);
-  }
-
-  onDraftBlur(draftId: number) {
-    this.draftBlur.emit(draftId);
-  }
-
-  onDeleteClick(event: MouseEvent) {
-    this.draftDelete.emit(event);
+  onDeleteDraft(draftId: number, event: MouseEvent) {
+    event.stopPropagation();
+    this.draftDelete.emit(draftId);
   }
 
   trackByDraftId(index: number, draft: FolderDraft) {

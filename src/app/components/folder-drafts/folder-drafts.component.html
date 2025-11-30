@@ -6,29 +6,25 @@
         <path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/>
       </svg>
     </button>
-    @if (focusedDraftId !== null) {
-      <button class="delete-draft-btn" 
-        (mousedown)="onDeleteClick($event)"
-        (click)="onDeleteClick($event)" 
-        title="Delete draft">
-        <svg xmlns="http://www.w3.org/2000/svg" class="icon-trash" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M6 7h12v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7zm3-4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1h4a1 1 0 1 1 0 2H5a1 1 0 0 1 0-2h4V3z"/>
-        </svg>
-      </button>
-    }
-    
-    
   </div>
-  <div class="folder-expanded-content">
+  <div class="folder-expanded-content" #scrollContainer>
     @if (drafts.length > 0) {
       @for (draft of drafts.slice().reverse(); track draft.id) {
-        <textarea 
-          class="folder-draft-textarea"
-          [(ngModel)]="draft.content"
-          (ngModelChange)="onDraftChange(draft.id, draft.content || '', 0)"
-          (focus)="onDraftFocus(draft.id)"
-          (blur)="onDraftBlur(draft.id)"
-          [placeholder]="draft.name"></textarea>
+        <div class="draft-card">
+          <div class="draft-card-header">
+            <span class="draft-name">{{ draft.name }}</span>
+            <button class="draft-delete-btn" (click)="onDeleteDraft(draft.id, $event)" title="Delete draft">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon-trash" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 7h12v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7zm3-4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1h4a1 1 0 1 1 0 2H5a1 1 0 0 1 0-2h4V3z"/>
+              </svg>
+            </button>
+          </div>
+          <textarea 
+            class="folder-draft-textarea"
+            [(ngModel)]="draft.content"
+            (ngModelChange)="onDraftChange(draft.id, draft.content || '', 0)"
+            [placeholder]="'Write your notes...'"></textarea>
+        </div>
       }
     } @else {
       <div class="no-drafts-placeholder">No drafts</div>
