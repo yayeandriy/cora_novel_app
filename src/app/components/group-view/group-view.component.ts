@@ -33,6 +33,7 @@ export class GroupViewComponent implements OnInit {
   @Output() notesChanged = new EventEmitter<void>();
   @Output() folderDraftCreate = new EventEmitter<void>();
   @Output() folderDraftChange = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();
+  @Output() folderDraftNameChange = new EventEmitter<{ draftId: number; name: string }>();
   @Output() folderDraftDelete = new EventEmitter<number>();
   
   @ViewChild('groupNameInput') groupNameInput?: ElementRef<HTMLInputElement>;
@@ -84,6 +85,10 @@ export class GroupViewComponent implements OnInit {
 
   onFolderDraftChange(draftId: number, content: string, cursorPosition: number) {
     this.folderDraftChange.emit({ draftId, content, cursorPosition });
+  }
+
+  onFolderDraftNameChange(draftId: number, name: string) {
+    this.folderDraftNameChange.emit({ draftId, name });
   }
 
   deleteFolderDraft(draftId: number) {

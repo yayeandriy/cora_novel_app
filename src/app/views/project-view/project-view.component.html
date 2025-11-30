@@ -100,6 +100,7 @@
           [drafts]="folderDrafts"
           (draftCreate)="createFolderDraft()"
           (draftChange)="onFolderDraftChange($event.draftId, $event.content, $event.cursorPosition)"
+          (draftNameChange)="onFolderDraftNameChange($event.draftId, $event.name)"
           (draftDelete)="deleteFolderDraft($event)">
         </app-folder-drafts>
       }
@@ -142,6 +143,7 @@
         (notesChanged)="onDocGroupNotesChange()"
         (folderDraftCreate)="createFolderDraft()"
         (folderDraftChange)="onFolderDraftChange($event.draftId, $event.content, $event.cursorPosition)"
+        (folderDraftNameChange)="onFolderDraftNameChange($event.draftId, $event.name)"
         (folderDraftDelete)="deleteFolderDraft($event)">
       </app-group-view>
       }

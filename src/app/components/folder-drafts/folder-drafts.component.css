@@ -136,13 +136,31 @@ color: #374151;
   flex-shrink: 0;
 }
 
-.draft-name {
+.draft-name-input {
+  flex: 1;
+  min-width: 0;
   font-size: 0.75rem;
   font-weight: 500;
   color: #374151;
+  border: 1px solid transparent;
+  background: transparent;
+  outline: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  transition: all 150ms;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.draft-name-input:hover {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+.draft-name-input:focus {
+  background: #ffffff;
+  border-color: #d1d5db;
 }
 
 .draft-delete-btn {

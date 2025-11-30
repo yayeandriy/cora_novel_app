@@ -2366,6 +2366,19 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  async onFolderDraftNameChange(draftId: number, name: string): Promise<void> {
+    try {
+      await this.projectService.updateFolderDraft(draftId, { name });
+      // Update local draft data
+      const draft = this.folderDrafts.find(d => d.id === draftId);
+      if (draft) {
+        draft.name = name;
+      }
+    } catch (e) {
+      console.error('Failed to update folder draft name:', e);
+    }
+  }
+
   private async syncFolderDraftToBackend(draftId: number, cursorPosition?: number): Promise<void> {
     const content = this.folderDraftLocalContent.get(draftId);
     if (content === undefined) return;

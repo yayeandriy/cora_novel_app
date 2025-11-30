@@ -1,6 +1,8 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ViewChild, ElementRef, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ViewChild, ElementRef, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 export interface FolderDraft {
   id: number;
@@ -17,7 +19,7 @@ export interface FolderDraft {
   styleUrls: ['./folder-drafts.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class FolderDraftsComponent implements OnChanges {
+export class FolderDraftsComponent implements OnChanges, OnDestroy {
   @ViewChild('scrollContainer') scrollContainer?: ElementRef<HTMLDivElement>;
 
   @Input() drafts: FolderDraft[] = [];
@@ -25,9 +27,15 @@ export class FolderDraftsComponent implements OnChanges {
 
   @Output() draftCreate = new EventEmitter<void>();
   @Output() draftChange = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();
+  @Output() draftNameChange = new EventEmitter<{ draftId: number; name: string }>();
   @Output() draftDelete = new EventEmitter<number>();
 
   private previousDraftsLength = 0;
+  private nameChangeSubject = new Subject<{ draftId: number; name: string }>();
+  private nameChangeSubscription = this.nameChangeSubject.pipe(
+    debounceTime(500),
+    distinctUntilChanged((prev, curr) => prev.draftId === curr.draftId && prev.name === curr.name)
+  ).subscribe(change => this.draftNameChange.emit(change));
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['drafts']) {
@@ -63,7 +71,21 @@ export class FolderDraftsComponent implements OnChanges {
     this.draftDelete.emit(draftId);
   }
 
+  onNameInput(draftId: number, event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.nameChangeSubject.next({ draftId, name: input.value });
+  }
+
+  onNameEnter(event: Event) {
+    const input = event.target as HTMLInputElement;
+    input.blur();
+  }
+
   trackByDraftId(index: number, draft: FolderDraft) {
     return draft.id;
+  }
+
+  ngOnDestroy() {
+    this.nameChangeSubscription.unsubscribe();
   }
 }
