@@ -1,6 +1,5 @@
 .sidebar-section{
     /* border-bottom:1px solid #e5e7eb; */
-    padding:0 0.5rem;
     /* margin-bottom:1rem */
 
 }
@@ -9,7 +8,7 @@
     align-items:center;
     justify-content:space-between;
     cursor:pointer;
-    padding: 0.5rem;
+    padding: 0.5rem 0.5rem;
     transition:background-color 150ms;
     /* border-radius:.375rem; */
     user-select:none;
@@ -36,6 +35,7 @@
 .icon-button-small:hover{background:#f3f4f6;color:#111827}
 .icon-button-small svg{width:.875rem;height:.875rem}
 .section-content{
+    padding: 0 0.5rem;
     max-height:0;opacity:0;
     overflow:hidden;transition:max-height 220ms ease,opacity 180ms ease;margin-top:0}
 .section-content.open{max-height:1000px;opacity:1;}
