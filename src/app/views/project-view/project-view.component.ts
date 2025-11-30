@@ -1036,6 +1036,20 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Cmd+1 to toggle left sidebar (tree)
+    if ((event.key === '1' || event.code === 'Digit1') && event.metaKey) {
+      event.preventDefault();
+      this.toggleLeftSidebar();
+      return;
+    }
+
+    // Cmd+2 to toggle right sidebar
+    if ((event.key === '2' || event.code === 'Digit2') && event.metaKey) {
+      event.preventDefault();
+      this.toggleRightSidebar();
+      return;
+    }
+
     // Cmd+Shift+N to create new folder (check both key and code for layout support)
     if ((event.key === 'N' || event.key === 'n' || event.code === 'KeyN') && event.metaKey && event.shiftKey) {
       event.preventDefault();

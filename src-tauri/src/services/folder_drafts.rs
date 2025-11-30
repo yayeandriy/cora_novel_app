@@ -26,7 +26,7 @@ pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<FolderDraft>> {
 
 pub fn list(pool: &DbPool, doc_group_id: i64) -> anyhow::Result<Vec<FolderDraft>> {
     let conn = pool.get()?;
-    let mut stmt = conn.prepare("SELECT id, doc_group_id, name, content, created_at, updated_at FROM folder_drafts WHERE doc_group_id = ?1 ORDER BY updated_at DESC")?;
+    let mut stmt = conn.prepare("SELECT id, doc_group_id, name, content, created_at, updated_at FROM folder_drafts WHERE doc_group_id = ?1 ORDER BY id")?;
     let rows = stmt.query_map(rusqlite::params![doc_group_id], |row| {
         Ok(FolderDraft { id: row.get(0)?, doc_group_id: row.get(1)?, name: row.get(2)?, content: row.get(3)?, created_at: row.get(4)?, updated_at: row.get(5)? })
     })?;
