@@ -159,7 +159,7 @@
     </main>
 
     <!-- Right Sidebar -->
-  @if (!rightCollapsed) {
+  @if (!rightCollapsed && selectedDoc) {
   <app-right-sidebar
       [selectedDoc]="selectedDoc"
       [selectedDocGroup]="selectedGroup || currentGroup"
