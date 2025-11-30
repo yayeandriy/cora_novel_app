@@ -1911,7 +1911,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       return;
     }
     try {
-      const draftName = `Draft ${new Date().toLocaleTimeString()}`;
+      const now = new Date();
+      const draftName = `Note ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
       await this.projectService.createFolderDraft(group.id, draftName, '');
       await this.loadFolderDrafts(group.id);
       this.folderDraftsCount = this.folderDrafts.length;
