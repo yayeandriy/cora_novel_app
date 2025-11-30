@@ -1,44 +1,7 @@
 @if (selectedGroup) {
 <div class="editor-container">
-  <div class="editor-toolbar">
-    <input 
-      #groupNameInput
-      type="text" 
-      class="doc-title-input" 
-      [(ngModel)]="selectedGroup.name"
-      (blur)="onNameChange(selectedGroup!)"
-      (keydown.enter)="onNameEnter($event)"
-      placeholder="Folder name">
-    <div class="toolbar-actions">
-      <button class="toolbar-button" (click)="onCreateDoc()">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-        </svg>
-        <span>New Document</span>
-      </button>
-    </div>
-  </div>
+  
 
-  <!-- Folder Notes Section -->
-  <div class="notes-section">
-    <div class="notes-header" (click)="toggleNotes()">
-      <div class="notes-title">
-        <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="notesExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
-        <span>Folder Notes</span>
-      </div>
-    </div>
-    @if (notesExpanded) {
-      <div class="notes-content">
-        <textarea 
-          class="notes-textarea" 
-          [(ngModel)]="selectedGroup.notes"
-          (input)="onNotesChange()"
-          placeholder="Add folder notes..."></textarea>
-      </div>
-    }
-  </div>
   
   <div class="group-content">
     <p class="group-empty-message">Folder drafts can be edited in the header above. Documents can be created using the "New Document" button.</p>
