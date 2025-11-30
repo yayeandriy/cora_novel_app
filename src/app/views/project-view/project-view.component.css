@@ -253,9 +253,12 @@ margin-right: 0.75rem !important;}
 
 .folder-header-buttons {
   display: flex;
+  width: 100%;
   align-items: center;
   gap: 0.5rem;
   margin-left: auto;
+  flex-direction: row-reverse;
+  padding-right: 1rem;
 }
 
 .create-draft-btn {
@@ -666,4 +669,8 @@ app-right-sidebar {
 .text-xs{} 
  
 .text-gray-500{} 
+ 
+.folder-drafts-editors-row{} 
+ 
+.folder-content-container{} 
  
