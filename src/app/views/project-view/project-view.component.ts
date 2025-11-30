@@ -11,6 +11,7 @@ import { GroupViewComponent } from '../../components/group-view/group-view.compo
 import { RightSidebarComponent } from '../../components/right-sidebar/right-sidebar.component';
 import { ProjectTimelineComponent } from '../../components/project-timeline/project-timeline.component';
 import { AppFooterComponent } from '../../components/app-footer/app-footer.component';
+import { FolderDraftsComponent } from '../../components/folder-drafts/folder-drafts.component';
 import type { Timeline, FolderDraft } from '../../shared/models';
 import { PersistTextareaHeightDirective } from '../../shared/persist-textarea-height.directive';
 
@@ -62,8 +63,9 @@ interface Event {
     DocumentEditorComponent,
     GroupViewComponent,
     RightSidebarComponent,
-  ProjectTimelineComponent,
-  AppFooterComponent,
+    ProjectTimelineComponent,
+    AppFooterComponent,
+    FolderDraftsComponent,
     PersistTextareaHeightDirective
   ],
   templateUrl: './project-view.component.html',
