@@ -1,0 +1,69 @@
+.sidebar-section{
+    /* border-bottom:1px solid #e5e7eb; */
+    padding:0 0.5rem;
+    /* margin-bottom:1rem */
+
+}
+.section-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    cursor:pointer;padding:.5rem ;
+    transition:background-color 150ms;
+
+    /* border-radius:.375rem; */
+    user-select:none}
+/* .section-header:hover{background:#f3f4f6} */
+.section-title{
+    display:flex;
+    align-items:center;
+    gap:.375rem;font-size:.65rem;
+    font-weight: bolder;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight:400;color:#374151}
+.toggle-icon{width:.875rem;height:.875rem;color:#4b5563;transition:transform 150ms;flex-shrink:0}
+.toggle-icon.expanded{transform:rotate(90deg)}
+.add-button{display:flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;background:transparent;border:none;border-radius:.25rem;color:#6b7280;cursor:pointer;transition:all 150ms}
+.add-button:hover{background:#f3f4f6;color:#111827}
+.add-button.active{background:#2563eb;color:#ffffff}
+.add-button.active:hover{background:#1d4ed8}
+.add-button svg{width:.875rem;height:.875rem;transition:transform 150ms}
+.add-button.active svg{transform:none}
+.section-content{
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    width: 100%;
+    max-height:0;opacity:0;overflow:hidden;transition:max-height 220ms ease,opacity 180ms ease;margin-top:0}
+.section-content.open{max-height:1000px;opacity:1;}
+.empty-state{padding:1.5rem 1rem;text-align:center;color:#9ca3af;font-size:.875rem;line-height:1.5}
+.h-3.5{} 
+ 
+.w-3.5{} 
+ 
+.hint{} 
+ 
+.h-3.5{} 
+ 
+.w-3.5{} 
+ 
+/* Inline list add button styled to match list items spacing */
+.list-add-button{display:flex;align-items:center;gap:.5rem;width:100%;padding:.625rem .75rem;margin-bottom:.5rem;background:#f9fafb;border:1px dashed #d1d5db;border-radius:.375rem;color:#374151;cursor:pointer;transition:background-color 150ms,border-color 150ms}
+.list-add-button:hover{background:#f3f4f6;border-color:#9ca3af}
+.cards-list { display: flex;
+flex-direction: column;
+gap: 0.5rem; }
+.drag-item{ display:flex; align-items: stretch; gap:.5rem; }
+.drag-item:active { cursor: grabbing; }
+.drag-handle{ display:flex; align-items:center; justify-content:center; width:1.25rem; height:100%; color:#9ca3af; cursor:grab; background:transparent; border:none; padding:0; }
+.drag-handle:hover{ color:#6b7280; }
+.drag-handle svg{ width:.875rem; height:.875rem; }
+
+/* CDK helpers */
+.cdk-drag-preview{box-sizing:border-box;border-radius:.375rem;box-shadow:0 5px 10px rgba(0,0,0,.2)}
+.cdk-drag-placeholder{opacity:0}
+.list-add-button .icon{width:.875rem;height:.875rem;color:#6b7280}
+
+/* Header action group */
+.header-actions{display:flex;align-items:center;gap:.25rem}

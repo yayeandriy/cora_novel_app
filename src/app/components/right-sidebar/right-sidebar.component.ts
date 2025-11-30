@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CharactersPanelComponent } from '../characters-panel/characters-panel.component';
 import { EventsPanelComponent } from '../events-panel/events-panel.component';
+import { PlacesPanelComponent } from '../places-panel/places-panel.component';
 import { PersistTextareaHeightDirective } from '../../shared/persist-textarea-height.directive';
 
 export interface Character {
@@ -17,6 +18,12 @@ export interface Event {
   desc: string;
   start_date?: string | null;
   end_date?: string | null;
+}
+
+export interface Place {
+  id: number;
+  name: string;
+  desc: string;
 }
 
 export interface Draft {
@@ -62,7 +69,7 @@ type TabType = 'doc' | 'folder' | 'project';
 @Component({
   selector: 'app-right-sidebar',
   standalone: true,
-  imports: [CommonModule, FormsModule, CharactersPanelComponent, EventsPanelComponent, PersistTextareaHeightDirective],
+  imports: [CommonModule, FormsModule, CharactersPanelComponent, EventsPanelComponent, PlacesPanelComponent, PersistTextareaHeightDirective],
   templateUrl: './right-sidebar.component.html',
   styleUrls: ['./right-sidebar.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -73,6 +80,7 @@ export class RightSidebarComponent {
   @Input() project: Project | null = null;
   @Input() characters: Character[] = [];
   @Input() events: Event[] = [];
+  @Input() places: any[] = [];
   @Input() drafts: Draft[] = [];
   @Input() draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
   @Input() docCharacterIds: Set<number> | null = null;
@@ -81,17 +89,22 @@ export class RightSidebarComponent {
   @Input() docEventIds: Set<number> | null = null;
   @Input() docGroupEventIds: Set<number> | null = null;
   @Input() editingEventId: number | null = null;
+  @Input() docPlaceIds: Set<number> | null = null;
+  @Input() docGroupPlaceIds: Set<number> | null = null;
+  @Input() editingPlaceId: number | null = null;
   
   activeTab: TabType = 'doc';
   
   @Input() charactersExpanded: boolean = true;
   @Input() eventsExpanded: boolean = true;
+  @Input() placesExpanded: boolean = true;
   @Input() notesExpanded: boolean = true;
   @Input() draftsExpanded: boolean = true;
   @Input() timelineHeaderVisible: boolean = false;
   
   @Output() charactersExpandedChange = new EventEmitter<boolean>();
   @Output() eventsExpandedChange = new EventEmitter<boolean>();
+  @Output() placesExpandedChange = new EventEmitter<boolean>();
   @Output() notesExpandedChange = new EventEmitter<boolean>();
   @Output() draftsExpandedChange = new EventEmitter<boolean>();
   
@@ -122,9 +135,17 @@ export class RightSidebarComponent {
   @Output() eventDelete = new EventEmitter<number>();
   @Output() eventToggle = new EventEmitter<{ eventId: number; checked: boolean }>();
   @Output() docGroupEventToggle = new EventEmitter<{ eventId: number; checked: boolean }>();
+  // Place outputs
+  @Output() placeAdd = new EventEmitter<void>();
+  @Output() placeCreate = new EventEmitter<{ name: string; desc: string }>();
+  @Output() placeUpdate = new EventEmitter<{ id: number; name: string; desc: string }>();
+  @Output() placeDelete = new EventEmitter<number>();
+  @Output() placeToggle = new EventEmitter<{ placeId: number; checked: boolean }>();
+  @Output() docGroupPlaceToggle = new EventEmitter<{ placeId: number; checked: boolean }>();
   // Reorder outputs (visible-list order of IDs)
   @Output() charactersReorder = new EventEmitter<number[]>();
   @Output() eventsReorder = new EventEmitter<number[]>();
+  @Output() placesReorder = new EventEmitter<number[]>();
   
   rightWidth = 300; // internal tracker for live drag; host width comes from parent binding
   isResizing = false;
@@ -259,6 +280,39 @@ export class RightSidebarComponent {
     const input = event?.target as HTMLInputElement;
     const checked = !!input?.checked;
     this.docGroupEventToggle.emit({ eventId: id, checked });
+  }
+
+  // ===== Places UI handlers =====
+  onPlacesToggle() {
+    this.placesExpandedChange.emit(!this.placesExpanded);
+  }
+
+  onPlaceAdd() {
+    this.placeAdd.emit();
+  }
+
+  onPlaceCreate(data: { name: string; desc: string }) {
+    this.placeCreate.emit(data);
+  }
+
+  onPlaceUpdate(payload: { id: number; name: string; desc: string }) {
+    this.placeUpdate.emit(payload);
+  }
+
+  onPlaceDelete(id: number) {
+    this.placeDelete.emit(id);
+  }
+
+  onPlaceToggle(id: number, event: any) {
+    const input = event?.target as HTMLInputElement;
+    const checked = !!input?.checked;
+    this.placeToggle.emit({ placeId: id, checked });
+  }
+
+  onDocGroupPlaceToggle(id: number, event: any) {
+    const input = event?.target as HTMLInputElement;
+    const checked = !!input?.checked;
+    this.docGroupPlaceToggle.emit({ placeId: id, checked });
   }
 
   onTimelineHeaderToggle() {

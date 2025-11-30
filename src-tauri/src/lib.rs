@@ -5,6 +5,7 @@ mod services {
     pub mod docs;
     pub mod characters;
     pub mod events;
+    pub mod places;
     pub mod doc_groups;
     pub mod drafts;
     pub mod project_drafts;
@@ -81,6 +82,17 @@ pub fn run() {
             commands::doc_group_events_from_docs,
             commands::doc_group_event_attach,
             commands::doc_group_event_detach,
+            commands::place_create,
+            commands::place_list,
+            commands::place_update,
+            commands::place_delete,
+            commands::doc_place_list,
+            commands::doc_place_attach,
+            commands::doc_place_detach,
+            commands::doc_group_place_list,
+            commands::doc_group_places_from_docs,
+            commands::doc_group_place_attach,
+            commands::doc_group_place_detach,
             commands::draft_create,
             commands::draft_get,
             commands::draft_list,

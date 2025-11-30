@@ -61,6 +61,22 @@
       (reorder)="eventsReorder.emit($event)"
       (timelineHeaderToggle)="onTimelineHeaderToggle()">
     </app-events-panel>
+
+    <!-- Places Section (separate component) -->
+    <app-places-panel
+      [places]="places"
+      [docPlaceIds]="docPlaceIds"
+      [selectedDoc]="selectedDoc"
+      [expanded]="placesExpanded"
+      [editingPlaceId]="editingPlaceId"
+      (expandedChange)="onPlacesToggle()"
+      (add)="onPlaceAdd()"
+      (createPlace)="onPlaceCreate($event)"
+      (update)="onPlaceUpdate($event)"
+      (remove)="onPlaceDelete($event)"
+      (toggle)="placeToggle.emit($event)"
+      (reorder)="placesReorder.emit($event)">
+    </app-places-panel>
     }
 
     <!-- FOLDER TAB CONTENT -->
@@ -126,6 +142,22 @@
         (reorder)="eventsReorder.emit($event)"
         (timelineHeaderToggle)="onTimelineHeaderToggle()">
       </app-events-panel>
+
+      <!-- Places Section for Folder -->
+      <app-places-panel
+        [places]="places"
+        [docPlaceIds]="docGroupPlaceIds"
+        [selectedDoc]="null"
+        [expanded]="placesExpanded"
+        [editingPlaceId]="editingPlaceId"
+        (expandedChange)="onPlacesToggle()"
+        (add)="onPlaceAdd()"
+        (createPlace)="onPlaceCreate($event)"
+        (update)="onPlaceUpdate($event)"
+        (remove)="onPlaceDelete($event)"
+        (toggle)="onDocGroupPlaceToggle($event.placeId, $event)"
+        (reorder)="placesReorder.emit($event)">
+      </app-places-panel>
     }
 
     <!-- PROJECT TAB CONTENT -->
@@ -185,6 +217,21 @@
         (reorder)="eventsReorder.emit($event)"
         (timelineHeaderToggle)="onTimelineHeaderToggle()">
       </app-events-panel>
+
+      <!-- Places Section for Project -->
+      <app-places-panel
+        [places]="places"
+        [docPlaceIds]="null"
+        [selectedDoc]="null"
+        [expanded]="placesExpanded"
+        [editingPlaceId]="editingPlaceId"
+        (expandedChange)="onPlacesToggle()"
+        (add)="onPlaceAdd()"
+        (createPlace)="onPlaceCreate($event)"
+        (update)="onPlaceUpdate($event)"
+        (remove)="onPlaceDelete($event)"
+        (reorder)="placesReorder.emit($event)">
+      </app-places-panel>
     }
   </div>
 </aside>

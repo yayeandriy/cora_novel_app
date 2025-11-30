@@ -63,6 +63,14 @@ pub struct Event {
     pub end_date: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Place {
+    pub id: i64,
+    pub project_id: i64,
+    pub name: String,
+    pub desc: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Draft {
     pub id: i64,

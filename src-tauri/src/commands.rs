@@ -1,7 +1,7 @@
 use crate::db::DbPool;
 use crate::models::{
     ProjectCreate, Project,
-    Character, Event,
+    Character, Event, Place,
     DraftCreate, DraftUpdate, Draft,
     ProjectDraft, ProjectDraftCreate, ProjectDraftUpdate,
     FolderDraft, FolderDraftCreate, FolderDraftUpdate,
@@ -309,6 +309,74 @@ pub async fn doc_group_event_detach(state: State<'_, AppState>, doc_group_id: i6
     crate::services::events::detach_from_doc_group(pool, doc_group_id, event_id).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub async fn place_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>) -> Result<Place, String> {
+    let pool = &state.pool;
+    crate::services::places::create(pool, project_id, &name, desc).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn place_list(state: State<'_, AppState>, project_id: i64) -> Result<Vec<Place>, String> {
+    let pool = &state.pool;
+    crate::services::places::list(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn place_update(state: State<'_, AppState>, id: i64, changes: Option<serde_json::Value>) -> Result<Place, String> {
+    let pool = &state.pool;
+    let name = changes.as_ref().and_then(|c| c.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()));
+    let desc = changes.as_ref().and_then(|c| c.get("desc").and_then(|v| v.as_str()).map(|s| s.to_string()));
+    crate::services::places::update(pool, id, name, desc).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn place_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::places::delete_(pool, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_place_list(state: State<'_, AppState>, doc_id: i64) -> Result<Vec<i64>, String> {
+    let pool = &state.pool;
+    crate::services::places::list_for_doc(pool, doc_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_place_attach(state: State<'_, AppState>, doc_id: i64, place_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::places::attach_to_doc(pool, doc_id, place_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_place_detach(state: State<'_, AppState>, doc_id: i64, place_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::places::detach_from_doc(pool, doc_id, place_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_group_place_list(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<i64>, String> {
+    let pool = &state.pool;
+    crate::services::places::list_for_doc_group(pool, doc_group_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_group_places_from_docs(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<i64>, String> {
+    let pool = &state.pool;
+    crate::services::places::list_from_docs_in_group(pool, doc_group_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_group_place_attach(state: State<'_, AppState>, doc_group_id: i64, place_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::places::attach_to_doc_group(pool, doc_group_id, place_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn doc_group_place_detach(state: State<'_, AppState>, doc_group_id: i64, place_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::places::detach_from_doc_group(pool, doc_group_id, place_id).map_err(|e| e.to_string())
+}
+
 // Draft Commands
 #[tauri::command]
 pub async fn draft_create(state: State<'_, AppState>, doc_id: i64, payload: DraftCreate) -> Result<Draft, String> {
@@ -549,8 +617,12 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
             docs: Vec<crate::models::Doc>,
             characters: Vec<crate::models::Character>,
             events: Vec<crate::models::Event>,
+            #[serde(default)]
+            places: Vec<crate::models::Place>,
             doc_characters: std::collections::HashMap<i64, Vec<i64>>,
             doc_events: std::collections::HashMap<i64, Vec<i64>>,
+            #[serde(default)]
+            doc_places: std::collections::HashMap<i64, Vec<i64>>,
             project_timeline: Option<crate::models::Timeline>,
             doc_timelines: std::collections::HashMap<i64, Option<crate::models::Timeline>>,
             #[serde(default)]
@@ -641,6 +713,12 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
             let created = crate::services::events::create(pool, new_project.id, &e.name, e.desc.clone(), e.start_date.clone(), e.end_date.clone(), e.date.clone()).map_err(|e| e.to_string())?;
             event_id_map.insert(e.id, created.id);
         }
+        // Places
+        let mut place_id_map: HashMap<i64, i64> = HashMap::new();
+        for p in &parsed.places {
+            let created = crate::services::places::create(pool, new_project.id, &p.name, p.desc.clone()).map_err(|e| e.to_string())?;
+            place_id_map.insert(p.id, created.id);
+        }
 
         // Attachments
         for (old_doc_id, old_chars) in parsed.doc_characters.iter() {
@@ -657,6 +735,15 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
                 for old_ev in old_events {
                     if let Some(&new_ev_id) = event_id_map.get(old_ev) {
                         crate::services::events::attach_to_doc(pool, new_doc_id, new_ev_id).map_err(|e| e.to_string())?;
+                    }
+                }
+            }
+        }
+        for (old_doc_id, old_places) in parsed.doc_places.iter() {
+            if let Some(&new_doc_id) = doc_id_map.get(old_doc_id) {
+                for old_pl in old_places {
+                    if let Some(&new_pl_id) = place_id_map.get(old_pl) {
+                        crate::services::places::attach_to_doc(pool, new_doc_id, new_pl_id).map_err(|e| e.to_string())?;
                     }
                 }
             }
@@ -841,14 +928,18 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
     // Build metadata
     let characters = crate::services::characters::list(pool, project_id).map_err(|e| e.to_string())?;
     let events = crate::services::events::list(pool, project_id).map_err(|e| e.to_string())?;
+    let places = crate::services::places::list(pool, project_id).map_err(|e| e.to_string())?;
     // doc -> character ids
     let mut doc_characters: HashMap<i64, Vec<i64>> = HashMap::new();
     let mut doc_events: HashMap<i64, Vec<i64>> = HashMap::new();
+    let mut doc_places: HashMap<i64, Vec<i64>> = HashMap::new();
     for d in &docs {
         let ch = crate::services::characters::list_for_doc(pool, d.id).map_err(|e| e.to_string())?;
         doc_characters.insert(d.id, ch);
         let ev = crate::services::events::list_for_doc(pool, d.id).map_err(|e| e.to_string())?;
         doc_events.insert(d.id, ev);
+        let pl = crate::services::places::list_for_doc(pool, d.id).map_err(|e| e.to_string())?;
+        doc_places.insert(d.id, pl);
     }
     let project_timeline = crate::services::timelines::get_by_entity(pool, "project", project_id).map_err(|e| e.to_string())?;
     let mut doc_timelines: HashMap<i64, Option<crate::models::Timeline>> = HashMap::new();
@@ -875,8 +966,10 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
         "docs": docs,
         "characters": characters,
         "events": events,
+        "places": places,
         "doc_characters": doc_characters,
         "doc_events": doc_events,
+        "doc_places": doc_places,
         "project_timeline": project_timeline,
         "doc_timelines": doc_timelines,
         "drafts_by_doc": drafts_by_doc,

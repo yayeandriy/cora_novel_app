@@ -111,6 +111,17 @@ pub fn init_pool() -> anyhow::Result<DbPool> {
         conn.execute_batch(include_str!("../migrations/011_add_doc_group_events.sql")).context("running migrations 011")?;
     }
 
+    // Conditionally run 012: create places, doc_places, and doc_group_places tables
+    let table_exists: bool = conn.query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='places'",
+        [],
+        |row| row.get(0)
+    ).unwrap_or(0) > 0;
+    
+    if !table_exists {
+        conn.execute_batch(include_str!("../migrations/012_add_places.sql")).context("running migrations 012")?;
+    }
+
     Ok(pool)
 }
 

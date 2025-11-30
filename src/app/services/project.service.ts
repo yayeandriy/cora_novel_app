@@ -2,7 +2,7 @@ import { Injectable } from "@angular/core";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   Project, ProjectCreate,
-  Doc, Character, Event,
+  Doc, Character, Event, Place,
   Draft, DraftCreate,
   ProjectDraft, ProjectDraftCreate, ProjectDraftUpdate,
   FolderDraft, FolderDraftCreate, FolderDraftUpdate
@@ -199,6 +199,52 @@ export class ProjectService {
 
   async detachEventFromDocGroup(docGroupId: number, eventId: number): Promise<void> {
     return invoke<void>("doc_group_event_detach", { docGroupId, eventId });
+  }
+
+  // Places
+  async createPlace(projectId: number, name: string, desc?: string | null): Promise<Place> {
+    const payload = { projectId, name, desc: desc ?? null };
+    return invoke<Place>("place_create", payload);
+  }
+
+  async listPlaces(projectId: number): Promise<Place[]> {
+    return invoke<Place[]>("place_list", { projectId });
+  }
+
+  async updatePlace(id: number, changes: Partial<{ name: string; desc: string }>): Promise<Place> {
+    return invoke<Place>("place_update", { id, changes });
+  }
+
+  async deletePlace(id: number): Promise<void> {
+    return invoke<void>("place_delete", { id });
+  }
+
+  async listDocPlaces(docId: number): Promise<number[]> {
+    return invoke<number[]>("doc_place_list", { docId });
+  }
+
+  async attachPlaceToDoc(docId: number, placeId: number): Promise<void> {
+    return invoke<void>("doc_place_attach", { docId, placeId });
+  }
+
+  async detachPlaceFromDoc(docId: number, placeId: number): Promise<void> {
+    return invoke<void>("doc_place_detach", { docId, placeId });
+  }
+
+  async listDocGroupPlaces(docGroupId: number): Promise<number[]> {
+    return invoke<number[]>("doc_group_place_list", { docGroupId });
+  }
+
+  async listDocGroupPlacesFromDocs(docGroupId: number): Promise<number[]> {
+    return invoke<number[]>("doc_group_places_from_docs", { docGroupId });
+  }
+
+  async attachPlaceToDocGroup(docGroupId: number, placeId: number): Promise<void> {
+    return invoke<void>("doc_group_place_attach", { docGroupId, placeId });
+  }
+
+  async detachPlaceFromDocGroup(docGroupId: number, placeId: number): Promise<void> {
+    return invoke<void>("doc_group_place_detach", { docGroupId, placeId });
   }
 
   // Drafts

@@ -30,6 +30,13 @@ export interface Event {
   date?: string | null;
 }
 
+export interface Place {
+  id: number;
+  project_id: number;
+  name: string;
+  desc?: string | null;
+}
+
 export interface Doc {
   id: number;
   project_id: number;

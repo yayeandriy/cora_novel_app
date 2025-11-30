@@ -1,0 +1,55 @@
+<!-- VIEW STATE -->
+@if (!isEditing && mode === 'view') {
+  <div class="place-card view-mode" (dblclick)="startEdit()">
+    <div class="card-content">
+      <div class="name">{{ place.name }}</div>
+      @if (place.desc) { 
+        <div class="desc">{{ place.desc }}</div> 
+      }
+    </div>
+  </div>
+}
+
+<!-- SELECTABLE STATE -->
+@if (!isEditing && mode === 'selectable') {
+  <div 
+    class="place-card selectable-mode" 
+    [class.selected]="checked"
+    (click)="onSelectToggle($event)"
+    (dblclick)="startEdit()">
+    <div class="card-content">
+      <div class="name">{{ place.name }}</div>
+      @if (place.desc) { 
+        <div class="desc">{{ place.desc }}</div> 
+      }
+    </div>
+  </div>
+}
+
+<!-- EDIT STATE -->
+@if (isEditing) {
+  <div class="place-card edit-mode">
+    <div class="edit-header">
+      <input 
+        class="name-input" 
+        [(ngModel)]="localName" 
+        placeholder="Place name"
+        (keydown.enter)="saveEdit()"
+        (keydown.escape)="cancelEdit()" />
+    </div>
+    
+    <textarea 
+      class="desc-input" 
+      [(ngModel)]="localDesc" 
+      placeholder="Description..."
+      rows="3"></textarea>
+    
+    <div class="edit-actions">
+      <button class="btn btn-delete" (click)="onDelete()">Delete</button>
+      <div class="action-group">
+        <button class="btn btn-cancel" (click)="cancelEdit()">Cancel</button>
+        <button class="btn btn-save" (click)="saveEdit()">Save</button>
+      </div>
+    </div>
+  </div>
+}

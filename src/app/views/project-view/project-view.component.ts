@@ -122,12 +122,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Right sidebar
   charactersExpanded = true;
   eventsExpanded = true;
+  placesExpanded = true;
   notesExpanded = true;
   draftsExpanded = true;
   
   projectData: import('../../shared/models').Project | null = null;
   characters: Character[] = [];
   events: Event[] = [];
+  places: any[] = [];
   drafts: any[] = [];
   // Folder drafts UI state
   folderDraftsExpanded = false;
@@ -164,6 +166,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   docEventIds: Set<number> = new Set();
   docGroupEventIds: Set<number> = new Set();
   editingEventId: number | null = null;
+  // Places per-doc and per-doc-group selection and editing
+  docPlaceIds: Set<number> = new Set();
+  docGroupPlaceIds: Set<number> = new Set();
+  editingPlaceId: number | null = null;
   
   // Draft local caching and syncing
   private draftLocalContent: Map<number, string> = new Map();
@@ -195,6 +201,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
   private getEventsOrderKey(projectId: number): string {
     return `cora-events-order-${projectId}`;
+  }
+  private getPlacesOrderKey(projectId: number): string {
+    return `cora-places-order-${projectId}`;
   }
 
   // Import flow state
@@ -584,8 +593,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Populate draft markers in the background
   this.populateInitialDraftMarkers(groups, docs).catch(err => console.warn('populateInitialDraftMarkers failed', err));
 
-  // Load characters and events
-  await Promise.all([this.loadCharacters(), this.loadEvents()]);
+  // Load characters, events, and places
+  await Promise.all([this.loadCharacters(), this.loadEvents(), this.loadPlaces()]);
 
       // Restore draft tool expansion states from localStorage
       try {
@@ -764,11 +773,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   await this.loadDocCharacters(this.selectedDoc.id);
   // Load events attached to this doc
   await this.loadDocEvents(this.selectedDoc.id);
+  // Load places attached to this doc
+  await this.loadDocPlaces(this.selectedDoc.id);
   
-  // Load parent folder characters and events for Folder tab
+  // Load parent folder characters, events, and places for Folder tab
   if (this.currentGroup) {
     await this.loadDocGroupCharacters(this.currentGroup.id);
     await this.loadDocGroupEvents(this.currentGroup.id);
+    await this.loadDocGroupPlaces(this.currentGroup.id);
     // If folder drafts panel is collapsed, ensure counts are available for toggler
     if (!this.folderDraftsExpanded) {
       this.refreshFolderDraftsCount(this.currentGroup.id);
@@ -2466,6 +2478,28 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  private async loadPlaces(): Promise<void> {
+    try {
+      const pls = await this.projectService.listPlaces(this.projectId);
+      const list = pls.map(p => ({ id: p.id, name: p.name, desc: p.desc ?? '' }));
+      // Apply any locally persisted order
+      try {
+        const saved = localStorage.getItem(this.getPlacesOrderKey(this.projectId));
+        if (saved) {
+          const order: number[] = JSON.parse(saved);
+          this.places = this.applyOrder(list, order);
+        } else {
+          this.places = list;
+        }
+      } catch {
+        this.places = list;
+      }
+    } catch (error) {
+      console.error('Failed to load places:', error);
+      this.places = [];
+    }
+  }
+
   private async loadDocCharacters(docId: number): Promise<void> {
     try {
       const ids = await this.projectService.listDocCharacters(docId);
@@ -2505,6 +2539,27 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Failed to load doc group events:', error);
       this.docGroupEventIds = new Set();
+    }
+  }
+
+  private async loadDocPlaces(docId: number): Promise<void> {
+    try {
+      const ids = await this.projectService.listDocPlaces(docId);
+      this.docPlaceIds = new Set(ids);
+    } catch (error) {
+      console.error('Failed to load doc places:', error);
+      this.docPlaceIds = new Set();
+    }
+  }
+
+  private async loadDocGroupPlaces(docGroupId: number): Promise<void> {
+    try {
+      // Load places mirrored from all docs within this folder
+      const ids = await this.projectService.listDocGroupPlacesFromDocs(docGroupId);
+      this.docGroupPlaceIds = new Set(ids);
+    } catch (error) {
+      console.error('Failed to load doc group places:', error);
+      this.docGroupPlaceIds = new Set();
     }
   }
 
@@ -2796,6 +2851,123 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ===== Places sidebar handlers =====
+  async onSidebarPlaceAdd(): Promise<void> {
+    try {
+      this.placesExpanded = true;
+      const created = await this.projectService.createPlace(this.projectId, 'New Place', '');
+      this.places = [...this.places, { id: created.id, name: created.name, desc: created.desc ?? '' }];
+      this.editingPlaceId = created.id;
+    } catch (error) {
+      console.error('Failed to create place:', error);
+      alert('Failed to create place: ' + error);
+    }
+  }
+
+  async onSidebarPlaceCreate(data: { name: string; desc: string }): Promise<void> {
+    try {
+      this.placesExpanded = true;
+      const created = await this.projectService.createPlace(this.projectId, data.name, data.desc);
+      this.places = [...this.places, { id: created.id, name: created.name, desc: created.desc ?? '' }];
+      
+      if (this.selectedDoc) {
+        await this.projectService.attachPlaceToDoc(this.selectedDoc.id, created.id);
+        this.docPlaceIds = new Set([...this.docPlaceIds, created.id]);
+        
+        if (this.currentGroup) {
+          await this.loadDocGroupPlaces(this.currentGroup.id);
+        }
+      } else if (this.selectedGroup) {
+        await this.projectService.attachPlaceToDocGroup(this.selectedGroup.id, created.id);
+        this.docGroupPlaceIds = new Set([...this.docGroupPlaceIds, created.id]);
+      }
+    } catch (error) {
+      console.error('Failed to create place:', error);
+      alert('Failed to create place: ' + error);
+    }
+  }
+
+  async onSidebarPlaceUpdate(payload: { id: number; name: string; desc: string }): Promise<void> {
+    try {
+      await this.projectService.updatePlace(payload.id, { name: payload.name, desc: payload.desc });
+      const idx = this.places.findIndex(p => p.id === payload.id);
+      if (idx !== -1) {
+        this.places[idx] = { ...this.places[idx], name: payload.name, desc: payload.desc };
+        this.places = [...this.places];
+      }
+      if (this.editingPlaceId === payload.id) {
+        this.editingPlaceId = null;
+      }
+    } catch (error) {
+      console.error('Failed to update place:', error);
+    }
+  }
+
+  async onSidebarPlaceDelete(id: number): Promise<void> {
+    try {
+      await this.projectService.deletePlace(id);
+      this.places = this.places.filter(p => p.id !== id);
+      
+      const wasInDocPlaces = this.docPlaceIds.has(id);
+      const wasInGroupPlaces = this.docGroupPlaceIds.has(id);
+      
+      if (wasInDocPlaces) {
+        this.docPlaceIds.delete(id);
+        this.docPlaceIds = new Set(this.docPlaceIds);
+      }
+      
+      if (wasInGroupPlaces) {
+        this.docGroupPlaceIds.delete(id);
+        this.docGroupPlaceIds = new Set(this.docGroupPlaceIds);
+      }
+      
+      if (this.currentGroup && (wasInDocPlaces || wasInGroupPlaces)) {
+        await this.loadDocGroupPlaces(this.currentGroup.id);
+      }
+    } catch (error) {
+      console.error('Failed to delete place:', error);
+      alert('Failed to delete place: ' + error);
+    }
+  }
+
+  async onSidebarPlaceToggle(payload: { placeId: number; checked: boolean }): Promise<void> {
+    if (!this.selectedDoc) return;
+    const { placeId, checked } = payload;
+    try {
+      if (checked) {
+        await this.projectService.attachPlaceToDoc(this.selectedDoc.id, placeId);
+        this.docPlaceIds.add(placeId);
+      } else {
+        await this.projectService.detachPlaceFromDoc(this.selectedDoc.id, placeId);
+        this.docPlaceIds.delete(placeId);
+      }
+      this.docPlaceIds = new Set(this.docPlaceIds);
+      
+      if (this.currentGroup) {
+        await this.loadDocGroupPlaces(this.currentGroup.id);
+      }
+    } catch (error) {
+      console.error('Failed to update doc place relation:', error);
+    }
+  }
+
+  async onSidebarDocGroupPlaceToggle(payload: { placeId: number; checked: boolean }): Promise<void> {
+    if (!this.selectedGroup) return;
+    const { placeId, checked } = payload;
+    try {
+      if (checked) {
+        await this.projectService.attachPlaceToDocGroup(this.selectedGroup.id, placeId);
+        this.docGroupPlaceIds.add(placeId);
+      } else {
+        await this.projectService.detachPlaceFromDocGroup(this.selectedGroup.id, placeId);
+        this.docGroupPlaceIds.delete(placeId);
+      }
+      this.docGroupPlaceIds = new Set(this.docGroupPlaceIds);
+    } catch (error) {
+      console.error('Failed to update doc group place relation:', error);
+    }
+  }
+
   // ===== Reordering from sidebar (temporary local persistence) =====
   onSidebarCharactersReorder(orderIds: number[]): void {
     this.characters = this.applyOrder(this.characters, orderIds);
@@ -2808,6 +2980,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.events = this.applyOrder(this.events, orderIds);
     try {
       localStorage.setItem(this.getEventsOrderKey(this.projectId), JSON.stringify(orderIds));
+    } catch {}
+  }
+
+  onSidebarPlacesReorder(orderIds: number[]): void {
+    this.places = this.applyOrder(this.places, orderIds);
+    try {
+      localStorage.setItem(this.getPlacesOrderKey(this.projectId), JSON.stringify(orderIds));
     } catch {}
   }
 
