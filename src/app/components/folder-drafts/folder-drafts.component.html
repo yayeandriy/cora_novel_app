@@ -1,4 +1,4 @@
-<div class="folder-content-container">
+<div class="folder-content-container" [class.layout-grid]="layout === 'grid'">
   <div class="folder-header-buttons">
     <div class="section-title">Notes</div>
     <button class="create-draft-btn" (click)="createDraft($event)" title="Create new draft">
@@ -7,7 +7,7 @@
       </svg>
     </button>
   </div>
-  <div class="folder-expanded-content" #scrollContainer>
+  <div class="folder-expanded-content" #scrollContainer [class.grid-content]="layout === 'grid'">
     @if (drafts.length > 0) {
       @for (draft of drafts.slice().reverse(); track draft.id) {
         <div class="draft-card">

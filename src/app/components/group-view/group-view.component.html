@@ -4,7 +4,13 @@
 
   
   <div class="group-content">
-    <p class="group-empty-message">Folder drafts can be edited in the header above. Documents can be created using the "New Document" button.</p>
+     <app-folder-drafts
+          [drafts]="folderDrafts"
+          [layout]="'grid'"
+          (draftCreate)="createFolderDraft()"
+          (draftChange)="onFolderDraftChange($event.draftId, $event.content, $event.cursorPosition)"
+          (draftDelete)="deleteFolderDraft($event)">
+        </app-folder-drafts>
   </div>
 </div>
 }

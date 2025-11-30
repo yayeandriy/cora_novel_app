@@ -21,6 +21,7 @@ export class FolderDraftsComponent implements OnChanges {
   @ViewChild('scrollContainer') scrollContainer?: ElementRef<HTMLDivElement>;
 
   @Input() drafts: FolderDraft[] = [];
+  @Input() layout: 'horizontal' | 'grid' = 'horizontal';
 
   @Output() draftCreate = new EventEmitter<void>();
   @Output() draftChange = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();

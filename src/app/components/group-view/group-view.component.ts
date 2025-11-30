@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { FolderDraftsComponent, FolderDraft } from '../folder-drafts/folder-drafts.component';
 
 export interface DocGroup {
   id: number;
@@ -17,18 +18,22 @@ export interface DocGroup {
 @Component({
   selector: 'app-group-view',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, FolderDraftsComponent],
   templateUrl: './group-view.component.html',
   styleUrls: ['./group-view.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GroupViewComponent implements OnInit {
   @Input() selectedGroup: DocGroup | null = null;
+  @Input() folderDrafts: FolderDraft[] = [];
   
   @Output() groupNameChange = new EventEmitter<DocGroup>();
   @Output() createDocRequested = new EventEmitter<void>();
   @Output() focusTreeRequested = new EventEmitter<void>();
   @Output() notesChanged = new EventEmitter<void>();
+  @Output() folderDraftCreate = new EventEmitter<void>();
+  @Output() folderDraftChange = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();
+  @Output() folderDraftDelete = new EventEmitter<number>();
   
   @ViewChild('groupNameInput') groupNameInput?: ElementRef<HTMLInputElement>;
 
@@ -70,6 +75,19 @@ export class GroupViewComponent implements OnInit {
     }
     // Request focus to be switched back to tree
     this.focusTreeRequested.emit();
+  }
+
+  // Folder drafts methods
+  createFolderDraft() {
+    this.folderDraftCreate.emit();
+  }
+
+  onFolderDraftChange(draftId: number, content: string, cursorPosition: number) {
+    this.folderDraftChange.emit({ draftId, content, cursorPosition });
+  }
+
+  deleteFolderDraft(draftId: number) {
+    this.folderDraftDelete.emit(draftId);
   }
 
   ngOnInit(): void {

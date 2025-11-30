@@ -135,10 +135,14 @@
       @if (selectedGroup && !selectedDoc) {
       <app-group-view 
         [selectedGroup]="selectedGroup"
+        [folderDrafts]="folderDrafts"
         (groupNameChange)="renameGroup($event)"
         (createDocRequested)="createDoc()"
         (focusTreeRequested)="focusTree()"
-        (notesChanged)="onDocGroupNotesChange()">
+        (notesChanged)="onDocGroupNotesChange()"
+        (folderDraftCreate)="createFolderDraft()"
+        (folderDraftChange)="onFolderDraftChange($event.draftId, $event.content, $event.cursorPosition)"
+        (folderDraftDelete)="deleteFolderDraft($event)">
       </app-group-view>
       }
       
