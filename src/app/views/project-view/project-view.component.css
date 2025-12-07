@@ -674,3 +674,41 @@ app-right-sidebar {
  
 .folder-content-container{} 
  
+.sidebar-container {
+  transition: width 0.3s ease-in-out;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #f9fafb; /* Match project-view background to avoid white flashes */
+}
+
+.sidebar-inner {
+  height: 100%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure handles are positioned correctly within the container */
+.collapsed-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  z-index: 20;
+}
+
+.collapsed-left {
+  right: 0; /* Stick to the right edge of the collapsed container */
+}
+
+.collapsed-right {
+  left: 0; /* Stick to the left edge of the collapsed container */
+}
+.left-sidebar{} 
+ 
+.right-sidebar{} 
+ 

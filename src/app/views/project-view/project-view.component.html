@@ -21,38 +21,43 @@
   <!-- Main content area -->
   <div class="content-wrapper">
     <!-- Left Sidebar -->
-    @if (!leftCollapsed) {
-    <app-doc-tree 
-      [docGroups]="docGroups"
-      [selectedDoc]="selectedDoc"
-      [selectedGroup]="selectedGroup"
-      [projectName]="projectName"
-      [editingProjectName]="editingProjectName"
-      [(projectNameEdit)]="projectNameEdit"
-      [groupsWithDrafts]="groupsWithDrafts"
-      [docsWithDrafts]="docsWithDrafts"
-      [style.width.px]="leftWidth"
-      (groupSelected)="selectGroup($event.group, $event.event)"
-      (docSelected)="selectDoc($event)"
-      (groupToggled)="toggleGroup($event)"
-      (groupCreated)="createGroup()"
-      (docCreatedInGroup)="createDocInGroup($event)"
-      (importFoldersRequested)="onImportFoldersRequested()"
-      (importFilesRequested)="onImportFilesRequested()"
-      (exportProjectRequested)="onExportProjectRequested()"
-      (treeKeyDown)="handleTreeKeyDown($event)"
-      (widthChanged)="startResizeLeft($event)"
-      (collapseToggle)="toggleLeftSidebar()"
-      (projectNameEditStart)="startEditProjectName($event)"
-      (projectNameSave)="saveProjectName()"
-      (projectNameKeydown)="onProjectNameKeydown($event)"
-      (backClicked)="goBack()">
-    </app-doc-tree>
-    } @else {
-      <div class="collapsed-handle collapsed-left" (mousedown)="startDragExpandLeft($event)" title="Drag to expand">
-        <span class="divider-grip"></span>
+    <div class="sidebar-container left-sidebar" [style.width.px]="leftCollapsed ? 6 : leftWidth">
+      <div class="sidebar-inner" [style.width.px]="leftWidth">
+        @if (!leftCollapsed) {
+        <app-doc-tree 
+          [docGroups]="docGroups"
+          [selectedDoc]="selectedDoc"
+          [selectedGroup]="selectedGroup"
+          [projectName]="projectName"
+          [editingProjectName]="editingProjectName"
+          [(projectNameEdit)]="projectNameEdit"
+          [groupsWithDrafts]="groupsWithDrafts"
+          [docsWithDrafts]="docsWithDrafts"
+          [style.width.px]="leftWidth"
+          (groupSelected)="selectGroup($event.group, $event.event)"
+          (docSelected)="selectDoc($event)"
+          (groupToggled)="toggleGroup($event)"
+          (groupCreated)="createGroup()"
+          (docCreatedInGroup)="createDocInGroup($event)"
+          (importFoldersRequested)="onImportFoldersRequested()"
+          (importFilesRequested)="onImportFilesRequested()"
+          (exportProjectRequested)="onExportProjectRequested()"
+          (treeKeyDown)="handleTreeKeyDown($event)"
+          (widthChanged)="startResizeLeft($event)"
+          (collapseToggle)="toggleLeftSidebar()"
+          (projectNameEditStart)="startEditProjectName($event)"
+          (projectNameSave)="saveProjectName()"
+          (projectNameKeydown)="onProjectNameKeydown($event)"
+          (backClicked)="goBack()">
+        </app-doc-tree>
+        }
       </div>
-    }
+      @if (leftCollapsed) {
+        <div class="collapsed-handle collapsed-left" (mousedown)="startDragExpandLeft($event)" title="Drag to expand">
+          <span class="divider-grip"></span>
+        </div>
+      }
+    </div>
 
     <!-- Editor -->
     <main class="editor-area">
@@ -161,8 +166,10 @@
     </main>
 
     <!-- Right Sidebar -->
-  @if (!rightCollapsed && selectedDoc) {
-  <app-right-sidebar
+    <div class="sidebar-container right-sidebar" [style.width.px]="(rightCollapsed || !selectedDoc) ? 6 : rightWidth">
+      <div class="sidebar-inner" [style.width.px]="rightWidth">
+        @if (!rightCollapsed && selectedDoc) {
+        <app-right-sidebar
       [selectedDoc]="selectedDoc"
       [selectedDocGroup]="selectedGroup || currentGroup"
       [project]="projectData"
@@ -226,12 +233,15 @@
       (draftDeleted)="deleteDraft($event)"
       (draftContentRequested)="getDraftLocalContent($event)"
       (widthChanged)="startResizeRight($event)">
-    </app-right-sidebar>
-  } @else {
-    <div class="collapsed-handle collapsed-right" (mousedown)="startDragExpandRight($event)" title="Drag to expand">
-      <span class="divider-grip"></span>
+        </app-right-sidebar>
+        }
+      </div>
+      @if (rightCollapsed || !selectedDoc) {
+        <div class="collapsed-handle collapsed-right" (mousedown)="startDragExpandRight($event)" title="Drag to expand">
+          <span class="divider-grip"></span>
+        </div>
+      }
     </div>
-  }
   </div>
 
   <!-- Import target folder dialog -->
