@@ -435,6 +435,32 @@ app-doc-tree {
   background: #f3f4f6;
 }
 
+.dropdown-create-row {
+  padding: 0.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 0.25rem;
+}
+
+.dropdown-create-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  color: #374151;
+  outline: none;
+  transition: border-color 150ms ease;
+}
+
+.dropdown-create-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.dropdown-create-input::placeholder {
+  color: #9ca3af;
+}
+
 .dropdown-empty {
   display: block;
   padding: 0.5rem 0.75rem;
@@ -1098,4 +1124,16 @@ app-right-sidebar {
 .dropdown-item{} 
  
 .dropdown-empty{} 
+ 
+.dropdown-create-row{} 
+ 
+.dropdown-create-input{} 
+ 
+.dropdown-create-row{} 
+ 
+.dropdown-create-input{} 
+ 
+.dropdown-create-row{} 
+ 
+.dropdown-create-input{} 
  

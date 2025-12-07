@@ -435,6 +435,52 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Create new item and add to doc from dropdown
+  async createAndAddCharacterToDoc(docId: number, name: string) {
+    if (!name.trim()) return;
+    try {
+      const created = await this.projectService.createCharacter(this.projectId, name.trim(), '');
+      this.characters = [...this.characters, created as Character];
+      // Also attach to doc
+      await this.projectService.attachCharacterToDoc(docId, created.id);
+      const current = this.projectHeaderDocCharactersCache.get(docId) || [];
+      this.projectHeaderDocCharactersCache.set(docId, [...current, created.id]);
+      this.projectHeaderAddDropdown = null;
+    } catch (error) {
+      console.error('Failed to create character:', error);
+    }
+  }
+
+  async createAndAddEventToDoc(docId: number, name: string) {
+    if (!name.trim()) return;
+    try {
+      const created = await this.projectService.createEvent(this.projectId, name.trim(), '');
+      this.events = [...this.events, created as Event];
+      // Also attach to doc
+      await this.projectService.attachEventToDoc(docId, created.id);
+      const current = this.projectHeaderDocEventsCache.get(docId) || [];
+      this.projectHeaderDocEventsCache.set(docId, [...current, created.id]);
+      this.projectHeaderAddDropdown = null;
+    } catch (error) {
+      console.error('Failed to create event:', error);
+    }
+  }
+
+  async createAndAddPlaceToDoc(docId: number, name: string) {
+    if (!name.trim()) return;
+    try {
+      const created = await this.projectService.createPlace(this.projectId, name.trim(), '');
+      this.places = [...this.places, created as any];
+      // Also attach to doc
+      await this.projectService.attachPlaceToDoc(docId, created.id);
+      const current = this.projectHeaderDocPlacesCache.get(docId) || [];
+      this.projectHeaderDocPlacesCache.set(docId, [...current, created.id]);
+      this.projectHeaderAddDropdown = null;
+    } catch (error) {
+      console.error('Failed to create place:', error);
+    }
+  }
+
   // Toggle folder header expansion (show/hide folder notes editor)
   onFolderHeaderClick(event: MouseEvent) {
     if (this.isInteractiveHeaderClick(event)) return;
