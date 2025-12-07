@@ -35,6 +35,7 @@ export class GroupViewComponent implements OnInit {
   @Output() folderDraftChange = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();
   @Output() folderDraftNameChange = new EventEmitter<{ draftId: number; name: string }>();
   @Output() folderDraftDelete = new EventEmitter<number>();
+  @Output() folderDraftMove = new EventEmitter<{ draftId: number; newIndex: number }>();
   
   @ViewChild('groupNameInput') groupNameInput?: ElementRef<HTMLInputElement>;
 
@@ -43,6 +44,10 @@ export class GroupViewComponent implements OnInit {
 
   onNameChange(group: DocGroup) {
     this.groupNameChange.emit(group);
+  }
+
+  onDraftMove(event: { draftId: number; newIndex: number }) {
+    this.folderDraftMove.emit(event);
   }
 
   toggleNotes() {
