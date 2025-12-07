@@ -217,6 +217,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   folderHeaderExpanded = false;
   // Track which folder is expanded in project header view
   projectHeaderSelectedGroupId: number | null = null;
+  // Track which doc is expanded in project header view to show its characters/events/places
+  projectHeaderExpandedDocId: number | null = null;
+  // Cache for doc metadata (characters, events, places) in project header view
+  private projectHeaderDocCharactersCache: Map<number, number[]> = new Map();
+  private projectHeaderDocEventsCache: Map<number, number[]> = new Map();
+  private projectHeaderDocPlacesCache: Map<number, number[]> = new Map();
 
   constructor(
     private route: ActivatedRoute,
@@ -246,9 +252,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   onProjectHeaderClick(event: MouseEvent) {
     if (this.isInteractiveHeaderClick(event)) return;
     this.projectHeaderExpanded = !this.projectHeaderExpanded;
-    // Clear folder selection when collapsing project header
+    // Clear folder and doc selection when collapsing project header
     if (!this.projectHeaderExpanded) {
       this.projectHeaderSelectedGroupId = null;
+      this.projectHeaderExpandedDocId = null;
     }
   }
 
@@ -261,6 +268,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     } else {
       this.projectHeaderSelectedGroupId = group.id;
     }
+    // Clear expanded doc when folder changes
+    this.projectHeaderExpandedDocId = null;
   }
 
   // Get docs for the folder selected in project header
@@ -274,6 +283,60 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   getProjectHeaderSelectedGroup(): DocGroup | null {
     if (!this.projectHeaderSelectedGroupId) return null;
     return this.docGroups.find(g => g.id === this.projectHeaderSelectedGroupId) || null;
+  }
+
+  // Handle doc chip click in project header - toggle expansion to show characters/events/places
+  async onProjectDocChipClick(doc: Doc, event: MouseEvent) {
+    event.stopPropagation();
+    // Toggle: if already expanded, collapse; otherwise expand
+    if (this.projectHeaderExpandedDocId === doc.id) {
+      this.projectHeaderExpandedDocId = null;
+    } else {
+      this.projectHeaderExpandedDocId = doc.id;
+      // Load doc metadata if not cached
+      await this.loadProjectHeaderDocMetadata(doc.id);
+    }
+  }
+
+  // Load characters, events, places for a doc in project header view
+  private async loadProjectHeaderDocMetadata(docId: number): Promise<void> {
+    try {
+      // Load characters if not cached
+      if (!this.projectHeaderDocCharactersCache.has(docId)) {
+        const charIds = await this.projectService.listDocCharacters(docId);
+        this.projectHeaderDocCharactersCache.set(docId, charIds);
+      }
+      // Load events if not cached
+      if (!this.projectHeaderDocEventsCache.has(docId)) {
+        const eventIds = await this.projectService.listDocEvents(docId);
+        this.projectHeaderDocEventsCache.set(docId, eventIds);
+      }
+      // Load places if not cached
+      if (!this.projectHeaderDocPlacesCache.has(docId)) {
+        const placeIds = await this.projectService.listDocPlaces(docId);
+        this.projectHeaderDocPlacesCache.set(docId, placeIds);
+      }
+    } catch (error) {
+      console.error('Failed to load doc metadata for project header:', error);
+    }
+  }
+
+  // Get characters for a doc in project header view
+  getProjectHeaderDocCharacters(docId: number): Character[] {
+    const charIds = this.projectHeaderDocCharactersCache.get(docId) || [];
+    return this.characters.filter(c => charIds.includes(c.id));
+  }
+
+  // Get events for a doc in project header view
+  getProjectHeaderDocEvents(docId: number): Event[] {
+    const eventIds = this.projectHeaderDocEventsCache.get(docId) || [];
+    return this.events.filter(e => eventIds.includes(e.id));
+  }
+
+  // Get places for a doc in project header view
+  getProjectHeaderDocPlaces(docId: number): any[] {
+    const placeIds = this.projectHeaderDocPlacesCache.get(docId) || [];
+    return this.places.filter(p => placeIds.includes(p.id));
   }
 
   // Toggle folder header expansion (show/hide folder notes editor)

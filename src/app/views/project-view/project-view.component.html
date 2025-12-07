@@ -105,7 +105,8 @@
                   <button 
                     class="doc-chip" 
                     [class.selected]="selectedDoc?.id === doc.id"
-                    (click)="selectDoc(doc)">
+                    [class.expanded]="projectHeaderExpandedDocId === doc.id"
+                    (click)="onProjectDocChipClick(doc, $event)">
                     <span class="doc-chip-index">{{ j + 1 }}.</span>
                     <span class="doc-chip-name">{{ doc.name }}</span>
                   </button>
@@ -114,6 +115,47 @@
                   <span class="no-docs-hint">No documents in this folder</span>
                 }
               </div>
+              <!-- Doc metadata (characters, events, places) when doc is expanded -->
+              @if (projectHeaderExpandedDocId) {
+                <div class="doc-metadata-row">
+                  <!-- Characters -->
+                  <div class="metadata-section">
+                    <span class="metadata-label">Characters:</span>
+                    <div class="metadata-chips">
+                      @for (char of getProjectHeaderDocCharacters(projectHeaderExpandedDocId); track char.id) {
+                        <span class="metadata-chip character-chip">{{ char.name }}</span>
+                      }
+                      @if (getProjectHeaderDocCharacters(projectHeaderExpandedDocId).length === 0) {
+                        <span class="metadata-empty">—</span>
+                      }
+                    </div>
+                  </div>
+                  <!-- Events -->
+                  <div class="metadata-section">
+                    <span class="metadata-label">Events:</span>
+                    <div class="metadata-chips">
+                      @for (evt of getProjectHeaderDocEvents(projectHeaderExpandedDocId); track evt.id) {
+                        <span class="metadata-chip event-chip">{{ evt.name }}</span>
+                      }
+                      @if (getProjectHeaderDocEvents(projectHeaderExpandedDocId).length === 0) {
+                        <span class="metadata-empty">—</span>
+                      }
+                    </div>
+                  </div>
+                  <!-- Places -->
+                  <div class="metadata-section">
+                    <span class="metadata-label">Places:</span>
+                    <div class="metadata-chips">
+                      @for (place of getProjectHeaderDocPlaces(projectHeaderExpandedDocId); track place.id) {
+                        <span class="metadata-chip place-chip">{{ place.name }}</span>
+                      }
+                      @if (getProjectHeaderDocPlaces(projectHeaderExpandedDocId).length === 0) {
+                        <span class="metadata-empty">—</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
             </div>
           }
         </div>
