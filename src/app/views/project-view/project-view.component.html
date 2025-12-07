@@ -275,11 +275,13 @@
   <!-- Global footer component -->
   <app-footer
     [selectedDoc]="selectedDoc"
+    [selectedGroup]="selectedGroup"
     [allDocs]="getAllDocs()"
     [leftCollapsed]="leftCollapsed"
     [rightCollapsed]="rightCollapsed"
     (backToProjects)="goBack()"
     (createGroup)="createGroup()"
+    (deleteItem)="deleteSelectedItem()"
     (importFolders)="onImportFoldersRequested()"
     (importFiles)="onImportFilesRequested()"
     (exportProject)="onExportProjectRequested()"

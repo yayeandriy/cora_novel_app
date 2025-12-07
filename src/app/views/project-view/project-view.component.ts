@@ -1100,6 +1100,15 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Called from footer delete button
+  deleteSelectedItem() {
+    if (this.selectedDoc) {
+      this.deleteDoc(this.selectedDoc);
+    } else if (this.selectedGroup) {
+      this.deleteGroup(this.selectedGroup);
+    }
+  }
+
   async deleteDoc(doc: Doc) {
     console.log('deleteDoc called for:', doc.name);
     this.isDeletingItem = true;

@@ -8,6 +8,12 @@ interface Doc {
   text?: string | null;
 }
 
+// Minimal DocGroup interface
+interface DocGroup {
+  id: number;
+  name: string;
+}
+
 export type FontFamily = 'mono' | 'serif' | 'sans';
 export type FontSize = 'S' | 'M' | 'L';
 export type LineHeight = 'S' | 'M' | 'L';
@@ -41,13 +47,15 @@ const LINE_HEIGHTS: Record<LineHeight, string> = {
 export class AppFooterComponent implements OnInit {
   // Inputs
   @Input() selectedDoc: Doc | null = null;
-  @Input() allDocs: Doc[] = [];
+  @Input() selectedGroup: DocGroup | null = null;
+  @Input() allDocs: Doc[] = [];  
   @Input() leftCollapsed: boolean = false;
   @Input() rightCollapsed: boolean = false;
 
   // Action outputs (migrated from doc tree & editor footers)
   @Output() backToProjects = new EventEmitter<void>();
   @Output() createGroup = new EventEmitter<void>();
+  @Output() deleteItem = new EventEmitter<void>();
   @Output() importFolders = new EventEmitter<void>();
   @Output() importFiles = new EventEmitter<void>();
   @Output() exportProject = new EventEmitter<void>();

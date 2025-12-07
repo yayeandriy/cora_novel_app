@@ -25,6 +25,10 @@
 .icon-button-small.export { border: 1px solid #d1d5db; background: #fff; }
 .icon-button-small.export:hover { background: #f9fafb; }
 .export-icon { width: 1rem; height: 1rem; display: block; }
+.icon-button-small.delete { color: #9ca3af; }
+.icon-button-small.delete:hover { background: #fef2f2; color: #dc2626; }
+.icon-button-small.delete.disabled { opacity: 0.3; cursor: not-allowed; }
+.icon-button-small.delete.disabled:hover { background: transparent; color: #9ca3af; }
 .stats-container { display: flex; align-items: center; justify-content: flex-end; gap: 1.25rem; color: #6b7280; }
 .stat-item { display: flex; align-items: center; gap: 0.25rem; }
 .stat-label { font-weight: 600; color: #374151; }
