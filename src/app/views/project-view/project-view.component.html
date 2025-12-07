@@ -127,7 +127,8 @@
                             placeholder="New character..."
                             (remove)="removeCharacterFromDocCard(doc.id, $event)"
                             (add)="addCharacterToDocCard(doc.id, $event)"
-                            (create)="createAndAddCharacterToDoc(doc.id, $event)">
+                            (create)="createAndAddCharacterToDoc(doc.id, $event)"
+                            (deleteItem)="onSidebarCharacterDelete($event)">
                           </app-metadata-chips>
 
                           <!-- Events row -->
@@ -138,7 +139,8 @@
                             placeholder="New event..."
                             (remove)="removeEventFromDocCard(doc.id, $event)"
                             (add)="addEventToDocCard(doc.id, $event)"
-                            (create)="createAndAddEventToDoc(doc.id, $event)">
+                            (create)="createAndAddEventToDoc(doc.id, $event)"
+                            (deleteItem)="onSidebarEventDelete($event)">
                           </app-metadata-chips>
 
                           <!-- Places row -->
@@ -149,7 +151,8 @@
                             placeholder="New place..."
                             (remove)="removePlaceFromDocCard(doc.id, $event)"
                             (add)="addPlaceToDocCard(doc.id, $event)"
-                            (create)="createAndAddPlaceToDoc(doc.id, $event)">
+                            (create)="createAndAddPlaceToDoc(doc.id, $event)"
+                            (deleteItem)="onSidebarPlaceDelete($event)">
                           </app-metadata-chips>
                         </div>
                       </div>
@@ -258,7 +261,8 @@
                         placeholder="New character..."
                         (remove)="removeCharacterFromDocCard(doc.id, $event)"
                         (add)="addCharacterToDocCard(doc.id, $event)"
-                        (create)="createAndAddCharacterToDoc(doc.id, $event)">
+                        (create)="createAndAddCharacterToDoc(doc.id, $event)"
+                        (deleteItem)="onSidebarCharacterDelete($event)">
                       </app-metadata-chips>
 
                       <!-- Events row -->
@@ -269,7 +273,8 @@
                         placeholder="New event..."
                         (remove)="removeEventFromDocCard(doc.id, $event)"
                         (add)="addEventToDocCard(doc.id, $event)"
-                        (create)="createAndAddEventToDoc(doc.id, $event)">
+                        (create)="createAndAddEventToDoc(doc.id, $event)"
+                        (deleteItem)="onSidebarEventDelete($event)">
                       </app-metadata-chips>
 
                       <!-- Places row -->
@@ -280,7 +285,8 @@
                         placeholder="New place..."
                         (remove)="removePlaceFromDocCard(doc.id, $event)"
                         (add)="addPlaceToDocCard(doc.id, $event)"
-                        (create)="createAndAddPlaceToDoc(doc.id, $event)">
+                        (create)="createAndAddPlaceToDoc(doc.id, $event)"
+                        (deleteItem)="onSidebarPlaceDelete($event)">
                       </app-metadata-chips>
                     </div>
                   </div>

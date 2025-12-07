@@ -26,6 +26,7 @@ export class MetadataChipsComponent {
   
   @Output() add = new EventEmitter<number>();
   @Output() remove = new EventEmitter<number>();
+  @Output() deleteItem = new EventEmitter<number>();
   @Output() create = new EventEmitter<string>();
   @Output() reorder = new EventEmitter<number[]>();
 
@@ -74,6 +75,14 @@ export class MetadataChipsComponent {
   onRemove(id: number, event: MouseEvent) {
     event.stopPropagation();
     this.remove.emit(id);
+  }
+
+  onDeleteItem(id: number, event: MouseEvent) {
+    event.stopPropagation();
+    console.log('[MetadataChips] onDeleteItem called with id:', id);
+    // Confirm deletion could be handled here or by the parent. 
+    // For now, just emit.
+    this.deleteItem.emit(id);
   }
 
   getChipClass(): string {

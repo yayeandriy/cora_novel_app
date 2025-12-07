@@ -137,10 +137,42 @@
   border: none;
   border-radius: 0.25rem;
   cursor: pointer;
+  flex: 1;
 }
 
 .dropdown-item:hover {
+  background: transparent;
+}
+
+.dropdown-item-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border-radius: 0.25rem;
+}
+
+.dropdown-item-wrapper:hover {
   background: #f3f4f6;
+}
+
+.dropdown-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 0.25rem;
+  margin-right: 0.25rem;
+}
+
+.dropdown-delete-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .dropdown-empty {

@@ -3165,8 +3165,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   async onSidebarEventDelete(id: number): Promise<void> {
+    console.log('[ProjectView] onSidebarEventDelete called with id:', id);
     try {
       await this.projectService.deleteEvent(id);
+      console.log('[ProjectView] Event deleted successfully');
       this.events = this.events.filter(e => e.id !== id);
       
       // Track if we need to refresh folder list
@@ -3188,6 +3190,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.currentGroup && (wasInDocEvents || wasInGroupEvents)) {
         await this.loadDocGroupEvents(this.currentGroup.id);
       }
+      
+      // Trigger change detection to update the UI
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to delete event:', error);
       alert('Failed to delete event: ' + error);
@@ -3217,8 +3222,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   async onSidebarCharacterDelete(id: number): Promise<void> {
+    console.log('[ProjectView] onSidebarCharacterDelete called with id:', id);
     try {
       await this.projectService.deleteCharacter(id);
+      console.log('[ProjectView] Character deleted successfully');
       this.characters = this.characters.filter(c => c.id !== id);
       
       // Track if we need to refresh folder list
@@ -3241,6 +3248,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.currentGroup && (wasInDocCharacters || wasInGroupCharacters)) {
         await this.loadDocGroupCharacters(this.currentGroup.id);
       }
+      
+      // Trigger change detection to update the UI
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to delete character:', error);
       alert('Failed to delete character: ' + error);
@@ -3357,8 +3367,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   async onSidebarPlaceDelete(id: number): Promise<void> {
+    console.log('[ProjectView] onSidebarPlaceDelete called with id:', id);
     try {
       await this.projectService.deletePlace(id);
+      console.log('[ProjectView] Place deleted successfully');
       this.places = this.places.filter(p => p.id !== id);
       
       const wasInDocPlaces = this.docPlaceIds.has(id);
@@ -3377,6 +3389,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.currentGroup && (wasInDocPlaces || wasInGroupPlaces)) {
         await this.loadDocGroupPlaces(this.currentGroup.id);
       }
+      
+      // Trigger change detection to update the UI
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to delete place:', error);
       alert('Failed to delete place: ' + error);

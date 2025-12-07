@@ -42,6 +42,7 @@
             placeholder="New character..."
             (remove)="removeCharacter($event)"
             (add)="addCharacter($event)"
+            (deleteItem)="deleteCharacter($event)"
             (create)="createAndAddCharacter($event)"
             (reorder)="onReorderCharacters($event)">
           </app-metadata-chips>
@@ -61,6 +62,7 @@
             placeholder="New event..."
             (remove)="removeEvent($event)"
             (add)="addEvent($event)"
+            (deleteItem)="deleteEvent($event)"
             (create)="createAndAddEvent($event)"
             (reorder)="onReorderEvents($event)">
           </app-metadata-chips>
@@ -80,6 +82,7 @@
             placeholder="New place..."
             (remove)="removePlace($event)"
             (add)="addPlace($event)"
+            (deleteItem)="deletePlace($event)"
             (create)="createAndAddPlace($event)"
             (reorder)="onReorderPlaces($event)">
           </app-metadata-chips>

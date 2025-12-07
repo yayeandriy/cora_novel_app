@@ -337,6 +337,11 @@ export class RightSidebarComponent {
     this.characterToggle.emit({ characterId: id, checked: false });
   }
 
+  deleteCharacter(id: number) {
+    console.log('[RightSidebar] deleteCharacter called with id:', id);
+    this.characterDelete.emit(id);
+  }
+
   createAndAddCharacter(name: string) {
     if (!name.trim()) return;
     this.characterCreate.emit({ name: name.trim(), desc: '' });
@@ -351,6 +356,11 @@ export class RightSidebarComponent {
     this.eventToggle.emit({ eventId: id, checked: false });
   }
 
+  deleteEvent(id: number) {
+    console.log('[RightSidebar] deleteEvent called with id:', id);
+    this.eventDelete.emit(id);
+  }
+
   createAndAddEvent(name: string) {
     if (!name.trim()) return;
     this.eventCreate.emit({ name: name.trim(), desc: '', start_date: null, end_date: null });
@@ -363,6 +373,11 @@ export class RightSidebarComponent {
   removePlace(id: number, event?: MouseEvent) {
     if (event) event.stopPropagation();
     this.placeToggle.emit({ placeId: id, checked: false });
+  }
+
+  deletePlace(id: number) {
+    console.log('[RightSidebar] deletePlace called with id:', id);
+    this.placeDelete.emit(id);
   }
 
   createAndAddPlace(name: string) {
