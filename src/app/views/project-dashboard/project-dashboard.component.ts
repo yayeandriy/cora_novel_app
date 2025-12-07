@@ -93,17 +93,20 @@ export class ProjectDashboardComponent implements AfterViewChecked {
         const docs = await this.svc.listDocs(project.id);
         const folders = await this.svc.listDocGroups(project.id);
         
+        // Only count docs that are in folders (have doc_group_id)
+        const docsInFolders = docs.filter(d => d.doc_group_id != null);
+        
         let totalChars = 0;
         let totalWords = 0;
         
-        for (const doc of docs) {
+        for (const doc of docsInFolders) {
           const text = doc.text || '';
           totalChars += text.length;
           totalWords += text.trim() ? text.trim().split(/\s+/).length : 0;
         }
         
         statsMap.set(project.id, {
-          docCount: docs.length,
+          docCount: docsInFolders.length,
           charCount: totalChars,
           pageCount: Math.ceil(totalChars / 1800),
           wordCount: totalWords,

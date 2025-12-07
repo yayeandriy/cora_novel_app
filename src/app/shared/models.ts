@@ -48,6 +48,9 @@ export interface Doc {
   name?: string | null;
   timeline_id?: number | null;
   text?: string | null;
+  notes?: string | null;
+  doc_group_id?: number | null;
+  sort_order?: number | null;
 }
 
 // Form DTOs used by UI forms. These are intentionally slightly different

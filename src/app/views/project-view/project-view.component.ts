@@ -111,6 +111,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   
   // Content
   docGroups: DocGroup[] = [];
+  allProjectDocs: Doc[] = [];  // All docs in project (for stats)
   selectedDoc: Doc | null = null;
   selectedGroup: DocGroup | null = null;
   currentGroup: DocGroup | null = null;
@@ -972,6 +973,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.projectService.listDocs(this.projectId)
       ]);
 
+      // Store all docs for stats calculation
+      this.allProjectDocs = docs;
+
       // Restore tree expansion state before building the tree
       this.restoreTreeState();
 
@@ -1196,7 +1200,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       for (const group of groups) {
         const docIndex = group.docs.findIndex(d => d.id === updatedDoc.id);
         if (docIndex !== -1) {
-          console.log('Found doc in group, updating:', updatedDoc.id);
           group.docs[docIndex] = { ...group.docs[docIndex], ...updatedDoc };
           return true;
         }
@@ -1206,10 +1209,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
       return false;
     };
-    const found = updateInGroups(this.docGroups);
-    if (!found) {
-      console.warn('Doc not found in tree for update:', updatedDoc.id);
-    }
+    updateInGroups(this.docGroups);
   }
 
 
