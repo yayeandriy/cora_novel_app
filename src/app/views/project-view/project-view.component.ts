@@ -481,6 +481,40 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Remove item from doc metadata
+  async removeCharacterFromDocCard(docId: number, characterId: number, event: MouseEvent) {
+    event.stopPropagation();
+    try {
+      await this.projectService.detachCharacterFromDoc(docId, characterId);
+      const current = this.projectHeaderDocCharactersCache.get(docId) || [];
+      this.projectHeaderDocCharactersCache.set(docId, current.filter(id => id !== characterId));
+    } catch (error) {
+      console.error('Failed to remove character from doc:', error);
+    }
+  }
+
+  async removeEventFromDocCard(docId: number, eventId: number, event: MouseEvent) {
+    event.stopPropagation();
+    try {
+      await this.projectService.detachEventFromDoc(docId, eventId);
+      const current = this.projectHeaderDocEventsCache.get(docId) || [];
+      this.projectHeaderDocEventsCache.set(docId, current.filter(id => id !== eventId));
+    } catch (error) {
+      console.error('Failed to remove event from doc:', error);
+    }
+  }
+
+  async removePlaceFromDocCard(docId: number, placeId: number, event: MouseEvent) {
+    event.stopPropagation();
+    try {
+      await this.projectService.detachPlaceFromDoc(docId, placeId);
+      const current = this.projectHeaderDocPlacesCache.get(docId) || [];
+      this.projectHeaderDocPlacesCache.set(docId, current.filter(id => id !== placeId));
+    } catch (error) {
+      console.error('Failed to remove place from doc:', error);
+    }
+  }
+
   // Toggle folder header expansion (show/hide folder notes editor)
   onFolderHeaderClick(event: MouseEvent) {
     if (this.isInteractiveHeaderClick(event)) return;

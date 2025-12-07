@@ -111,7 +111,12 @@
                       <!-- Characters row -->
                       <div class="card-metadata-row">
                         @for (char of getProjectHeaderDocCharacters(doc.id); track char.id) {
-                          <span class="metadata-chip character-chip">{{ char.name }}</span>
+                          <span class="metadata-chip character-chip">
+                            {{ char.name }}
+                            <button class="chip-delete-btn" (click)="removeCharacterFromDocCard(doc.id, char.id, $event)">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>
+                            </button>
+                          </span>
                         }
                         <button class="add-metadata-btn character-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'characters', $event)">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
@@ -139,7 +144,12 @@
                       <!-- Events row -->
                       <div class="card-metadata-row">
                         @for (evt of getProjectHeaderDocEvents(doc.id); track evt.id) {
-                          <span class="metadata-chip event-chip">{{ evt.name }}</span>
+                          <span class="metadata-chip event-chip">
+                            {{ evt.name }}
+                            <button class="chip-delete-btn" (click)="removeEventFromDocCard(doc.id, evt.id, $event)">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>
+                            </button>
+                          </span>
                         }
                         <button class="add-metadata-btn event-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'events', $event)">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
@@ -167,7 +177,12 @@
                       <!-- Places row -->
                       <div class="card-metadata-row">
                         @for (place of getProjectHeaderDocPlaces(doc.id); track place.id) {
-                          <span class="metadata-chip place-chip">{{ place.name }}</span>
+                          <span class="metadata-chip place-chip">
+                            {{ place.name }}
+                            <button class="chip-delete-btn" (click)="removePlaceFromDocCard(doc.id, place.id, $event)">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>
+                            </button>
+                          </span>
                         }
                         <button class="add-metadata-btn place-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'places', $event)">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
