@@ -368,11 +368,15 @@ app-doc-tree {
   border: 1px dashed #d1d5db;
   background: transparent;
   color: #9ca3af;
-  font-size: 0.875rem;
-  font-weight: 500;
   cursor: pointer;
   transition: all 150ms ease;
   flex-shrink: 0;
+  padding: 0;
+}
+
+.add-metadata-btn svg {
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 .add-metadata-btn:hover {
@@ -485,29 +489,27 @@ app-doc-tree {
 .metadata-chip {
   display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.75rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 500;
   white-space: nowrap;
+  border: none;
 }
 
 .character-chip {
   background: #fef3c7;
   color: #92400e;
-  border: 1px solid #fcd34d;
 }
 
 .event-chip {
   background: #dbeafe;
   color: #1e40af;
-  border: 1px solid #93c5fd;
 }
 
 .place-chip {
   background: #d1fae5;
   color: #065f46;
-  border: 1px solid #6ee7b7;
 }
 
 .metadata-empty {

@@ -113,7 +113,9 @@
                         @for (char of getProjectHeaderDocCharacters(doc.id); track char.id) {
                           <span class="metadata-chip character-chip">{{ char.name }}</span>
                         }
-                        <button class="add-metadata-btn character-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'characters', $event)">+</button>
+                        <button class="add-metadata-btn character-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'characters', $event)">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
+                        </button>
                         @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'characters') {
                           <div class="add-metadata-dropdown" (click)="$event.stopPropagation()">
                             <div class="dropdown-create-row">
@@ -139,7 +141,9 @@
                         @for (evt of getProjectHeaderDocEvents(doc.id); track evt.id) {
                           <span class="metadata-chip event-chip">{{ evt.name }}</span>
                         }
-                        <button class="add-metadata-btn event-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'events', $event)">+</button>
+                        <button class="add-metadata-btn event-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'events', $event)">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
+                        </button>
                         @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'events') {
                           <div class="add-metadata-dropdown" (click)="$event.stopPropagation()">
                             <div class="dropdown-create-row">
@@ -165,7 +169,9 @@
                         @for (place of getProjectHeaderDocPlaces(doc.id); track place.id) {
                           <span class="metadata-chip place-chip">{{ place.name }}</span>
                         }
-                        <button class="add-metadata-btn place-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'places', $event)">+</button>
+                        <button class="add-metadata-btn place-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'places', $event)">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
+                        </button>
                         @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'places') {
                           <div class="add-metadata-dropdown" (click)="$event.stopPropagation()">
                             <div class="dropdown-create-row">
