@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ElementRef, ViewChild } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ElementRef, ViewChild, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -16,7 +16,8 @@ export type MetadataType = 'character' | 'event' | 'place';
   imports: [CommonModule, FormsModule, DragDropModule],
   templateUrl: './metadata-chips.component.html',
   styleUrls: ['./metadata-chips.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  encapsulation: ViewEncapsulation.None
 })
 export class MetadataChipsComponent {
   @Input() items: MetadataItem[] = [];
@@ -54,10 +55,36 @@ export class MetadataChipsComponent {
     } else {
       const button = event.currentTarget as HTMLElement;
       const rect = button.getBoundingClientRect();
-      this.dropdownPosition = {
-        top: rect.bottom + 4,
-        left: rect.left
-      };
+      
+      // Dropdown dimensions (approximate)
+      const dropdownWidth = 200;
+      const dropdownHeight = 240;
+      
+      // Calculate position with viewport boundary checking
+      let left = rect.left;
+      let top = rect.bottom + 4;
+      
+      // Check right edge
+      if (left + dropdownWidth > window.innerWidth) {
+        left = window.innerWidth - dropdownWidth - 8;
+      }
+      
+      // Check left edge
+      if (left < 8) {
+        left = 8;
+      }
+      
+      // Check bottom edge - if dropdown would go below viewport, show it above the button
+      if (top + dropdownHeight > window.innerHeight) {
+        top = rect.top - dropdownHeight - 4;
+      }
+      
+      // Ensure it doesn't go above the viewport
+      if (top < 8) {
+        top = 8;
+      }
+      
+      this.dropdownPosition = { top, left };
       this.dropdownVisible = true;
     }
   }
@@ -80,10 +107,36 @@ export class MetadataChipsComponent {
     // Open dropdown and start editing the item
     const button = event.currentTarget as HTMLElement;
     const rect = button.getBoundingClientRect();
-    this.dropdownPosition = {
-      top: rect.bottom + 4,
-      left: rect.left
-    };
+    
+    // Dropdown dimensions (approximate)
+    const dropdownWidth = 200;
+    const dropdownHeight = 240;
+    
+    // Calculate position with viewport boundary checking
+    let left = rect.left;
+    let top = rect.bottom + 4;
+    
+    // Check right edge
+    if (left + dropdownWidth > window.innerWidth) {
+      left = window.innerWidth - dropdownWidth - 8;
+    }
+    
+    // Check left edge
+    if (left < 8) {
+      left = 8;
+    }
+    
+    // Check bottom edge - if dropdown would go below viewport, show it above the button
+    if (top + dropdownHeight > window.innerHeight) {
+      top = rect.top - dropdownHeight - 4;
+    }
+    
+    // Ensure it doesn't go above the viewport
+    if (top < 8) {
+      top = 8;
+    }
+    
+    this.dropdownPosition = { top, left };
     this.dropdownVisible = true;
     this.editingItemId = item.id;
     this.editingItemName = item.name;
