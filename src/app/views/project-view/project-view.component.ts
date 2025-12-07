@@ -1381,6 +1381,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // ESC always focuses the tree
     if (event.key === 'Escape') {
       event.preventDefault();
+
+      // If headers overlay is visible, hide it
+      if (this.headersHoverVisible) {
+        this.headersHoverVisible = false;
+        return;
+      }
+
       this.focusTree();
       return;
     }
