@@ -39,9 +39,9 @@
           </div>
         </div>
         @if (charactersExpanded) {
-          <div class="card-metadata-row">
+          <div class="card-metadata-row" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="dropCharacter($event)">
             @for (char of getAttachedCharacters(); track char.id) {
-              <span class="metadata-chip character-chip">
+              <span class="metadata-chip character-chip" cdkDrag>
                 {{ char.name }}
                 <button class="chip-delete-btn" (click)="removeCharacter(char.id, $event)">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>
@@ -66,9 +66,9 @@
           </div>
         </div>
         @if (eventsExpanded) {
-          <div class="card-metadata-row">
+          <div class="card-metadata-row" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="dropEvent($event)">
             @for (evt of getAttachedEvents(); track evt.id) {
-              <span class="metadata-chip event-chip">
+              <span class="metadata-chip event-chip" cdkDrag>
                 {{ evt.name }}
                 <button class="chip-delete-btn" (click)="removeEvent(evt.id, $event)">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>
@@ -93,9 +93,9 @@
           </div>
         </div>
         @if (placesExpanded) {
-          <div class="card-metadata-row">
+          <div class="card-metadata-row" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="dropPlace($event)">
             @for (place of getAttachedPlaces(); track place.id) {
-              <span class="metadata-chip place-chip">
+              <span class="metadata-chip place-chip" cdkDrag>
                 {{ place.name }}
                 <button class="chip-delete-btn" (click)="removePlace(place.id, $event)">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>

@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { CharactersPanelComponent } from '../characters-panel/characters-panel.component';
 import { EventsPanelComponent } from '../events-panel/events-panel.component';
 import { PlacesPanelComponent } from '../places-panel/places-panel.component';
@@ -69,7 +70,7 @@ type TabType = 'doc' | 'folder' | 'project';
 @Component({
   selector: 'app-right-sidebar',
   standalone: true,
-  imports: [CommonModule, FormsModule, CharactersPanelComponent, EventsPanelComponent, PlacesPanelComponent, PersistTextareaHeightDirective],
+  imports: [CommonModule, FormsModule, DragDropModule, CharactersPanelComponent, EventsPanelComponent, PlacesPanelComponent, PersistTextareaHeightDirective],
   templateUrl: './right-sidebar.component.html',
   styleUrls: ['./right-sidebar.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -317,6 +318,28 @@ export class RightSidebarComponent {
 
   onTimelineHeaderToggle() {
     this.timelineHeaderToggle.emit();
+  }
+
+  // ===== Drag and Drop Handlers =====
+  dropCharacter(event: CdkDragDrop<any[]>) {
+    const currentAttached = this.getAttachedCharacters();
+    moveItemInArray(currentAttached, event.previousIndex, event.currentIndex);
+    const newOrderIds = currentAttached.map(c => c.id);
+    this.charactersReorder.emit(newOrderIds);
+  }
+
+  dropEvent(event: CdkDragDrop<any[]>) {
+    const currentAttached = this.getAttachedEvents();
+    moveItemInArray(currentAttached, event.previousIndex, event.currentIndex);
+    const newOrderIds = currentAttached.map(e => e.id);
+    this.eventsReorder.emit(newOrderIds);
+  }
+
+  dropPlace(event: CdkDragDrop<any[]>) {
+    const currentAttached = this.getAttachedPlaces();
+    moveItemInArray(currentAttached, event.previousIndex, event.currentIndex);
+    const newOrderIds = currentAttached.map(p => p.id);
+    this.placesReorder.emit(newOrderIds);
   }
 
   // ===== Dropdown Logic =====
