@@ -293,6 +293,18 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Handle wheel scroll on docs cards container - enable horizontal scroll with vertical wheel
+  onDocsContainerWheel(event: WheelEvent) {
+    const container = event.currentTarget as HTMLElement;
+    if (!container) return;
+    
+    // Use deltaY for horizontal scroll (works with and without Shift)
+    if (event.deltaY !== 0) {
+      event.preventDefault();
+      container.scrollLeft += event.deltaY;
+    }
+  }
+
   // Load metadata for all docs in a folder for project header view
   private async loadProjectHeaderFolderDocsMetadata(group: DocGroup): Promise<void> {
     const docs = group.docs || [];

@@ -7,7 +7,7 @@
       </svg>
     </button>
   </div>
-  <div class="folder-expanded-content" #scrollContainer [class.grid-content]="layout === 'grid'" cdkDropList [cdkDropListOrientation]="layout === 'grid' ? 'mixed' : 'horizontal'" (cdkDropListDropped)="drop($event)">
+  <div class="folder-expanded-content" #scrollContainer [class.grid-content]="layout === 'grid'" cdkDropList [cdkDropListOrientation]="layout === 'grid' ? 'mixed' : 'horizontal'" (cdkDropListDropped)="drop($event)" (wheel)="onContainerWheel($event)">
     @if (drafts.length > 0) {
       @for (draft of drafts; track draft.id) {
         <div class="draft-card" cdkDrag [class.selected]="selectedDraftId === draft.id" (click)="onDraftFocus(draft.id)">

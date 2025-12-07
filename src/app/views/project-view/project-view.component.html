@@ -100,7 +100,7 @@
           <!-- Docs cards for selected folder -->
           @if (projectHeaderSelectedGroupId) {
             <div class="folder-docs-row">
-              <div class="docs-cards-container">
+              <div class="docs-cards-container" (wheel)="onDocsContainerWheel($event)">
                 @for (doc of getProjectHeaderSelectedGroupDocs(); track doc.id; let j = $index) {
                   <div class="doc-card" [class.selected]="projectHeaderHighlightedDocId === doc.id" (click)="onProjectDocCardClick(doc, $event)">
                     <div class="doc-card-header">
