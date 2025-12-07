@@ -219,6 +219,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   projectHeaderSelectedGroupId: number | null = null;
   // Track which doc is expanded in project header view to show its characters/events/places
   projectHeaderExpandedDocId: number | null = null;
+  // Track which doc card is highlighted (selected but no navigation)
+  projectHeaderHighlightedDocId: number | null = null;
   // Cache for doc metadata (characters, events, places) in project header view
   private projectHeaderDocCharactersCache: Map<number, number[]> = new Map();
   private projectHeaderDocEventsCache: Map<number, number[]> = new Map();
@@ -256,20 +258,41 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     if (!this.projectHeaderExpanded) {
       this.projectHeaderSelectedGroupId = null;
       this.projectHeaderExpandedDocId = null;
+      this.projectHeaderHighlightedDocId = null;
     }
   }
 
   // Handle folder chip click in project header - toggle expansion without navigation
-  onProjectFolderChipClick(group: DocGroup, event: MouseEvent) {
+  async onProjectFolderChipClick(group: DocGroup, event: MouseEvent) {
     event.stopPropagation();
     // Toggle: if already selected, deselect; otherwise select
     if (this.projectHeaderSelectedGroupId === group.id) {
       this.projectHeaderSelectedGroupId = null;
     } else {
       this.projectHeaderSelectedGroupId = group.id;
+      // Load metadata for all docs in this folder
+      await this.loadProjectHeaderFolderDocsMetadata(group);
     }
-    // Clear expanded doc when folder changes
+    // Clear expanded doc and highlighted doc when folder changes
     this.projectHeaderExpandedDocId = null;
+    this.projectHeaderHighlightedDocId = null;
+  }
+
+  // Handle doc card click in project header - just highlight, don't navigate
+  onProjectDocCardClick(doc: Doc, event: MouseEvent) {
+    event.stopPropagation();
+    // Toggle highlight
+    if (this.projectHeaderHighlightedDocId === doc.id) {
+      this.projectHeaderHighlightedDocId = null;
+    } else {
+      this.projectHeaderHighlightedDocId = doc.id;
+    }
+  }
+
+  // Load metadata for all docs in a folder for project header view
+  private async loadProjectHeaderFolderDocsMetadata(group: DocGroup): Promise<void> {
+    const docs = group.docs || [];
+    await Promise.all(docs.map(doc => this.loadProjectHeaderDocMetadata(doc.id)));
   }
 
   // Get docs for the folder selected in project header

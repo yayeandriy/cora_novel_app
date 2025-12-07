@@ -97,65 +97,48 @@
               <span class="no-folders-hint">No folders yet</span>
             }
           </div>
-          <!-- Docs row for selected folder -->
+          <!-- Docs cards for selected folder -->
           @if (projectHeaderSelectedGroupId) {
             <div class="folder-docs-row">
-              <div class="docs-scroll-container">
+              <div class="docs-cards-container">
                 @for (doc of getProjectHeaderSelectedGroupDocs(); track doc.id; let j = $index) {
-                  <button 
-                    class="doc-chip" 
-                    [class.selected]="selectedDoc?.id === doc.id"
-                    [class.expanded]="projectHeaderExpandedDocId === doc.id"
-                    (click)="onProjectDocChipClick(doc, $event)">
-                    <span class="doc-chip-index">{{ j + 1 }}.</span>
-                    <span class="doc-chip-name">{{ doc.name }}</span>
-                  </button>
+                  <div class="doc-card" [class.selected]="projectHeaderHighlightedDocId === doc.id" (click)="onProjectDocCardClick(doc, $event)">
+                    <div class="doc-card-header">
+                      <span class="doc-card-index">{{ j + 1 }}.</span>
+                      <span class="doc-card-name">{{ doc.name }}</span>
+                    </div>
+                    <div class="doc-card-metadata">
+                      <!-- Characters -->
+                      @if (getProjectHeaderDocCharacters(doc.id).length > 0) {
+                        <div class="card-metadata-row">
+                          @for (char of getProjectHeaderDocCharacters(doc.id); track char.id) {
+                            <span class="metadata-chip character-chip">{{ char.name }}</span>
+                          }
+                        </div>
+                      }
+                      <!-- Events -->
+                      @if (getProjectHeaderDocEvents(doc.id).length > 0) {
+                        <div class="card-metadata-row">
+                          @for (evt of getProjectHeaderDocEvents(doc.id); track evt.id) {
+                            <span class="metadata-chip event-chip">{{ evt.name }}</span>
+                          }
+                        </div>
+                      }
+                      <!-- Places -->
+                      @if (getProjectHeaderDocPlaces(doc.id).length > 0) {
+                        <div class="card-metadata-row">
+                          @for (place of getProjectHeaderDocPlaces(doc.id); track place.id) {
+                            <span class="metadata-chip place-chip">{{ place.name }}</span>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
                 }
                 @if (getProjectHeaderSelectedGroupDocs().length === 0) {
                   <span class="no-docs-hint">No documents in this folder</span>
                 }
               </div>
-              <!-- Doc metadata (characters, events, places) when doc is expanded -->
-              @if (projectHeaderExpandedDocId) {
-                <div class="doc-metadata-row">
-                  <!-- Characters -->
-                  <div class="metadata-section">
-                    <span class="metadata-label">Characters:</span>
-                    <div class="metadata-chips">
-                      @for (char of getProjectHeaderDocCharacters(projectHeaderExpandedDocId); track char.id) {
-                        <span class="metadata-chip character-chip">{{ char.name }}</span>
-                      }
-                      @if (getProjectHeaderDocCharacters(projectHeaderExpandedDocId).length === 0) {
-                        <span class="metadata-empty">—</span>
-                      }
-                    </div>
-                  </div>
-                  <!-- Events -->
-                  <div class="metadata-section">
-                    <span class="metadata-label">Events:</span>
-                    <div class="metadata-chips">
-                      @for (evt of getProjectHeaderDocEvents(projectHeaderExpandedDocId); track evt.id) {
-                        <span class="metadata-chip event-chip">{{ evt.name }}</span>
-                      }
-                      @if (getProjectHeaderDocEvents(projectHeaderExpandedDocId).length === 0) {
-                        <span class="metadata-empty">—</span>
-                      }
-                    </div>
-                  </div>
-                  <!-- Places -->
-                  <div class="metadata-section">
-                    <span class="metadata-label">Places:</span>
-                    <div class="metadata-chips">
-                      @for (place of getProjectHeaderDocPlaces(projectHeaderExpandedDocId); track place.id) {
-                        <span class="metadata-chip place-chip">{{ place.name }}</span>
-                      }
-                      @if (getProjectHeaderDocPlaces(projectHeaderExpandedDocId).length === 0) {
-                        <span class="metadata-empty">—</span>
-                      }
-                    </div>
-                  </div>
-                </div>
-              }
             </div>
           }
         </div>

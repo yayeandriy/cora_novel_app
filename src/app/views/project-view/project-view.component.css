@@ -282,94 +282,81 @@ app-doc-tree {
   border-top: 1px solid #e5e7eb;
 }
 
-.docs-scroll-container {
+/* Doc cards container */
+.docs-cards-container {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding: 0.25rem;
+  margin: -0.25rem;
+  padding-bottom: 0.5rem;
 }
 
-.doc-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.375rem 0.75rem;
+/* Doc card */
+.doc-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  max-width: 240px;
   background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 1rem;
-  font-size: 0.8125rem;
-  color: #374151;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
   cursor: pointer;
   transition: all 150ms ease;
+  flex-shrink: 0;
+}
+
+.doc-card:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.doc-card.selected {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.doc-card-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.doc-card-index {
+  color: #9ca3af;
+  font-size: 0.8125rem;
+  flex-shrink: 0;
+}
+
+.doc-card-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.doc-chip:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+.doc-card-metadata {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
 }
 
-.doc-chip.selected {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  color: #ffffff;
-}
-
-.doc-chip-index {
-  color: #9ca3af;
-  font-size: 0.75rem;
-}
-
-.doc-chip.selected .doc-chip-index {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.doc-chip-name {
-  max-width: 12rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.card-metadata-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
 }
 
 .no-docs-hint {
   color: #9ca3af;
   font-size: 0.8125rem;
   font-style: italic;
-}
-
-/* Expanded doc chip indicator */
-.doc-chip.expanded {
-  background: #1f2937;
-  border-color: #1f2937;
-  color: #ffffff;
-}
-
-.doc-chip.expanded .doc-chip-index {
-  color: rgba(255, 255, 255, 0.7);
-}
-
-/* Doc metadata row (characters, events, places) */
-.doc-metadata-row {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #e5e7eb;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.metadata-section {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.metadata-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
 }
 
 .metadata-chips {
@@ -973,4 +960,22 @@ app-right-sidebar {
 .place-chip{} 
  
 .metadata-empty{} 
+ 
+.docs-cards-container{} 
+ 
+.doc-card{} 
+ 
+.doc-card-header{} 
+ 
+.doc-card-index{} 
+ 
+.doc-card-name{} 
+ 
+.doc-card-metadata{} 
+ 
+.card-metadata-row{} 
+ 
+.card-metadata-row{} 
+ 
+.card-metadata-row{} 
  
