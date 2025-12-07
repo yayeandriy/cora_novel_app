@@ -1224,3 +1224,47 @@ app-right-sidebar {
  
 .fixed-dropdown{} 
  
+.close-hint-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s;
+  z-index: 1001;
+}
+
+.close-hint-btn:hover {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.key-hint {
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  color: #6b7280;
+}
+
+.close-hint-btn:hover .key-hint {
+  background-color: white;
+  border-color: #d1d5db;
+}
+
+.close-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+} 
+ 
+.key-hint{} 
+ 
+.close-icon{} 
+ 

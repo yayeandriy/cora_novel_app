@@ -64,6 +64,14 @@
       <!-- Floating headers overlay (visible when triggered by doc header click when scrolled) -->
       @if (headersHoverVisible) {
         <div class="floating-headers-overlay" (click)="onFloatingHeadersClick($event)">
+          <!-- Close hint button -->
+          <div class="close-hint-btn" (click)="headersHoverVisible = false" title="Press ESC to close">
+            <span class="key-hint">ESC</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="close-icon">
+              <path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clip-rule="evenodd" />
+            </svg>
+          </div>
+
           <!-- Project title bar -->
           <div class="project-title-bar floating" (click)="onProjectHeaderClick($event)">
             <div class="project-title-center">
