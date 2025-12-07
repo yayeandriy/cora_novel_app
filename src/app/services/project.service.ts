@@ -12,7 +12,13 @@ import type {
 export class ProjectService {
   async createProject(payload: ProjectCreate): Promise<Project> {
     // Normalize optional fields so the invoke payload is consistent
-    const normalized = { name: payload.name, desc: payload.desc ?? null, path: payload.path ?? null, notes: payload.notes ?? null };
+    const normalized = { 
+      name: payload.name, 
+      desc: payload.desc ?? null, 
+      path: payload.path ?? null, 
+      notes: payload.notes ?? null,
+      grid_order: payload.grid_order ?? null
+    };
     return invoke<Project>("project_create", { payload: normalized });
   }
 

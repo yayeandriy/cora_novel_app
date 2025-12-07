@@ -6,13 +6,13 @@ use anyhow::Context;
 pub fn create(pool: &DbPool, payload: ProjectCreate) -> anyhow::Result<Project> {
     let conn = get_conn(pool)?;
     conn.execute(
-        "INSERT INTO projects (name, desc, path, notes) VALUES (?1, ?2, ?3, ?4)",
-        rusqlite::params![payload.name, payload.desc, payload.path, payload.notes],
+        "INSERT INTO projects (name, desc, path, notes, grid_order) VALUES (?1, ?2, ?3, ?4, ?5)",
+        rusqlite::params![payload.name, payload.desc, payload.path, payload.notes, payload.grid_order],
     )
     .context("inserting project")?;
 
     let id = conn.last_insert_rowid();
-    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end FROM projects WHERE id = ?1")?;
+    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end, grid_order FROM projects WHERE id = ?1")?;
     let project = stmt
         .query_row(rusqlite::params![id], |row| {
             Ok(Project {
@@ -23,6 +23,7 @@ pub fn create(pool: &DbPool, payload: ProjectCreate) -> anyhow::Result<Project> 
                 notes: row.get(4)?,
                 timeline_start: row.get(5)?,
                 timeline_end: row.get(6)?,
+                grid_order: row.get(7)?,
             })
         })
         .context("querying created project")?;
@@ -32,7 +33,7 @@ pub fn create(pool: &DbPool, payload: ProjectCreate) -> anyhow::Result<Project> 
 
 pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<Project>> {
     let conn = get_conn(pool)?;
-    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end FROM projects WHERE id = ?1")?;
+    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end, grid_order FROM projects WHERE id = ?1")?;
     let res = stmt.query_row(rusqlite::params![id], |row| {
         Ok(Project {
             id: row.get(0)?,
@@ -42,6 +43,7 @@ pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<Project>> {
             notes: row.get(4)?,
             timeline_start: row.get(5)?,
             timeline_end: row.get(6)?,
+            grid_order: row.get(7)?,
         })
     }).optional()?;
 
@@ -50,7 +52,7 @@ pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<Project>> {
 
 pub fn list(pool: &DbPool) -> anyhow::Result<Vec<Project>> {
     let conn = get_conn(pool)?;
-    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end FROM projects ORDER BY id")?;
+    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end, grid_order FROM projects ORDER BY grid_order, id")?;
     let rows = stmt.query_map([], |row| {
         Ok(Project {
             id: row.get(0)?,
@@ -60,6 +62,7 @@ pub fn list(pool: &DbPool) -> anyhow::Result<Vec<Project>> {
             notes: row.get(4)?,
             timeline_start: row.get(5)?,
             timeline_end: row.get(6)?,
+            grid_order: row.get(7)?,
         })
     })?;
 

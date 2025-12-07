@@ -29,6 +29,7 @@ export class ProjectDashboardComponent implements AfterViewChecked {
   projectStats = signal<Map<number, ProjectStats>>(new Map());
   showCreate = signal(false);
   editingId = signal<number | null>(null);
+  editingCellIndex = signal<number | null>(null);
   isLoading = signal(false);
   
   // For inline editing
@@ -38,11 +39,12 @@ export class ProjectDashboardComponent implements AfterViewChecked {
   // Computed values
   hasProjects = computed(() => this.projects().length > 0);
   sortedProjects = computed(() => {
+    // Sort by grid_order, then by id as fallback
     return [...this.projects()].sort((a, b) => {
-      // Sort by most recent activity (using timeline_start as proxy for now)
-      const aTime = a.timeline_start ? new Date(a.timeline_start).getTime() : 0;
-      const bTime = b.timeline_start ? new Date(b.timeline_start).getTime() : 0;
-      return bTime - aTime;
+      const aOrder = a.grid_order ?? 999;
+      const bOrder = b.grid_order ?? 999;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return a.id - b.id;
     });
   });
   
@@ -125,30 +127,66 @@ export class ProjectDashboardComponent implements AfterViewChecked {
     const projects = this.sortedProjects();
     const cells: { index: number; project: Project | null }[] = [];
     
+    // Separate projects with and without grid_order
+    const projectsWithOrder = projects.filter(p => p.grid_order !== null && p.grid_order !== undefined);
+    const projectsWithoutOrder = projects.filter(p => p.grid_order === null || p.grid_order === undefined);
+    
+    // Track which cells are occupied
+    const occupiedCells = new Set<number>();
+    const cellToProject = new Map<number, Project>();
+    
+    // First, place projects that have a grid_order
+    for (const p of projectsWithOrder) {
+      if (p.grid_order! < totalCells) {
+        occupiedCells.add(p.grid_order!);
+        cellToProject.set(p.grid_order!, p);
+      }
+    }
+    
+    // Then, place projects without grid_order in first available cells
+    let nextFreeCell = 0;
+    for (const p of projectsWithoutOrder) {
+      while (occupiedCells.has(nextFreeCell) && nextFreeCell < totalCells) {
+        nextFreeCell++;
+      }
+      if (nextFreeCell < totalCells) {
+        occupiedCells.add(nextFreeCell);
+        cellToProject.set(nextFreeCell, p);
+        nextFreeCell++;
+      }
+    }
+    
+    // Build the cells array
     for (let i = 0; i < totalCells; i++) {
       cells.push({
         index: i,
-        project: i < projects.length ? projects[i] : null
+        project: cellToProject.get(i) || null
       });
     }
     
     return cells;
   }
   
-  getFirstEmptyIndex(): number {
-    return this.sortedProjects().length;
+  startCreateAt(cellIndex: number) {
+    this.editingCellIndex.set(cellIndex);
+    this.showCreate.set(true);
+    this.nameControl.reset();
+    this.shouldFocusInput = true;
   }
   
   async createQuick() {
     const name = this.nameControl.value?.trim();
+    const cellIndex = this.editingCellIndex();
+    
     if (!name) {
       this.cancelEdit();
       return;
     }
     
-    await this.svc.createProject({ name, desc: null, path: null });
+    await this.svc.createProject({ name, desc: null, path: null, grid_order: cellIndex });
     this.nameControl.reset();
     this.showCreate.set(false);
+    this.editingCellIndex.set(null);
     await this.reload();
   }
   
@@ -244,6 +282,7 @@ export class ProjectDashboardComponent implements AfterViewChecked {
 
   cancelEdit() {
     this.editingId.set(null);
+    this.editingCellIndex.set(null);
     this.showCreate.set(false);
     this.nameControl.reset();
     this.form.reset({ name: '', desc: null, path: null });

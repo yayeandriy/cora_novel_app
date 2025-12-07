@@ -3,6 +3,7 @@ export interface ProjectCreate {
   desc?: string | null;
   path?: string | null;
   notes?: string | null;
+  grid_order?: number | null;
 }
 
 export interface Project {
@@ -13,6 +14,7 @@ export interface Project {
   notes?: string | null;
   timeline_start?: string | null;
   timeline_end?: string | null;
+  grid_order?: number | null;
 }
 
 export interface Character {

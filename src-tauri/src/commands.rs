@@ -656,8 +656,8 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
 
         // Create project (prefer metadata project name)
         let project_name = parsed.project.name.clone();
-    let payload = crate::models::ProjectCreate { name: project_name, desc: parsed.project.desc.clone(), path: Some(folder_path.clone()), notes: parsed.project.notes.clone() };
-        let new_project = crate::services::projects::create(pool, payload).map_err(|e| e.to_string())?;
+    let payload = crate::models::ProjectCreate { name: project_name, desc: parsed.project.desc.clone(), path: Some(folder_path.clone()), notes: parsed.project.notes.clone(), grid_order: None };
+        let new_project = crate::services::projects::create(pool, payload).map_err(|e| e.to_string())?;;
 
         use std::collections::HashMap;
         // Create groups in parent-first order using original ids for mapping
@@ -784,7 +784,7 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
 fn legacy_import_folder(pool: &crate::db::DbPool, base: &Path, folder_path: &str) -> Result<serde_json::Value, String> {
         // Project name from folder basename
         let project_name = base.file_name().and_then(|s| s.to_str()).unwrap_or("Imported Project").to_string();
-    let payload = crate::models::ProjectCreate { name: project_name.clone(), desc: None, path: Some(folder_path.to_string()), notes: None };
+    let payload = crate::models::ProjectCreate { name: project_name.clone(), desc: None, path: Some(folder_path.to_string()), notes: None, grid_order: None };
         let project = crate::services::projects::create(pool, payload).map_err(|e| e.to_string())?;
 
         // Read entries and partition into subdirs and root .txt files

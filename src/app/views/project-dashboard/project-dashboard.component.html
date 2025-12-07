@@ -21,7 +21,7 @@
             <span>{{ getStats(cell.project.id).pageCount === 0 ? 'No pages' : getStats(cell.project.id).pageCount + ' ' + (getStats(cell.project.id).pageCount === 1 ? 'page' : 'pages') }}</span>
           </div>
         </div>
-      } @else if (showCreate() && cell.index === getFirstEmptyIndex()) {
+      } @else if (showCreate() && cell.index === editingCellIndex()) {
         <!-- New Project Card (inline edit) -->
         <div class="card card-project card-editing">
           <div class="card-title">
@@ -43,7 +43,7 @@
       } @else {
         <!-- Empty Card -->
         <div class="card card-empty"
-             (click)="toggleCreate()">
+             (click)="startCreateAt(cell.index)">
         </div>
       }
     }

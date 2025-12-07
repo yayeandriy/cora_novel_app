@@ -9,6 +9,7 @@ pub struct Project {
     pub notes: Option<String>,
     pub timeline_start: Option<String>,
     pub timeline_end: Option<String>,
+    pub grid_order: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -17,6 +18,7 @@ pub struct ProjectCreate {
     pub desc: Option<String>,
     pub path: Option<String>,
     pub notes: Option<String>,
+    pub grid_order: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
