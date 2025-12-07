@@ -338,9 +338,8 @@ app-doc-tree {
 .doc-card {
   display: flex;
   flex-direction: column;
-  width: 200px;
-  min-width: 200px;
-  max-width: 200px;
+  min-width: 140px;
+  max-width: 280px;
   min-height: 140px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
