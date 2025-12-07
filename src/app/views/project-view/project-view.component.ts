@@ -442,6 +442,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Update cache
       const current = this.projectHeaderDocCharactersCache.get(docId) || [];
       this.projectHeaderDocCharactersCache.set(docId, [...current, characterId]);
+      
+      // Update sidebar if this is the selected doc
+      if (this.selectedDoc && this.selectedDoc.id === docId) {
+        this.docCharacterIds = new Set([...this.docCharacterIds, characterId]);
+      }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to add character to doc:', error);
     }
@@ -453,6 +459,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Update cache
       const current = this.projectHeaderDocEventsCache.get(docId) || [];
       this.projectHeaderDocEventsCache.set(docId, [...current, eventId]);
+      
+      // Update sidebar if this is the selected doc
+      if (this.selectedDoc && this.selectedDoc.id === docId) {
+        this.docEventIds = new Set([...this.docEventIds, eventId]);
+      }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to add event to doc:', error);
     }
@@ -464,6 +476,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Update cache
       const current = this.projectHeaderDocPlacesCache.get(docId) || [];
       this.projectHeaderDocPlacesCache.set(docId, [...current, placeId]);
+      
+      // Update sidebar if this is the selected doc
+      if (this.selectedDoc && this.selectedDoc.id === docId) {
+        this.docPlaceIds = new Set([...this.docPlaceIds, placeId]);
+      }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to add place to doc:', error);
     }
@@ -479,6 +497,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.projectService.attachCharacterToDoc(docId, created.id);
       const current = this.projectHeaderDocCharactersCache.get(docId) || [];
       this.projectHeaderDocCharactersCache.set(docId, [...current, created.id]);
+      
+      // Update sidebar if this is the selected doc
+      if (this.selectedDoc && this.selectedDoc.id === docId) {
+        this.docCharacterIds = new Set([...this.docCharacterIds, created.id]);
+      }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to create character:', error);
     }
@@ -493,6 +517,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.projectService.attachEventToDoc(docId, created.id);
       const current = this.projectHeaderDocEventsCache.get(docId) || [];
       this.projectHeaderDocEventsCache.set(docId, [...current, created.id]);
+      
+      // Update sidebar if this is the selected doc
+      if (this.selectedDoc && this.selectedDoc.id === docId) {
+        this.docEventIds = new Set([...this.docEventIds, created.id]);
+      }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to create event:', error);
     }
@@ -507,6 +537,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.projectService.attachPlaceToDoc(docId, created.id);
       const current = this.projectHeaderDocPlacesCache.get(docId) || [];
       this.projectHeaderDocPlacesCache.set(docId, [...current, created.id]);
+      
+      // Update sidebar if this is the selected doc
+      if (this.selectedDoc && this.selectedDoc.id === docId) {
+        this.docPlaceIds = new Set([...this.docPlaceIds, created.id]);
+      }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to create place:', error);
     }
@@ -519,6 +555,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.projectService.detachCharacterFromDoc(docId, characterId);
       const current = this.projectHeaderDocCharactersCache.get(docId) || [];
       this.projectHeaderDocCharactersCache.set(docId, current.filter(id => id !== characterId));
+      
+      // Update sidebar if this is the selected doc
+      if (this.selectedDoc && this.selectedDoc.id === docId) {
+        this.docCharacterIds.delete(characterId);
+        this.docCharacterIds = new Set(this.docCharacterIds);
+      }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to remove character from doc:', error);
     }
@@ -530,6 +573,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.projectService.detachEventFromDoc(docId, eventId);
       const current = this.projectHeaderDocEventsCache.get(docId) || [];
       this.projectHeaderDocEventsCache.set(docId, current.filter(id => id !== eventId));
+      
+      // Update sidebar if this is the selected doc
+      if (this.selectedDoc && this.selectedDoc.id === docId) {
+        this.docEventIds.delete(eventId);
+        this.docEventIds = new Set(this.docEventIds);
+      }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to remove event from doc:', error);
     }
@@ -541,6 +591,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.projectService.detachPlaceFromDoc(docId, placeId);
       const current = this.projectHeaderDocPlacesCache.get(docId) || [];
       this.projectHeaderDocPlacesCache.set(docId, current.filter(id => id !== placeId));
+      
+      // Update sidebar if this is the selected doc
+      if (this.selectedDoc && this.selectedDoc.id === docId) {
+        this.docPlaceIds.delete(placeId);
+        this.docPlaceIds = new Set(this.docPlaceIds);
+      }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to remove place from doc:', error);
     }
@@ -3048,6 +3105,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         await this.projectService.attachCharacterToDoc(this.selectedDoc.id, created.id);
         this.docCharacterIds = new Set([...this.docCharacterIds, created.id]);
         
+        // Update project header cache
+        const current = this.projectHeaderDocCharactersCache.get(this.selectedDoc.id) || [];
+        this.projectHeaderDocCharactersCache.set(this.selectedDoc.id, [...current, created.id]);
+        
         // Refresh parent folder's character list (union of all docs)
         if (this.currentGroup) {
           await this.loadDocGroupCharacters(this.currentGroup.id);
@@ -3058,6 +3119,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         await this.projectService.attachCharacterToDocGroup(this.selectedGroup.id, created.id);
         this.docGroupCharacterIds = new Set([...this.docGroupCharacterIds, created.id]);
       }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to create character:', error);
       alert('Failed to create character: ' + error);
@@ -3142,6 +3204,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         await this.projectService.attachEventToDoc(this.selectedDoc.id, created.id);
         this.docEventIds = new Set([...this.docEventIds, created.id]);
         
+        // Update project header cache
+        const current = this.projectHeaderDocEventsCache.get(this.selectedDoc.id) || [];
+        this.projectHeaderDocEventsCache.set(this.selectedDoc.id, [...current, created.id]);
+        
         // Refresh parent folder's event list (union of all docs)
         if (this.currentGroup) {
           await this.loadDocGroupEvents(this.currentGroup.id);
@@ -3152,6 +3218,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         await this.projectService.attachEventToDocGroup(this.selectedGroup.id, created.id);
         this.docGroupEventIds = new Set([...this.docGroupEventIds, created.id]);
       }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to create event:', error);
       alert('Failed to create event: ' + error);
@@ -3228,9 +3295,17 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (checked) {
         await this.projectService.attachEventToDoc(this.selectedDoc.id, eventId);
         this.docEventIds.add(eventId);
+        // Update project header cache
+        const current = this.projectHeaderDocEventsCache.get(this.selectedDoc.id) || [];
+        if (!current.includes(eventId)) {
+          this.projectHeaderDocEventsCache.set(this.selectedDoc.id, [...current, eventId]);
+        }
       } else {
         await this.projectService.detachEventFromDoc(this.selectedDoc.id, eventId);
         this.docEventIds.delete(eventId);
+        // Update project header cache
+        const current = this.projectHeaderDocEventsCache.get(this.selectedDoc.id) || [];
+        this.projectHeaderDocEventsCache.set(this.selectedDoc.id, current.filter(id => id !== eventId));
       }
       this.docEventIds = new Set(this.docEventIds);
       
@@ -3238,6 +3313,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.currentGroup) {
         await this.loadDocGroupEvents(this.currentGroup.id);
       }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to update event relation:', error);
     }
@@ -3286,9 +3362,17 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (checked) {
         await this.projectService.attachCharacterToDoc(this.selectedDoc.id, characterId);
         this.docCharacterIds.add(characterId);
+        // Update project header cache
+        const current = this.projectHeaderDocCharactersCache.get(this.selectedDoc.id) || [];
+        if (!current.includes(characterId)) {
+          this.projectHeaderDocCharactersCache.set(this.selectedDoc.id, [...current, characterId]);
+        }
       } else {
         await this.projectService.detachCharacterFromDoc(this.selectedDoc.id, characterId);
         this.docCharacterIds.delete(characterId);
+        // Update project header cache
+        const current = this.projectHeaderDocCharactersCache.get(this.selectedDoc.id) || [];
+        this.projectHeaderDocCharactersCache.set(this.selectedDoc.id, current.filter(id => id !== characterId));
       }
       // Reassign to trigger OnPush consumers
       this.docCharacterIds = new Set(this.docCharacterIds);
@@ -3297,6 +3381,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.currentGroup) {
         await this.loadDocGroupCharacters(this.currentGroup.id);
       }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to update character relation:', error);
     }
@@ -3359,6 +3444,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         await this.projectService.attachPlaceToDoc(this.selectedDoc.id, created.id);
         this.docPlaceIds = new Set([...this.docPlaceIds, created.id]);
         
+        // Update project header cache
+        const current = this.projectHeaderDocPlacesCache.get(this.selectedDoc.id) || [];
+        this.projectHeaderDocPlacesCache.set(this.selectedDoc.id, [...current, created.id]);
+        
         if (this.currentGroup) {
           await this.loadDocGroupPlaces(this.currentGroup.id);
         }
@@ -3366,6 +3455,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         await this.projectService.attachPlaceToDocGroup(this.selectedGroup.id, created.id);
         this.docGroupPlaceIds = new Set([...this.docGroupPlaceIds, created.id]);
       }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to create place:', error);
       alert('Failed to create place: ' + error);
@@ -3437,15 +3527,24 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (checked) {
         await this.projectService.attachPlaceToDoc(this.selectedDoc.id, placeId);
         this.docPlaceIds.add(placeId);
+        // Update project header cache
+        const current = this.projectHeaderDocPlacesCache.get(this.selectedDoc.id) || [];
+        if (!current.includes(placeId)) {
+          this.projectHeaderDocPlacesCache.set(this.selectedDoc.id, [...current, placeId]);
+        }
       } else {
         await this.projectService.detachPlaceFromDoc(this.selectedDoc.id, placeId);
         this.docPlaceIds.delete(placeId);
+        // Update project header cache
+        const current = this.projectHeaderDocPlacesCache.get(this.selectedDoc.id) || [];
+        this.projectHeaderDocPlacesCache.set(this.selectedDoc.id, current.filter(id => id !== placeId));
       }
       this.docPlaceIds = new Set(this.docPlaceIds);
       
       if (this.currentGroup) {
         await this.loadDocGroupPlaces(this.currentGroup.id);
       }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to update doc place relation:', error);
     }
