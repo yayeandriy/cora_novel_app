@@ -253,7 +253,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
 
   // Toggle project header expansion (show/hide project notes editor)
-  onProjectHeaderClick(event: MouseEvent) {
+  async onProjectHeaderClick(event: MouseEvent) {
     if (this.isInteractiveHeaderClick(event)) return;
     this.projectHeaderExpanded = !this.projectHeaderExpanded;
     // Clear folder and doc selection when collapsing project header
@@ -261,6 +261,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.projectHeaderSelectedGroupId = null;
       this.projectHeaderExpandedDocId = null;
       this.projectHeaderHighlightedDocId = null;
+    } else {
+      // When expanding, automatically select the current folder (if any)
+      const currentGroup = this.selectedGroup || this.currentGroup;
+      if (currentGroup) {
+        this.projectHeaderSelectedGroupId = currentGroup.id;
+        // Load metadata for all docs in this folder
+        await this.loadProjectHeaderFolderDocsMetadata(currentGroup);
+      }
     }
   }
 
