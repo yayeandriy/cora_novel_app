@@ -1,4 +1,4 @@
-<div class="metadata-row" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="onDrop($event)">
+<div class="metadata-row" cdkDropList cdkDropListOrientation="mixed" (cdkDropListDropped)="onDrop($event)">
   @for (item of items; track item.id) {
     <span class="metadata-chip" [ngClass]="getChipClass()" cdkDrag>
       {{ item.name }}
