@@ -318,4 +318,112 @@ export class RightSidebarComponent {
   onTimelineHeaderToggle() {
     this.timelineHeaderToggle.emit();
   }
+
+  // ===== Dropdown Logic =====
+  activeDropdown: { type: 'characters' | 'events' | 'places', top: number, left: number } | null = null;
+
+  toggleAddDropdown(type: 'characters' | 'events' | 'places', event: MouseEvent) {
+    event.stopPropagation();
+    if (this.activeDropdown && this.activeDropdown.type === type) {
+      this.activeDropdown = null;
+    } else {
+      const button = event.currentTarget as HTMLElement;
+      const rect = button.getBoundingClientRect();
+      // Position dropdown below the button, aligned to the right if possible, or left
+      // Since sidebar is on the right, aligning to the right might clip. Align to the right edge of button minus width?
+      // Let's just position it below-left of the button
+      this.activeDropdown = {
+        type,
+        top: rect.bottom + 4,
+        left: rect.left
+      };
+    }
+  }
+
+  closeDropdown() {
+    this.activeDropdown = null;
+  }
+
+  // Helper to get items NOT already attached to the current doc
+  getAvailableCharacters(): Character[] {
+    if (!this.docCharacterIds) return this.characters;
+    return this.characters.filter(c => !this.docCharacterIds!.has(c.id));
+  }
+
+  getAvailableEvents(): Event[] {
+    if (!this.docEventIds) return this.events;
+    return this.events.filter(e => !this.docEventIds!.has(e.id));
+  }
+
+  getAvailablePlaces(): any[] {
+    if (!this.docPlaceIds) return this.places;
+    return this.places.filter(p => !this.docPlaceIds!.has(p.id));
+  }
+
+  // Actions
+  addCharacter(id: number) {
+    this.characterToggle.emit({ characterId: id, checked: true });
+    this.closeDropdown();
+  }
+
+  removeCharacter(id: number, event?: MouseEvent) {
+    if (event) event.stopPropagation();
+    this.characterToggle.emit({ characterId: id, checked: false });
+  }
+
+  createAndAddCharacter(name: string) {
+    if (!name.trim()) return;
+    this.characterCreate.emit({ name: name.trim(), desc: '' });
+    // Note: The parent component handles creation and auto-attaching if selectedDoc is present.
+    // We just need to close the dropdown.
+    this.closeDropdown();
+  }
+
+  addEvent(id: number) {
+    this.eventToggle.emit({ eventId: id, checked: true });
+    this.closeDropdown();
+  }
+
+  removeEvent(id: number, event?: MouseEvent) {
+    if (event) event.stopPropagation();
+    this.eventToggle.emit({ eventId: id, checked: false });
+  }
+
+  createAndAddEvent(name: string) {
+    if (!name.trim()) return;
+    this.eventCreate.emit({ name: name.trim(), desc: '', start_date: null, end_date: null });
+    this.closeDropdown();
+  }
+
+  addPlace(id: number) {
+    this.placeToggle.emit({ placeId: id, checked: true });
+    this.closeDropdown();
+  }
+
+  removePlace(id: number, event?: MouseEvent) {
+    if (event) event.stopPropagation();
+    this.placeToggle.emit({ placeId: id, checked: false });
+  }
+
+  createAndAddPlace(name: string) {
+    if (!name.trim()) return;
+    this.placeCreate.emit({ name: name.trim(), desc: '' });
+    this.closeDropdown();
+  }
+
+  // Get attached items for display
+  getAttachedCharacters(): Character[] {
+    if (!this.docCharacterIds) return [];
+    return this.characters.filter(c => this.docCharacterIds!.has(c.id));
+  }
+
+  getAttachedEvents(): Event[] {
+    if (!this.docEventIds) return [];
+    return this.events.filter(e => this.docEventIds!.has(e.id));
+  }
+
+  getAttachedPlaces(): any[] {
+    if (!this.docPlaceIds) return [];
+    return this.places.filter(p => this.docPlaceIds!.has(p.id));
+  }
 }

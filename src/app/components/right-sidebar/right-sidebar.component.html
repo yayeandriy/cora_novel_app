@@ -28,55 +28,86 @@
   <div class="sidebar-content">
     <!-- DOC TAB CONTENT -->
     @if (activeTab === 'doc') {
-      <!-- Characters Section (separate component) -->
-      <app-characters-panel
-      [characters]="characters"
-      [docCharacterIds]="docCharacterIds"
-      [selectedDoc]="selectedDoc"
-      [expanded]="charactersExpanded"
-      [editingCharacterId]="editingCharacterId"
-      (expandedChange)="onCharactersToggle()"
-      (add)="onCharacterAdd()"
-      (createCharacter)="onCharacterCreate($event)"
-      (update)="onCharacterUpdate($event)"
-      (remove)="onCharacterDelete($event)"
-      (toggle)="characterToggle.emit($event)"
-      (reorder)="charactersReorder.emit($event)">
-    </app-characters-panel>
+      <!-- Characters Section -->
+      <div class="sidebar-section">
+        <div class="section-header" (click)="onCharactersToggle()">
+          <div class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="charactersExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+            <span>Characters</span>
+          </div>
+        </div>
+        @if (charactersExpanded) {
+          <div class="card-metadata-row">
+            @for (char of getAttachedCharacters(); track char.id) {
+              <span class="metadata-chip character-chip">
+                {{ char.name }}
+                <button class="chip-delete-btn" (click)="removeCharacter(char.id, $event)">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>
+                </button>
+              </span>
+            }
+            <button class="add-metadata-btn character-add" (click)="toggleAddDropdown('characters', $event)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
+            </button>
+          </div>
+        }
+      </div>
 
-    <!-- Events Section (separate component) -->
-    <app-events-panel
-      [events]="events"
-      [docEventIds]="docEventIds"
-      [selectedDoc]="selectedDoc"
-      [expanded]="eventsExpanded"
-      [editingEventId]="editingEventId"
-      [timelineHeaderVisible]="timelineHeaderVisible"
-      (expandedChange)="onEventsToggle()"
-      (add)="eventAdd.emit()"
-      (createEvent)="onEventCreate($event)"
-      (update)="eventUpdate.emit($event)"
-      (remove)="eventDelete.emit($event)"
-      (toggle)="eventToggle.emit($event)"
-      (reorder)="eventsReorder.emit($event)"
-      (timelineHeaderToggle)="onTimelineHeaderToggle()">
-    </app-events-panel>
+      <!-- Events Section -->
+      <div class="sidebar-section">
+        <div class="section-header" (click)="onEventsToggle()">
+          <div class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="eventsExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+            <span>Events</span>
+          </div>
+        </div>
+        @if (eventsExpanded) {
+          <div class="card-metadata-row">
+            @for (evt of getAttachedEvents(); track evt.id) {
+              <span class="metadata-chip event-chip">
+                {{ evt.name }}
+                <button class="chip-delete-btn" (click)="removeEvent(evt.id, $event)">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>
+                </button>
+              </span>
+            }
+            <button class="add-metadata-btn event-add" (click)="toggleAddDropdown('events', $event)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
+            </button>
+          </div>
+        }
+      </div>
 
-    <!-- Places Section (separate component) -->
-    <app-places-panel
-      [places]="places"
-      [docPlaceIds]="docPlaceIds"
-      [selectedDoc]="selectedDoc"
-      [expanded]="placesExpanded"
-      [editingPlaceId]="editingPlaceId"
-      (expandedChange)="onPlacesToggle()"
-      (add)="onPlaceAdd()"
-      (createPlace)="onPlaceCreate($event)"
-      (update)="onPlaceUpdate($event)"
-      (remove)="onPlaceDelete($event)"
-      (toggle)="placeToggle.emit($event)"
-      (reorder)="placesReorder.emit($event)">
-    </app-places-panel>
+      <!-- Places Section -->
+      <div class="sidebar-section">
+        <div class="section-header" (click)="onPlacesToggle()">
+          <div class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="placesExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+            <span>Places</span>
+          </div>
+        </div>
+        @if (placesExpanded) {
+          <div class="card-metadata-row">
+            @for (place of getAttachedPlaces(); track place.id) {
+              <span class="metadata-chip place-chip">
+                {{ place.name }}
+                <button class="chip-delete-btn" (click)="removePlace(place.id, $event)">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>
+                </button>
+              </span>
+            }
+            <button class="add-metadata-btn place-add" (click)="toggleAddDropdown('places', $event)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
+            </button>
+          </div>
+        }
+      </div>
     }
 
     <!-- FOLDER TAB CONTENT -->
@@ -234,4 +265,72 @@
       </app-places-panel>
     }
   </div>
+
+  <!-- Dropdown Backdrop -->
+  @if (activeDropdown) {
+    <div class="fixed inset-0 z-[999]" (click)="closeDropdown()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 999;"></div>
+  }
+
+  <!-- Add Metadata Dropdown -->
+  @if (activeDropdown) {
+    <div class="add-metadata-dropdown" 
+         [style.top.px]="activeDropdown.top" 
+         [style.left.px]="activeDropdown.left"
+         (click)="$event.stopPropagation()">
+      
+      @if (activeDropdown.type === 'characters') {
+        <div class="dropdown-create-row">
+          <input 
+            #charInput
+            type="text" 
+            class="dropdown-create-input" 
+            placeholder="New character..."
+            (keydown.enter)="$event.preventDefault(); createAndAddCharacter(charInput.value); charInput.value = ''"
+            autofocus />
+        </div>
+        @for (char of getAvailableCharacters(); track char.id) {
+          <button class="dropdown-item" (click)="addCharacter(char.id)">{{ char.name }}</button>
+        }
+        @if (getAvailableCharacters().length === 0) {
+          <span class="dropdown-empty">No more characters</span>
+        }
+      }
+
+      @if (activeDropdown.type === 'events') {
+        <div class="dropdown-create-row">
+          <input 
+            #eventInput
+            type="text" 
+            class="dropdown-create-input" 
+            placeholder="New event..."
+            (keydown.enter)="$event.preventDefault(); createAndAddEvent(eventInput.value); eventInput.value = ''"
+            autofocus />
+        </div>
+        @for (evt of getAvailableEvents(); track evt.id) {
+          <button class="dropdown-item" (click)="addEvent(evt.id)">{{ evt.name }}</button>
+        }
+        @if (getAvailableEvents().length === 0) {
+          <span class="dropdown-empty">No more events</span>
+        }
+      }
+
+      @if (activeDropdown.type === 'places') {
+        <div class="dropdown-create-row">
+          <input 
+            #placeInput
+            type="text" 
+            class="dropdown-create-input" 
+            placeholder="New place..."
+            (keydown.enter)="$event.preventDefault(); createAndAddPlace(placeInput.value); placeInput.value = ''"
+            autofocus />
+        </div>
+        @for (place of getAvailablePlaces(); track place.id) {
+          <button class="dropdown-item" (click)="addPlace(place.id)">{{ place.name }}</button>
+        }
+        @if (getAvailablePlaces().length === 0) {
+          <span class="dropdown-empty">No more places</span>
+        }
+      }
+    </div>
+  }
 </aside>
