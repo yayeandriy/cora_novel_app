@@ -31,8 +31,33 @@
 .stat-value { color: #111827; font-weight: 500; }
 .stat-project { color: #9ca3af; font-size: 0.7rem; }
 .width-control { gap: 0.35rem; }
-.width-slider { width: 6rem; opacity: 0.6; transition: opacity 120ms ease-in-out; }
+.width-slider { 
+  width: 6rem; 
+  opacity: 0.6; 
+  transition: opacity 120ms ease-in-out;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 12px; /* Match thumb height */
+  cursor: pointer;
+}
 .width-slider:hover, .width-slider:focus { opacity: 0.9; }
-.width-slider::-webkit-slider-runnable-track { height: 2px; background: #e5e7eb; border-radius: 999px; }
-.width-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; margin-top: -4px; background: #9ca3af; border-radius: 50%; border: none; }
+
+/* Track styling using gradient on the input itself for the fill effect */
+.width-slider::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #000000 0%, #000000 var(--val), #e5e7eb var(--val), #e5e7eb 100%);
+}
+
+.width-slider::-webkit-slider-thumb { 
+  -webkit-appearance: none; 
+  width: 12px; 
+  height: 12px; 
+  margin-top: -5px; /* (2px track - 12px thumb) / 2 */
+  background: #000000; 
+  border-radius: 50%; 
+  border: 2px solid #ffffff; 
+  box-shadow: 0 0 0 1px #000000; 
+}
 .page-icon { width: 0.875rem; height: 0.875rem; color: #374151; flex-shrink: 0; }

@@ -41,8 +41,18 @@
         <span class="stat-project">({{ projectPageCount }})</span>
       </span>
       <span class="stat-item width-control">
-        <input type="range" min="20" max="100" step="1" [value]="editorWidthPct" (input)="onWidthInput($event.target.value)" class="width-slider" aria-label="Editor width" title="Editor width" />
-        <span class="stat-project">{{ editorWidthPct }}%</span>
+        <input 
+          type="range" 
+          min="400" 
+          max="1400" 
+          step="10" 
+          [value]="editorWidthPx" 
+          (input)="onWidthInput($event.target.value)" 
+          class="width-slider" 
+          [style.--val.%]="(editorWidthPx - 400) / 10"
+          aria-label="Editor width" 
+          title="Editor width" />
+        <span class="stat-project">{{ editorWidthPx }}px</span>
       </span>
     </div>
   </div>

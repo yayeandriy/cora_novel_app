@@ -20,7 +20,7 @@ export class AppFooterComponent {
   // Inputs
   @Input() selectedDoc: Doc | null = null;
   @Input() allDocs: Doc[] = [];
-  @Input() editorWidthPct: number = 100;
+  @Input() editorWidthPx: number = 800;
   @Input() leftCollapsed: boolean = false;
   @Input() rightCollapsed: boolean = false;
 
@@ -29,7 +29,7 @@ export class AppFooterComponent {
   @Output() importFolders = new EventEmitter<void>();
   @Output() importFiles = new EventEmitter<void>();
   @Output() exportProject = new EventEmitter<void>();
-  @Output() editorWidthPctChange = new EventEmitter<number>();
+  @Output() editorWidthPxChange = new EventEmitter<number>();
   @Output() toggleLeft = new EventEmitter<void>();
   @Output() toggleRight = new EventEmitter<void>();
   @Output() toggleAll = new EventEmitter<void>();
@@ -39,7 +39,7 @@ export class AppFooterComponent {
   }
 
   // === Stats (mirroring previous editor footer logic) ===
-  private clampWidth(pct: number): number { return Math.max(20, Math.min(100, pct | 0)); }
+  private clampWidth(px: number): number { return Math.max(400, Math.min(1400, px | 0)); }
 
   get docCharCount(): number {
     if (!this.selectedDoc?.text) return 0;
@@ -66,9 +66,9 @@ export class AppFooterComponent {
     return num.toString();
   }
 
-  onWidthInput(val: string) {
-    const pct = this.clampWidth(parseInt(val, 10));
-    this.editorWidthPct = pct;
-    this.editorWidthPctChange.emit(pct);
+  onWidthInput(value: string) {
+    const px = this.clampWidth(parseInt(value, 10));
+    this.editorWidthPx = px;
+    this.editorWidthPxChange.emit(px);
   }
 }

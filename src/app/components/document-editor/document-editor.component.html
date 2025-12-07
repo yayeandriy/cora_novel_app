@@ -78,7 +78,7 @@
       [(ngModel)]="selectedDoc.text"
       (input)="onTextChange()"
       class="editor-textarea"
-      [style.width.%]="editorWidthPct"
+      [style.width.px]="editorWidthPx"
       (blur)="onBlur()"
       placeholder="Start writing...">
     </textarea>
@@ -90,7 +90,7 @@
           [(ngModel)]="selectedDoc.text"
           (input)="onTextChange()"
           class="editor-textarea"
-          [style.width.%]="editorWidthPct"
+          [style.width.px]="editorWidthPx"
           (blur)="onBlur()"
           placeholder="Start writing...">
         </textarea>

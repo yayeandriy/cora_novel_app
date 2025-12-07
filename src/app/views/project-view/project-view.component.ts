@@ -95,7 +95,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   rightWidth = 300;
   timelineHeaderVisible = false;
   // Editor width (moved from editor footer)
-  editorWidthPct: number = 100;
+  editorWidthPx: number = 800;
   
   // Deletion state
   isDeletingItem = false;
@@ -242,11 +242,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   // Called when global footer width slider changes
-  onFooterEditorWidthChange(pct: number) {
-    this.editorWidthPct = pct;
+  onFooterEditorWidthChange(px: number) {
+    this.editorWidthPx = px;
     // Propagate to editor component if present
     if (this.documentEditorComponent) {
-      (this.documentEditorComponent as any).editorWidthPct = pct;
+      (this.documentEditorComponent as any).editorWidthPx = px;
       if (typeof (this.documentEditorComponent as any).onEditorWidthChange === 'function') {
         (this.documentEditorComponent as any).onEditorWidthChange();
       }
