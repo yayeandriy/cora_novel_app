@@ -56,8 +56,8 @@ export class MetadataChipsComponent {
       const button = event.currentTarget as HTMLElement;
       const rect = button.getBoundingClientRect();
       
-      // Dropdown dimensions (approximate)
-      const dropdownWidth = 200;
+      // Dropdown dimensions (approximate - 18rem = 288px)
+      const dropdownWidth = 300;
       const dropdownHeight = 240;
       
       // Calculate position with viewport boundary checking
@@ -108,8 +108,8 @@ export class MetadataChipsComponent {
     const button = event.currentTarget as HTMLElement;
     const rect = button.getBoundingClientRect();
     
-    // Dropdown dimensions (approximate)
-    const dropdownWidth = 200;
+    // Dropdown dimensions (approximate - 18rem = 288px)
+    const dropdownWidth = 300;
     const dropdownHeight = 240;
     
     // Calculate position with viewport boundary checking
