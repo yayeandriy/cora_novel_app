@@ -359,15 +359,39 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   private autoSizePrimary() {
     const el = this.editorTextarea?.nativeElement;
     if (!el) return;
+
+    // Preserve scroll position of the container to prevent jumping
+    let scrollParent: HTMLElement | null = el.parentElement;
+    while (scrollParent && window.getComputedStyle(scrollParent).overflowY !== 'auto' && window.getComputedStyle(scrollParent).overflowY !== 'scroll') {
+      scrollParent = scrollParent.parentElement;
+    }
+    const scrollTop = scrollParent ? scrollParent.scrollTop : 0;
+
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 200000) + 'px';
+
+    if (scrollParent) {
+      scrollParent.scrollTop = scrollTop;
+    }
   }
 
   private autoSizeDraft() {
     const el = this.draftTextarea?.nativeElement;
     if (!el) return;
+
+    // Preserve scroll position of the container to prevent jumping
+    let scrollParent: HTMLElement | null = el.parentElement;
+    while (scrollParent && window.getComputedStyle(scrollParent).overflowY !== 'auto' && window.getComputedStyle(scrollParent).overflowY !== 'scroll') {
+      scrollParent = scrollParent.parentElement;
+    }
+    const scrollTop = scrollParent ? scrollParent.scrollTop : 0;
+
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 200000) + 'px';
+
+    if (scrollParent) {
+      scrollParent.scrollTop = scrollTop;
+    }
   }
 
   ngAfterViewInit() {
