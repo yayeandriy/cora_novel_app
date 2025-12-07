@@ -24,6 +24,7 @@ export class AppFooterComponent {
   @Input() rightCollapsed: boolean = false;
 
   // Action outputs (migrated from doc tree & editor footers)
+  @Output() backToProjects = new EventEmitter<void>();
   @Output() createGroup = new EventEmitter<void>();
   @Output() importFolders = new EventEmitter<void>();
   @Output() importFiles = new EventEmitter<void>();
