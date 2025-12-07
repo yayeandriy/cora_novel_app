@@ -225,6 +225,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private projectHeaderDocCharactersCache: Map<number, number[]> = new Map();
   private projectHeaderDocEventsCache: Map<number, number[]> = new Map();
   private projectHeaderDocPlacesCache: Map<number, number[]> = new Map();
+  // Track which add dropdown is open: { docId, type: 'characters' | 'events' | 'places' }
+  projectHeaderAddDropdown: { docId: number; type: 'characters' | 'events' | 'places' } | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -281,6 +283,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Handle doc card click in project header - just highlight, don't navigate
   onProjectDocCardClick(doc: Doc, event: MouseEvent) {
     event.stopPropagation();
+    // Close any open dropdown
+    this.projectHeaderAddDropdown = null;
     // Toggle highlight
     if (this.projectHeaderHighlightedDocId === doc.id) {
       this.projectHeaderHighlightedDocId = null;
@@ -360,6 +364,75 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   getProjectHeaderDocPlaces(docId: number): any[] {
     const placeIds = this.projectHeaderDocPlacesCache.get(docId) || [];
     return this.places.filter(p => placeIds.includes(p.id));
+  }
+
+  // Toggle add dropdown for a doc card metadata
+  toggleProjectHeaderAddDropdown(docId: number, type: 'characters' | 'events' | 'places', event: MouseEvent) {
+    event.stopPropagation();
+    if (this.projectHeaderAddDropdown?.docId === docId && this.projectHeaderAddDropdown?.type === type) {
+      this.projectHeaderAddDropdown = null;
+    } else {
+      this.projectHeaderAddDropdown = { docId, type };
+    }
+  }
+
+  // Get available items to add (not already linked to doc)
+  getAvailableCharactersForDoc(docId: number): Character[] {
+    const linkedIds = this.projectHeaderDocCharactersCache.get(docId) || [];
+    return this.characters.filter(c => !linkedIds.includes(c.id));
+  }
+
+  getAvailableEventsForDoc(docId: number): Event[] {
+    const linkedIds = this.projectHeaderDocEventsCache.get(docId) || [];
+    return this.events.filter(e => !linkedIds.includes(e.id));
+  }
+
+  getAvailablePlacesForDoc(docId: number): any[] {
+    const linkedIds = this.projectHeaderDocPlacesCache.get(docId) || [];
+    return this.places.filter(p => !linkedIds.includes(p.id));
+  }
+
+  // Add item to doc metadata
+  async addCharacterToDocCard(docId: number, characterId: number, event: MouseEvent) {
+    event.stopPropagation();
+    try {
+      await this.projectService.attachCharacterToDoc(docId, characterId);
+      // Update cache
+      const current = this.projectHeaderDocCharactersCache.get(docId) || [];
+      this.projectHeaderDocCharactersCache.set(docId, [...current, characterId]);
+      // Close dropdown
+      this.projectHeaderAddDropdown = null;
+    } catch (error) {
+      console.error('Failed to add character to doc:', error);
+    }
+  }
+
+  async addEventToDocCard(docId: number, eventId: number, event: MouseEvent) {
+    event.stopPropagation();
+    try {
+      await this.projectService.attachEventToDoc(docId, eventId);
+      // Update cache
+      const current = this.projectHeaderDocEventsCache.get(docId) || [];
+      this.projectHeaderDocEventsCache.set(docId, [...current, eventId]);
+      // Close dropdown
+      this.projectHeaderAddDropdown = null;
+    } catch (error) {
+      console.error('Failed to add event to doc:', error);
+    }
+  }
+
+  async addPlaceToDocCard(docId: number, placeId: number, event: MouseEvent) {
+    event.stopPropagation();
+    try {
+      await this.projectService.attachPlaceToDoc(docId, placeId);
+      // Update cache
+      const current = this.projectHeaderDocPlacesCache.get(docId) || [];
+      this.projectHeaderDocPlacesCache.set(docId, [...current, placeId]);
+      // Close dropdown
+      this.projectHeaderAddDropdown = null;
+    } catch (error) {
+      console.error('Failed to add place to doc:', error);
+    }
   }
 
   // Toggle folder header expansion (show/hide folder notes editor)

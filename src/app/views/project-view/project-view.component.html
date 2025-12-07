@@ -108,30 +108,57 @@
                       <span class="doc-card-name">{{ doc.name }}</span>
                     </div>
                     <div class="doc-card-metadata">
-                      <!-- Characters -->
-                      @if (getProjectHeaderDocCharacters(doc.id).length > 0) {
-                        <div class="card-metadata-row">
-                          @for (char of getProjectHeaderDocCharacters(doc.id); track char.id) {
-                            <span class="metadata-chip character-chip">{{ char.name }}</span>
-                          }
-                        </div>
-                      }
-                      <!-- Events -->
-                      @if (getProjectHeaderDocEvents(doc.id).length > 0) {
-                        <div class="card-metadata-row">
-                          @for (evt of getProjectHeaderDocEvents(doc.id); track evt.id) {
-                            <span class="metadata-chip event-chip">{{ evt.name }}</span>
-                          }
-                        </div>
-                      }
-                      <!-- Places -->
-                      @if (getProjectHeaderDocPlaces(doc.id).length > 0) {
-                        <div class="card-metadata-row">
-                          @for (place of getProjectHeaderDocPlaces(doc.id); track place.id) {
-                            <span class="metadata-chip place-chip">{{ place.name }}</span>
-                          }
-                        </div>
-                      }
+                      <!-- Characters row -->
+                      <div class="card-metadata-row">
+                        @for (char of getProjectHeaderDocCharacters(doc.id); track char.id) {
+                          <span class="metadata-chip character-chip">{{ char.name }}</span>
+                        }
+                        <button class="add-metadata-btn character-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'characters', $event)">+</button>
+                        @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'characters') {
+                          <div class="add-metadata-dropdown">
+                            @for (char of getAvailableCharactersForDoc(doc.id); track char.id) {
+                              <button class="dropdown-item" (click)="addCharacterToDocCard(doc.id, char.id, $event)">{{ char.name }}</button>
+                            }
+                            @if (getAvailableCharactersForDoc(doc.id).length === 0) {
+                              <span class="dropdown-empty">No more characters</span>
+                            }
+                          </div>
+                        }
+                      </div>
+                      <!-- Events row -->
+                      <div class="card-metadata-row">
+                        @for (evt of getProjectHeaderDocEvents(doc.id); track evt.id) {
+                          <span class="metadata-chip event-chip">{{ evt.name }}</span>
+                        }
+                        <button class="add-metadata-btn event-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'events', $event)">+</button>
+                        @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'events') {
+                          <div class="add-metadata-dropdown">
+                            @for (evt of getAvailableEventsForDoc(doc.id); track evt.id) {
+                              <button class="dropdown-item" (click)="addEventToDocCard(doc.id, evt.id, $event)">{{ evt.name }}</button>
+                            }
+                            @if (getAvailableEventsForDoc(doc.id).length === 0) {
+                              <span class="dropdown-empty">No more events</span>
+                            }
+                          </div>
+                        }
+                      </div>
+                      <!-- Places row -->
+                      <div class="card-metadata-row">
+                        @for (place of getProjectHeaderDocPlaces(doc.id); track place.id) {
+                          <span class="metadata-chip place-chip">{{ place.name }}</span>
+                        }
+                        <button class="add-metadata-btn place-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'places', $event)">+</button>
+                        @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'places') {
+                          <div class="add-metadata-dropdown">
+                            @for (place of getAvailablePlacesForDoc(doc.id); track place.id) {
+                              <button class="dropdown-item" (click)="addPlaceToDocCard(doc.id, place.id, $event)">{{ place.name }}</button>
+                            }
+                            @if (getAvailablePlacesForDoc(doc.id).length === 0) {
+                              <span class="dropdown-empty">No more places</span>
+                            }
+                          </div>
+                        }
+                      </div>
                     </div>
                   </div>
                 }

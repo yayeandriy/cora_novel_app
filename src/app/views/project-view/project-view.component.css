@@ -289,9 +289,11 @@ app-doc-tree {
   gap: 0.75rem;
   align-items: flex-start;
   overflow-x: auto;
+  overflow-y: visible;
   padding: 0.25rem;
   margin: -0.25rem;
-  padding-bottom: 0.5rem;
+  padding-bottom: 12rem; /* Extra space for dropdowns */
+  margin-bottom: -11.5rem; /* Compensate for extra padding */
 }
 
 /* Doc card */
@@ -351,6 +353,94 @@ app-doc-tree {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
+  align-items: center;
+  position: relative;
+}
+
+/* Add metadata button */
+.add-metadata-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  border: 1px dashed #d1d5db;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+}
+
+.add-metadata-btn:hover {
+  border-style: solid;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.add-metadata-btn.character-add:hover {
+  border-color: #fcd34d;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.add-metadata-btn.event-add:hover {
+  border-color: #93c5fd;
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.add-metadata-btn.place-add:hover {
+  border-color: #6ee7b7;
+  background: #d1fae5;
+  color: #065f46;
+}
+
+/* Add metadata dropdown */
+.add-metadata-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  min-width: 150px;
+  max-width: 220px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.8125rem;
+  color: #374151;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.dropdown-item:hover {
+  background: #f3f4f6;
+}
+
+.dropdown-empty {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-style: italic;
 }
 
 .no-docs-hint {
@@ -978,4 +1068,34 @@ app-right-sidebar {
 .card-metadata-row{} 
  
 .card-metadata-row{} 
+ 
+.add-metadata-btn{} 
+ 
+.character-add{} 
+ 
+.add-metadata-dropdown{} 
+ 
+.dropdown-item{} 
+ 
+.dropdown-empty{} 
+ 
+.add-metadata-btn{} 
+ 
+.event-add{} 
+ 
+.add-metadata-dropdown{} 
+ 
+.dropdown-item{} 
+ 
+.dropdown-empty{} 
+ 
+.add-metadata-btn{} 
+ 
+.place-add{} 
+ 
+.add-metadata-dropdown{} 
+ 
+.dropdown-item{} 
+ 
+.dropdown-empty{} 
  
