@@ -45,14 +45,12 @@
       <button class="typo-tab" [class.active]="fontFamily === 'serif'" (click)="setFontFamily('serif')">Serif</button>
       <button class="typo-tab" [class.active]="fontFamily === 'sans'" (click)="setFontFamily('sans')">Sans</button>
     </div>
-    <div class="typo-divider"></div>
     <!-- Font Size -->
     <div class="typography-group" title="Size">
       <button class="typo-tab" [class.active]="fontSize === 'S'" (click)="setFontSize('S')">S</button>
       <button class="typo-tab" [class.active]="fontSize === 'M'" (click)="setFontSize('M')">M</button>
       <button class="typo-tab" [class.active]="fontSize === 'L'" (click)="setFontSize('L')">L</button>
     </div>
-    <div class="typo-divider"></div>
     <!-- Line Height / Leading -->
     <div class="typography-group" title="Leading">
       <button class="typo-tab leading-icon" [class.active]="lineHeight === 'S'" (click)="setLineHeight('S')">
