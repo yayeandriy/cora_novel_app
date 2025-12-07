@@ -445,9 +445,7 @@ app-doc-tree {
 
 /* Add metadata dropdown */
 .add-metadata-dropdown {
-  position: absolute;
-  bottom: 100%;
-  left: 0;
+  position: fixed;
   z-index: 1000;
   min-width: 150px;
   max-width: 220px;
@@ -458,8 +456,6 @@ app-doc-tree {
   border-radius: 0.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 0.25rem;
-  margin-bottom: 0.25rem;
-  margin-top: 0.25rem;
 }
 
 .dropdown-item {
@@ -1225,4 +1221,6 @@ app-right-sidebar {
 .floating{} 
  
 .floating-folder-drafts{} 
+ 
+.fixed-dropdown{} 
  

@@ -124,25 +124,7 @@
                             <button class="add-metadata-btn character-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'characters', $event)">
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
                             </button>
-                            @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'characters') {
-                              <div class="add-metadata-dropdown" (click)="$event.stopPropagation()">
-                                <div class="dropdown-create-row">
-                                  <input 
-                                    #charInputFloat
-                                    type="text" 
-                                    class="dropdown-create-input" 
-                                    placeholder="New character..."
-                                    (keydown.enter)="$event.preventDefault(); createAndAddCharacterToDoc(doc.id, charInputFloat.value); charInputFloat.value = ''"
-                                    (click)="$event.stopPropagation()" />
-                                </div>
-                                @for (char of getAvailableCharactersForDoc(doc.id); track char.id) {
-                                  <button class="dropdown-item" (click)="addCharacterToDocCard(doc.id, char.id, $event)">{{ char.name }}</button>
-                                }
-                                @if (getAvailableCharactersForDoc(doc.id).length === 0) {
-                                  <span class="dropdown-empty">No more characters</span>
-                                }
-                              </div>
-                            }
+
                           </div>
                           <!-- Events row -->
                           <div class="card-metadata-row">
@@ -157,25 +139,7 @@
                             <button class="add-metadata-btn event-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'events', $event)">
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
                             </button>
-                            @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'events') {
-                              <div class="add-metadata-dropdown" (click)="$event.stopPropagation()">
-                                <div class="dropdown-create-row">
-                                  <input 
-                                    #eventInputFloat
-                                    type="text" 
-                                    class="dropdown-create-input" 
-                                    placeholder="New event..."
-                                    (keydown.enter)="$event.preventDefault(); createAndAddEventToDoc(doc.id, eventInputFloat.value); eventInputFloat.value = ''"
-                                    (click)="$event.stopPropagation()" />
-                                </div>
-                                @for (evt of getAvailableEventsForDoc(doc.id); track evt.id) {
-                                  <button class="dropdown-item" (click)="addEventToDocCard(doc.id, evt.id, $event)">{{ evt.name }}</button>
-                                }
-                                @if (getAvailableEventsForDoc(doc.id).length === 0) {
-                                  <span class="dropdown-empty">No more events</span>
-                                }
-                              </div>
-                            }
+
                           </div>
                           <!-- Places row -->
                           <div class="card-metadata-row">
@@ -190,25 +154,7 @@
                             <button class="add-metadata-btn place-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'places', $event)">
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
                             </button>
-                            @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'places') {
-                              <div class="add-metadata-dropdown" (click)="$event.stopPropagation()">
-                                <div class="dropdown-create-row">
-                                  <input 
-                                    #placeInputFloat
-                                    type="text" 
-                                    class="dropdown-create-input" 
-                                    placeholder="New place..."
-                                    (keydown.enter)="$event.preventDefault(); createAndAddPlaceToDoc(doc.id, placeInputFloat.value); placeInputFloat.value = ''"
-                                    (click)="$event.stopPropagation()" />
-                                </div>
-                                @for (place of getAvailablePlacesForDoc(doc.id); track place.id) {
-                                  <button class="dropdown-item" (click)="addPlaceToDocCard(doc.id, place.id, $event)">{{ place.name }}</button>
-                                }
-                                @if (getAvailablePlacesForDoc(doc.id).length === 0) {
-                                  <span class="dropdown-empty">No more places</span>
-                                }
-                              </div>
-                            }
+
                           </div>
                         </div>
                       </div>
@@ -322,25 +268,7 @@
                         <button class="add-metadata-btn character-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'characters', $event)">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
                         </button>
-                        @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'characters') {
-                          <div class="add-metadata-dropdown" (click)="$event.stopPropagation()">
-                            <div class="dropdown-create-row">
-                              <input 
-                                #charInput
-                                type="text" 
-                                class="dropdown-create-input" 
-                                placeholder="New character..."
-                                (keydown.enter)="$event.preventDefault(); createAndAddCharacterToDoc(doc.id, charInput.value); charInput.value = ''"
-                                (click)="$event.stopPropagation()" />
-                            </div>
-                            @for (char of getAvailableCharactersForDoc(doc.id); track char.id) {
-                              <button class="dropdown-item" (click)="addCharacterToDocCard(doc.id, char.id, $event)">{{ char.name }}</button>
-                            }
-                            @if (getAvailableCharactersForDoc(doc.id).length === 0) {
-                              <span class="dropdown-empty">No more characters</span>
-                            }
-                          </div>
-                        }
+
                       </div>
                       <!-- Events row -->
                       <div class="card-metadata-row">
@@ -355,25 +283,7 @@
                         <button class="add-metadata-btn event-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'events', $event)">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
                         </button>
-                        @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'events') {
-                          <div class="add-metadata-dropdown" (click)="$event.stopPropagation()">
-                            <div class="dropdown-create-row">
-                              <input 
-                                #eventInput
-                                type="text" 
-                                class="dropdown-create-input" 
-                                placeholder="New event..."
-                                (keydown.enter)="$event.preventDefault(); createAndAddEventToDoc(doc.id, eventInput.value); eventInput.value = ''"
-                                (click)="$event.stopPropagation()" />
-                            </div>
-                            @for (evt of getAvailableEventsForDoc(doc.id); track evt.id) {
-                              <button class="dropdown-item" (click)="addEventToDocCard(doc.id, evt.id, $event)">{{ evt.name }}</button>
-                            }
-                            @if (getAvailableEventsForDoc(doc.id).length === 0) {
-                              <span class="dropdown-empty">No more events</span>
-                            }
-                          </div>
-                        }
+
                       </div>
                       <!-- Places row -->
                       <div class="card-metadata-row">
@@ -388,25 +298,7 @@
                         <button class="add-metadata-btn place-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'places', $event)">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
                         </button>
-                        @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'places') {
-                          <div class="add-metadata-dropdown" (click)="$event.stopPropagation()">
-                            <div class="dropdown-create-row">
-                              <input 
-                                #placeInput
-                                type="text" 
-                                class="dropdown-create-input" 
-                                placeholder="New place..."
-                                (keydown.enter)="$event.preventDefault(); createAndAddPlaceToDoc(doc.id, placeInput.value); placeInput.value = ''"
-                                (click)="$event.stopPropagation()" />
-                            </div>
-                            @for (place of getAvailablePlacesForDoc(doc.id); track place.id) {
-                              <button class="dropdown-item" (click)="addPlaceToDocCard(doc.id, place.id, $event)">{{ place.name }}</button>
-                            }
-                            @if (getAvailablePlacesForDoc(doc.id).length === 0) {
-                              <span class="dropdown-empty">No more places</span>
-                            }
-                          </div>
-                        }
+
                       </div>
                     </div>
                   </div>
@@ -611,6 +503,71 @@
           <button class="btn-primary" [disabled]="!importTargetGroupId" (click)="confirmImport()">Import</button>
         </div>
       </div>
+    </div>
+  }
+  <!-- Global Add Metadata Dropdown -->
+  @if (projectHeaderAddDropdown && dropdownPosition) {
+    <div class="add-metadata-dropdown fixed-dropdown" 
+         [style.top.px]="dropdownPosition.top" 
+         [style.left.px]="dropdownPosition.left"
+         (click)="$event.stopPropagation()">
+      
+      @if (projectHeaderAddDropdown.type === 'characters') {
+        <div class="dropdown-create-row">
+          <input 
+            #charInputGlobal
+            type="text" 
+            class="dropdown-create-input" 
+            placeholder="New character..."
+            (keydown.enter)="$event.preventDefault(); createAndAddCharacterToDoc(projectHeaderAddDropdown.docId, charInputGlobal.value); charInputGlobal.value = ''"
+            (click)="$event.stopPropagation()"
+            autofocus />
+        </div>
+        @for (char of getAvailableCharactersForDoc(projectHeaderAddDropdown.docId); track char.id) {
+          <button class="dropdown-item" (click)="addCharacterToDocCard(projectHeaderAddDropdown.docId, char.id, $event)">{{ char.name }}</button>
+        }
+        @if (getAvailableCharactersForDoc(projectHeaderAddDropdown.docId).length === 0) {
+          <span class="dropdown-empty">No more characters</span>
+        }
+      }
+
+      @if (projectHeaderAddDropdown.type === 'events') {
+        <div class="dropdown-create-row">
+          <input 
+            #eventInputGlobal
+            type="text" 
+            class="dropdown-create-input" 
+            placeholder="New event..."
+            (keydown.enter)="$event.preventDefault(); createAndAddEventToDoc(projectHeaderAddDropdown.docId, eventInputGlobal.value); eventInputGlobal.value = ''"
+            (click)="$event.stopPropagation()"
+            autofocus />
+        </div>
+        @for (evt of getAvailableEventsForDoc(projectHeaderAddDropdown.docId); track evt.id) {
+          <button class="dropdown-item" (click)="addEventToDocCard(projectHeaderAddDropdown.docId, evt.id, $event)">{{ evt.name }}</button>
+        }
+        @if (getAvailableEventsForDoc(projectHeaderAddDropdown.docId).length === 0) {
+          <span class="dropdown-empty">No more events</span>
+        }
+      }
+
+      @if (projectHeaderAddDropdown.type === 'places') {
+        <div class="dropdown-create-row">
+          <input 
+            #placeInputGlobal
+            type="text" 
+            class="dropdown-create-input" 
+            placeholder="New place..."
+            (keydown.enter)="$event.preventDefault(); createAndAddPlaceToDoc(projectHeaderAddDropdown.docId, placeInputGlobal.value); placeInputGlobal.value = ''"
+            (click)="$event.stopPropagation()"
+            autofocus />
+        </div>
+        @for (place of getAvailablePlacesForDoc(projectHeaderAddDropdown.docId); track place.id) {
+          <button class="dropdown-item" (click)="addPlaceToDocCard(projectHeaderAddDropdown.docId, place.id, $event)">{{ place.name }}</button>
+        }
+        @if (getAvailablePlacesForDoc(projectHeaderAddDropdown.docId).length === 0) {
+          <span class="dropdown-empty">No more places</span>
+        }
+      }
     </div>
   }
   <!-- Global footer component -->

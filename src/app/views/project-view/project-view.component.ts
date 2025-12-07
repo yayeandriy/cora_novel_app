@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -230,6 +230,15 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private projectHeaderDocPlacesCache: Map<number, number[]> = new Map();
   // Track which add dropdown is open: { docId, type: 'characters' | 'events' | 'places' }
   projectHeaderAddDropdown: { docId: number; type: 'characters' | 'events' | 'places' } | null = null;
+  dropdownPosition: { top: number, left: number } | null = null;
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    if (this.projectHeaderAddDropdown) {
+      this.projectHeaderAddDropdown = null;
+      this.dropdownPosition = null;
+    }
+  }
 
   constructor(
     private route: ActivatedRoute,
@@ -306,6 +315,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   // Handle wheel scroll on docs cards container - enable horizontal scroll with vertical wheel
   onDocsContainerWheel(event: WheelEvent) {
+    // Close dropdown on scroll
+    if (this.projectHeaderAddDropdown) {
+      this.projectHeaderAddDropdown = null;
+      this.dropdownPosition = null;
+    }
+
     const container = event.currentTarget as HTMLElement;
     if (!container) return;
     
@@ -427,8 +442,15 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     event.stopPropagation();
     if (this.projectHeaderAddDropdown?.docId === docId && this.projectHeaderAddDropdown?.type === type) {
       this.projectHeaderAddDropdown = null;
+      this.dropdownPosition = null;
     } else {
       this.projectHeaderAddDropdown = { docId, type };
+      const button = event.currentTarget as HTMLElement;
+      const rect = button.getBoundingClientRect();
+      this.dropdownPosition = {
+        top: rect.bottom + 5,
+        left: rect.left
+      };
     }
   }
 
