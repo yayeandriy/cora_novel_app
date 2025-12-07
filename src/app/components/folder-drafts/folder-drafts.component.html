@@ -10,7 +10,7 @@
   <div class="folder-expanded-content" #scrollContainer [class.grid-content]="layout === 'grid'" cdkDropList [cdkDropListOrientation]="layout === 'grid' ? 'mixed' : 'horizontal'" (cdkDropListDropped)="drop($event)">
     @if (drafts.length > 0) {
       @for (draft of drafts; track draft.id) {
-        <div class="draft-card" cdkDrag>
+        <div class="draft-card" cdkDrag [class.selected]="selectedDraftId === draft.id" (click)="onDraftFocus(draft.id)">
           <div class="draft-card-header">
             <div class="drag-handle" cdkDragHandle title="Drag to reorder">
               <svg xmlns="http://www.w3.org/2000/svg" class="icon-drag" viewBox="0 0 24 24" fill="currentColor">
@@ -34,6 +34,7 @@
             class="folder-draft-textarea"
             [(ngModel)]="draft.content"
             (ngModelChange)="onDraftChange(draft.id, draft.content || '', 0)"
+            (focus)="onDraftFocus(draft.id)"
             [placeholder]="'Write your notes...'"></textarea>
         </div>
       }

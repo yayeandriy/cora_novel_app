@@ -250,10 +250,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   onFolderHeaderClick(event: MouseEvent) {
     if (this.isInteractiveHeaderClick(event)) return;
     this.folderHeaderExpanded = !this.folderHeaderExpanded;
+    console.log('[DEBUG] onFolderHeaderClick - expanded:', this.folderHeaderExpanded, 'selectedGroup:', this.selectedGroup?.id, 'currentGroup:', this.currentGroup?.id);
     
     // Load drafts when expanding the header
     if (this.folderHeaderExpanded) {
       const group = this.selectedGroup || this.currentGroup;
+      console.log('[DEBUG] onFolderHeaderClick - will load drafts for group:', group?.id, group?.name);
       if (group) {
         this.loadFolderDrafts(group.id);
       }
@@ -261,8 +263,28 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   onDraftFocus(draftId: number) {
-    console.log('Draft focused, id:', draftId);
+    console.log('[DEBUG] onDraftFocus called with draftId:', draftId);
     this.focusedFolderDraftId = draftId;
+    
+    // Also mark this draft as selected and persist to localStorage
+    this.selectedFolderDraftId = draftId;
+    const group = this.selectedGroup || this.currentGroup;
+    console.log('[DEBUG] onDraftFocus - group:', group?.id, group?.name);
+    if (group) {
+      try {
+        const key = this.getFolderDraftSelectionKey(group.id);
+        console.log('[DEBUG] onDraftFocus - saving to localStorage, key:', key, 'value:', draftId);
+        localStorage.setItem(key, String(draftId));
+        // Verify it was saved
+        const saved = localStorage.getItem(key);
+        console.log('[DEBUG] onDraftFocus - verified localStorage value:', saved);
+      } catch (e) {
+        console.error('[DEBUG] onDraftFocus - localStorage error:', e);
+      }
+    } else {
+      console.warn('[DEBUG] onDraftFocus - no group found, cannot save selection!');
+    }
+    
     console.log('focusedFolderDraftId set to:', this.focusedFolderDraftId);
     console.log('Delete button should now be visible. Checking...');
     this.changeDetector.detectChanges();
@@ -1837,14 +1859,18 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   // ==================== FOLDER DRAFTS UI ====================
   toggleFolderDrafts() {
+    console.log('[DEBUG] toggleFolderDrafts called, current expanded:', this.folderDraftsExpanded);
     this.folderDraftsExpanded = !this.folderDraftsExpanded;
+    console.log('[DEBUG] toggleFolderDrafts - new expanded:', this.folderDraftsExpanded);
     const group = this.selectedGroup || this.currentGroup;
+    console.log('[DEBUG] toggleFolderDrafts - group:', group?.id, group?.name);
     if (this.folderDraftsExpanded && group) {
-      // When expanding via the toggler, don't auto-restore a previously selected folder draft,
-      // so we don't hide doc draft tools or switch external mode unexpectedly.
-      this.loadFolderDrafts(group.id, /*restoreSelection*/ false);
+      // When expanding, restore previously selected folder draft from localStorage
+      console.log('[DEBUG] toggleFolderDrafts - calling loadFolderDrafts with restoreSelection=true');
+      this.loadFolderDrafts(group.id, /*restoreSelection*/ true);
     } else if (group) {
       // Collapsing: retain count indicator
+      console.log('[DEBUG] toggleFolderDrafts - collapsing, refreshing count');
       this.refreshFolderDraftsCount(group.id);
     }
     // Persist selection visibility per group
@@ -1852,9 +1878,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   async loadFolderDrafts(docGroupId: number, restoreSelection: boolean = true) {
+    console.log('[DEBUG] loadFolderDrafts called - docGroupId:', docGroupId, 'restoreSelection:', restoreSelection);
     try {
       this.folderDrafts = await this.projectService.listFolderDrafts(docGroupId);
       this.folderDraftsCount = this.folderDrafts.length;
+      console.log('[DEBUG] loadFolderDrafts - loaded', this.folderDraftsCount, 'drafts:', this.folderDrafts.map(d => ({ id: d.id, name: d.name })));
       // Update tree marker for this folder
       if (this.folderDraftsCount > 0) {
         this.groupsWithDrafts.add(docGroupId);
@@ -1879,23 +1907,40 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Optionally restore previously selected folder draft for this group
       if (restoreSelection) {
         try {
-          const savedIdStr = localStorage.getItem(this.getFolderDraftSelectionKey(docGroupId));
+          console.log('[DEBUG] loadFolderDrafts - about to call getFolderDraftSelectionKey with docGroupId:', docGroupId, 'projectId:', this.projectId);
+          const key = this.getFolderDraftSelectionKey(docGroupId);
+          console.log('[DEBUG] loadFolderDrafts - generated key:', key);
+          const savedIdStr = localStorage.getItem(key);
+          console.log('[DEBUG] loadFolderDrafts - restoreSelection: key=', key, 'savedIdStr=', savedIdStr);
           if (savedIdStr) {
             const savedId = parseInt(savedIdStr, 10);
-            if (this.folderDrafts.some(fd => fd.id === savedId)) {
+            console.log('[DEBUG] loadFolderDrafts - parsed savedId:', savedId);
+            const draftExists = this.folderDrafts.some(fd => fd.id === savedId);
+            console.log('[DEBUG] loadFolderDrafts - draftExists:', draftExists, 'selectedDraftId:', this.selectedDraftId);
+            if (draftExists) {
               // Only restore if no document draft is currently selected, to avoid hiding doc draft tools
               if (this.selectedDraftId == null) {
+                console.log('[DEBUG] loadFolderDrafts - RESTORING selectedFolderDraftId to:', savedId);
                 this.selectedFolderDraftId = savedId;
+              } else {
+                console.log('[DEBUG] loadFolderDrafts - NOT restoring because selectedDraftId is set:', this.selectedDraftId);
               }
             } else {
               // Saved selection no longer valid
+              console.log('[DEBUG] loadFolderDrafts - draft no longer exists, removing from localStorage');
               localStorage.removeItem(this.getFolderDraftSelectionKey(docGroupId));
               if (this.selectedFolderDraftId === savedId) {
                 this.selectedFolderDraftId = null;
               }
             }
+          } else {
+            console.log('[DEBUG] loadFolderDrafts - no saved selection found');
           }
-        } catch {}
+        } catch (e) {
+          console.error('[DEBUG] loadFolderDrafts - error restoring selection:', e);
+        }
+      } else {
+        console.log('[DEBUG] loadFolderDrafts - restoreSelection is false, skipping restore');
       }
     } catch (e) {
       console.error('Failed to load folder drafts:', e);
@@ -1913,7 +1958,19 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     try {
       const now = new Date();
       const draftName = `Note ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
-      await this.projectService.createFolderDraft(group.id, draftName, '');
+      
+      // Calculate insert index if a draft is selected
+      let insertIndex: number | undefined;
+      if (this.selectedFolderDraftId != null) {
+        const currentIndex = this.folderDrafts.findIndex(d => d.id === this.selectedFolderDraftId);
+        if (currentIndex !== -1) {
+          insertIndex = currentIndex + 1;
+        }
+      }
+      
+      // console.log('Creating draft with insertIndex:', insertIndex, 'selectedId:', this.selectedFolderDraftId);
+
+      await this.projectService.createFolderDraft(group.id, draftName, '', insertIndex);
       await this.loadFolderDrafts(group.id);
       this.folderDraftsCount = this.folderDrafts.length;
     } catch (e) {
@@ -2021,6 +2078,41 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   cancelFolderDraftEdit() {
     this.editingFolderDraftId = null;
+  }
+
+  onFolderDraftSelect(draftId: number) {
+    // Pure selection logic - no toggling
+    if (this.selectedFolderDraftId !== draftId) {
+      if (this.folderDraftClickTimer) { clearTimeout(this.folderDraftClickTimer); this.folderDraftClickTimer = null; }
+      this.selectedFolderDraftId = draftId;
+      
+      // Clear other selections
+      if (this.selectedDraftId != null) {
+        this.selectedDraftId = null;
+        if (this.selectedDoc) {
+          try { localStorage.removeItem(this.getDraftSelectionKey(this.selectedDoc.id)); } catch {}
+        }
+      }
+      if (this.selectedProjectDraftId != null) {
+        this.selectedProjectDraftId = null;
+        try { localStorage.removeItem(this.getProjectDraftSelectionKey(this.projectId)); } catch {}
+      }
+
+      // Persist selection
+      const group = this.selectedGroup || this.currentGroup;
+      if (group) {
+        try {
+          const key = this.getFolderDraftSelectionKey(group.id);
+          localStorage.setItem(key, String(this.selectedFolderDraftId));
+        } catch {}
+      }
+    } else {
+      // If already selected, ensure no pending deselect timer is running
+      if (this.folderDraftClickTimer) { 
+        clearTimeout(this.folderDraftClickTimer); 
+        this.folderDraftClickTimer = null; 
+      }
+    }
   }
 
   // ===== Folder draft selection & syncing =====

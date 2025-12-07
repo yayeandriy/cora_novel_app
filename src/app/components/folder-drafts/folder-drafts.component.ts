@@ -26,12 +26,14 @@ export class FolderDraftsComponent implements OnChanges, OnDestroy {
 
   @Input() drafts: FolderDraft[] = [];
   @Input() layout: 'horizontal' | 'grid' = 'horizontal';
+  @Input() selectedDraftId: number | null = null;
 
   @Output() draftCreate = new EventEmitter<void>();
   @Output() draftChange = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();
   @Output() draftNameChange = new EventEmitter<{ draftId: number; name: string }>();
   @Output() draftDelete = new EventEmitter<number>();
   @Output() draftMove = new EventEmitter<{ draftId: number; newIndex: number }>();
+  @Output() draftSelect = new EventEmitter<number>();
 
   private previousDraftsLength = 0;
   private nameChangeSubject = new Subject<{ draftId: number; name: string }>();
@@ -53,7 +55,11 @@ export class FolderDraftsComponent implements OnChanges, OnDestroy {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['drafts']) {
-      if (this.drafts.length > this.previousDraftsLength) {
+      const prevLength = changes['drafts'].previousValue?.length ?? 0;
+      const currLength = this.drafts.length;
+      // Only auto-focus when exactly 1 new draft was added (user created a draft),
+      // not when loading multiple drafts from backend
+      if (currLength === prevLength + 1 && prevLength > 0) {
         // New draft added - scroll to the end and focus the new textarea
         setTimeout(() => {
           const el = this.scrollContainer?.nativeElement;
@@ -93,6 +99,10 @@ export class FolderDraftsComponent implements OnChanges, OnDestroy {
   onNameEnter(event: Event) {
     const input = event.target as HTMLInputElement;
     input.blur();
+  }
+
+  onDraftFocus(draftId: number) {
+    this.draftSelect.emit(draftId);
   }
 
   trackByDraftId(index: number, draft: FolderDraft) {

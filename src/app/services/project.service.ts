@@ -303,8 +303,8 @@ export class ProjectService {
   }
 
   // Folder (Doc Group) Drafts
-  async createFolderDraft(docGroupId: number, name: string, content: string): Promise<FolderDraft> {
-    return invoke<FolderDraft>("folder_draft_create", { docGroupId, payload: { name, content } });
+  async createFolderDraft(docGroupId: number, name: string, content: string, insertAtIndex?: number): Promise<FolderDraft> {
+    return invoke<FolderDraft>("folder_draft_create", { docGroupId, payload: { name, content, insert_at_index: insertAtIndex } });
   }
 
   async getFolderDraft(id: number): Promise<FolderDraft | null> {

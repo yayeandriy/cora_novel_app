@@ -11,7 +11,8 @@
           (draftChange)="onFolderDraftChange($event.draftId, $event.content, $event.cursorPosition)"
           (draftNameChange)="onFolderDraftNameChange($event.draftId, $event.name)"
           (draftDelete)="deleteFolderDraft($event)"
-          (draftMove)="onDraftMove($event)">
+          (draftMove)="onDraftMove($event)"
+          (draftSelect)="onDraftSelect($event)">
         </app-folder-drafts>
   </div>
 </div>

@@ -103,11 +103,13 @@
       @if (folderHeaderExpanded && (selectedGroup || currentGroup) && selectedDoc) {
         <app-folder-drafts
           [drafts]="folderDrafts"
+          [selectedDraftId]="selectedFolderDraftId"
           (draftCreate)="createFolderDraft()"
           (draftChange)="onFolderDraftChange($event.draftId, $event.content, $event.cursorPosition)"
           (draftNameChange)="onFolderDraftNameChange($event.draftId, $event.name)"
           (draftDelete)="deleteFolderDraft($event)"
-          (draftMove)="onFolderDraftMove($event)">
+          (draftMove)="onFolderDraftMove($event)"
+          (draftSelect)="onFolderDraftSelect($event)">
         </app-folder-drafts>
       }
       }
@@ -151,7 +153,8 @@
         (folderDraftChange)="onFolderDraftChange($event.draftId, $event.content, $event.cursorPosition)"
         (folderDraftNameChange)="onFolderDraftNameChange($event.draftId, $event.name)"
         (folderDraftDelete)="deleteFolderDraft($event)"
-        (folderDraftMove)="onFolderDraftMove($event)">
+        (folderDraftMove)="onFolderDraftMove($event)"
+        (folderDraftSelect)="onFolderDraftSelect($event)">
       </app-group-view>
       }
       

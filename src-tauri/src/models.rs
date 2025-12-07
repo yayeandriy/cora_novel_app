@@ -132,6 +132,7 @@ pub struct FolderDraft {
 pub struct FolderDraftCreate {
     pub name: String,
     pub content: String,
+    pub insert_at_index: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

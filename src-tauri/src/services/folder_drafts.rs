@@ -21,6 +21,13 @@ pub fn create(pool: &DbPool, doc_group_id: i64, req: FolderDraftCreate) -> anyho
         rusqlite::params![doc_group_id, req.name, req.content, now, now, sort_order],
     ).context("creating folder draft")?;
     let id = conn.last_insert_rowid();
+    
+    // If an index was requested, move the new draft to that index
+    if let Some(index) = req.insert_at_index {
+        drop(conn); // Release connection before calling move_to_index which gets its own
+        move_to_index(pool, id, index)?;
+    }
+
     get(pool, id)?.context("folder draft not found after creation")
 }
 
