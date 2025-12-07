@@ -97,17 +97,9 @@ export class RightSidebarComponent {
   
   activeTab: TabType = 'doc';
   
-  @Input() charactersExpanded: boolean = true;
-  @Input() eventsExpanded: boolean = true;
-  @Input() placesExpanded: boolean = true;
-  @Input() notesExpanded: boolean = true;
   @Input() draftsExpanded: boolean = true;
   @Input() timelineHeaderVisible: boolean = false;
   
-  @Output() charactersExpandedChange = new EventEmitter<boolean>();
-  @Output() eventsExpandedChange = new EventEmitter<boolean>();
-  @Output() placesExpandedChange = new EventEmitter<boolean>();
-  @Output() notesExpandedChange = new EventEmitter<boolean>();
   @Output() draftsExpandedChange = new EventEmitter<boolean>();
   
   @Output() docNotesChanged = new EventEmitter<void>();
@@ -154,18 +146,6 @@ export class RightSidebarComponent {
 
   switchTab(tab: TabType) {
     this.activeTab = tab;
-  }
-
-  onCharactersToggle() {
-    this.charactersExpandedChange.emit(!this.charactersExpanded);
-  }
-
-  onEventsToggle() {
-    this.eventsExpandedChange.emit(!this.eventsExpanded);
-  }
-
-  onNotesToggle() {
-    this.notesExpandedChange.emit(!this.notesExpanded);
   }
 
   onDocNotesChange() {
@@ -285,9 +265,6 @@ export class RightSidebarComponent {
   }
 
   // ===== Places UI handlers =====
-  onPlacesToggle() {
-    this.placesExpandedChange.emit(!this.placesExpanded);
-  }
 
   onPlaceAdd() {
     this.placeAdd.emit();

@@ -30,15 +30,11 @@
     @if (activeTab === 'doc') {
       <!-- Characters Section -->
       <div class="sidebar-section">
-        <div class="section-header" (click)="onCharactersToggle()">
+        <div class="section-header">
           <div class="section-title">
-            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="charactersExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
             <span>Characters</span>
           </div>
         </div>
-        @if (charactersExpanded) {
           <app-metadata-chips
             [items]="getAttachedCharacters()"
             [availableItems]="getAvailableCharacters()"
@@ -49,20 +45,15 @@
             (create)="createAndAddCharacter($event)"
             (reorder)="onReorderCharacters($event)">
           </app-metadata-chips>
-        }
       </div>
 
       <!-- Events Section -->
       <div class="sidebar-section">
-        <div class="section-header" (click)="onEventsToggle()">
+        <div class="section-header">
           <div class="section-title">
-            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="eventsExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
             <span>Events</span>
           </div>
         </div>
-        @if (eventsExpanded) {
           <app-metadata-chips
             [items]="getAttachedEvents()"
             [availableItems]="getAvailableEvents()"
@@ -73,20 +64,15 @@
             (create)="createAndAddEvent($event)"
             (reorder)="onReorderEvents($event)">
           </app-metadata-chips>
-        }
       </div>
 
       <!-- Places Section -->
       <div class="sidebar-section">
-        <div class="section-header" (click)="onPlacesToggle()">
+        <div class="section-header">
           <div class="section-title">
-            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="placesExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
             <span>Places</span>
           </div>
         </div>
-        @if (placesExpanded) {
           <app-metadata-chips
             [items]="getAttachedPlaces()"
             [availableItems]="getAvailablePlaces()"
@@ -97,7 +83,6 @@
             (create)="createAndAddPlace($event)"
             (reorder)="onReorderPlaces($event)">
           </app-metadata-chips>
-        }
       </div>
     }
 
@@ -105,16 +90,13 @@
     @if (activeTab === 'folder') {
       <!-- Notes Section for Folder (first) -->
       <div class="sidebar-section">
-        <div class="section-header" (click)="onNotesToggle()">
+        <div class="section-header">
           <div class="section-title">
-            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="notesExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
             <span>Folder Notes</span>
           </div>
         </div>
         
-        @if (notesExpanded && selectedDocGroup) {
+        @if (selectedDocGroup) {
           <div class="section-content">
             <textarea 
               class="notes-textarea"
@@ -124,7 +106,7 @@
               placeholder="Add folder notes..."></textarea>
           </div>
         }
-        @if (notesExpanded && !selectedDocGroup) {
+        @if (!selectedDocGroup) {
           <div class="section-content">
             <p style="font-size: 0.875rem; color: #9ca3af; padding: 0.5rem;">Select a folder to add notes</p>
           </div>
@@ -136,9 +118,7 @@
         [characters]="characters"
         [docCharacterIds]="docGroupCharacterIds"
         [selectedDoc]="selectedDocGroup"
-        [expanded]="charactersExpanded"
         [editingCharacterId]="editingCharacterId"
-        (expandedChange)="onCharactersToggle()"
         (add)="onCharacterAdd()"
         (createCharacter)="onCharacterCreate($event)"
         (update)="onCharacterUpdate($event)"
@@ -152,10 +132,8 @@
         [events]="events"
         [docEventIds]="docGroupEventIds"
         [selectedDoc]="null"
-        [expanded]="eventsExpanded"
         [editingEventId]="editingEventId"
         [timelineHeaderVisible]="timelineHeaderVisible"
-        (expandedChange)="onEventsToggle()"
         (add)="eventAdd.emit()"
         (createEvent)="onEventCreate($event)"
         (update)="eventUpdate.emit($event)"
@@ -170,9 +148,7 @@
         [places]="places"
         [docPlaceIds]="docGroupPlaceIds"
         [selectedDoc]="null"
-        [expanded]="placesExpanded"
         [editingPlaceId]="editingPlaceId"
-        (expandedChange)="onPlacesToggle()"
         (add)="onPlaceAdd()"
         (createPlace)="onPlaceCreate($event)"
         (update)="onPlaceUpdate($event)"
@@ -186,16 +162,12 @@
     @if (activeTab === 'project') {
       <!-- Notes Section for Project (first) -->
       <div class="sidebar-section">
-        <div class="section-header" (click)="onNotesToggle()">
+        <div class="section-header">
           <div class="section-title">
-            <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="notesExpanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
             <span>Project Notes</span>
           </div>
         </div>
         
-        @if (notesExpanded) {
           <div class="section-content">
             @if (project) {
               <textarea 
@@ -206,7 +178,6 @@
                 placeholder="Add project notes..."></textarea>
             }
           </div>
-        }
       </div>
 
       <!-- Characters Section for Project -->
@@ -214,9 +185,7 @@
         [characters]="characters"
         [docCharacterIds]="null"
         [selectedDoc]="null"
-        [expanded]="charactersExpanded"
         [editingCharacterId]="editingCharacterId"
-        (expandedChange)="onCharactersToggle()"
         (add)="onCharacterAdd()"
         (update)="onCharacterUpdate($event)"
         (remove)="onCharacterDelete($event)"
@@ -228,10 +197,8 @@
         [events]="events"
         [docEventIds]="null"
         [selectedDoc]="null"
-        [expanded]="eventsExpanded"
         [editingEventId]="editingEventId"
         [timelineHeaderVisible]="timelineHeaderVisible"
-        (expandedChange)="onEventsToggle()"
         (add)="eventAdd.emit()"
         (createEvent)="onEventCreate($event)"
         (update)="eventUpdate.emit($event)"
@@ -245,9 +212,7 @@
         [places]="places"
         [docPlaceIds]="null"
         [selectedDoc]="null"
-        [expanded]="placesExpanded"
         [editingPlaceId]="editingPlaceId"
-        (expandedChange)="onPlacesToggle()"
         (add)="onPlaceAdd()"
         (createPlace)="onPlaceCreate($event)"
         (update)="onPlaceUpdate($event)"

@@ -1,9 +1,6 @@
 <div class="sidebar-section">
-  <div class="section-header" (click)="onHeaderClick()">
+  <div class="section-header">
     <div class="section-title">
-      <svg xmlns="http://www.w3.org/2000/svg" class="toggle-icon" [class.expanded]="expanded" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-      </svg>
       <span>Places</span>
     </div>
     <div class="header-actions">
@@ -27,7 +24,7 @@
     </button>
     </div>
   </div>
-  <div class="section-content" [class.open]="expanded">
+  <div class="section-content">
       @if (isSelectMode && !newPlace) {
         <button class="list-add-button" (click)="onAddPlaceClick($event)">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="icon">

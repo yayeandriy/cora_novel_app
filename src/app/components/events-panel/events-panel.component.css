@@ -36,8 +36,7 @@
 .icon-button-small svg{width:.875rem;height:.875rem}
 .section-content{
     padding: 0 0.5rem;
-    max-height:0;opacity:0;
-    overflow:hidden;transition:max-height 220ms ease,opacity 180ms ease;margin-top:0}
+    margin-top:0}
 .section-content.open{max-height:1000px;opacity:1;}
 .empty-state{padding:1.5rem 1rem;text-align:center;color:#9ca3af;font-size:.875rem;line-height:1.5}
 .h-3.5{} 

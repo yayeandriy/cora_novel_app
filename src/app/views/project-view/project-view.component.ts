@@ -120,10 +120,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   docsWithDrafts: Set<number> = new Set();
   
   // Right sidebar
-  charactersExpanded = true;
-  eventsExpanded = true;
-  placesExpanded = true;
-  notesExpanded = true;
   draftsExpanded = true;
   
   projectData: import('../../shared/models').Project | null = null;
@@ -3030,7 +3026,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   async onSidebarCharacterAdd(): Promise<void> {
     try {
       // Ensure panel is opened
-      this.charactersExpanded = true;
       const created = await this.projectService.createCharacter(this.projectId, 'New Character', '');
   this.characters = [...this.characters, { id: created.id, name: created.name, desc: created.desc ?? '' }];
       // Enter edit mode on the newly created card
@@ -3044,7 +3039,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   async onSidebarCharacterCreate(data: { name: string; desc: string }): Promise<void> {
     try {
       // Ensure panel is opened
-      this.charactersExpanded = true;
       // Create character with the provided data
       const created = await this.projectService.createCharacter(this.projectId, data.name, data.desc);
       this.characters = [...this.characters, { id: created.id, name: created.name, desc: created.desc ?? '' }];
@@ -3117,7 +3111,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   async onSidebarEventAdd(): Promise<void> {
     try {
       // Ensure panel is opened
-      this.eventsExpanded = true;
       const created = await this.projectService.createEvent(this.projectId, 'New Event', '', null, null);
       this.events = [...this.events, { id: created.id, name: created.name, desc: created.desc ?? '', start_date: created.start_date ?? null, end_date: created.end_date ?? null } as any];
       this.editingEventId = created.id;
@@ -3130,7 +3123,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   async onSidebarEventCreate(data: { name: string; desc: string; start_date: string | null; end_date: string | null }): Promise<void> {
     try {
       // Ensure panel is opened
-      this.eventsExpanded = true;
       // Create event with the provided data
       const created = await this.projectService.createEvent(this.projectId, data.name, data.desc, data.start_date, data.end_date);
       this.events = [...this.events, { id: created.id, name: created.name, desc: created.desc ?? '', start_date: created.start_date ?? null, end_date: created.end_date ?? null }];
@@ -3317,7 +3309,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // ===== Places sidebar handlers =====
   async onSidebarPlaceAdd(): Promise<void> {
     try {
-      this.placesExpanded = true;
       const created = await this.projectService.createPlace(this.projectId, 'New Place', '');
       this.places = [...this.places, { id: created.id, name: created.name, desc: created.desc ?? '' }];
       this.editingPlaceId = created.id;
@@ -3329,7 +3320,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   async onSidebarPlaceCreate(data: { name: string; desc: string }): Promise<void> {
     try {
-      this.placesExpanded = true;
       const created = await this.projectService.createPlace(this.projectId, data.name, data.desc);
       this.places = [...this.places, { id: created.id, name: created.name, desc: created.desc ?? '' }];
       
