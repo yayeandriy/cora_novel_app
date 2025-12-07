@@ -792,13 +792,22 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     await this.loadDocGroupCharacters(this.currentGroup.id);
     await this.loadDocGroupEvents(this.currentGroup.id);
     await this.loadDocGroupPlaces(this.currentGroup.id);
-    // If folder drafts panel is collapsed, ensure counts are available for toggler
-    if (!this.folderDraftsExpanded) {
+    // Load folder drafts if the folder header is expanded (visible in main editor area)
+    if (this.folderHeaderExpanded) {
+      // Clear previous folder draft selection when switching folders
+      this.selectedFolderDraftId = null;
+      await this.loadFolderDrafts(this.currentGroup.id, /*restoreSelection*/ true);
+    } else {
+      // If folder drafts panel is collapsed, ensure counts are available for toggler
       this.refreshFolderDraftsCount(this.currentGroup.id);
     }
   } else {
     this.docGroupCharacterIds = new Set();
     this.docGroupEventIds = new Set();
+    // Clear folder drafts when no parent group
+    this.folderDrafts = [];
+    this.folderDraftsCount = 0;
+    this.selectedFolderDraftId = null;
   }
     
     // Save selection to localStorage
