@@ -111,6 +111,19 @@
   transition: all 0.2s;
 }
 
+.add-metadata-btn.add-empty {
+  width: auto;
+  height: auto;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  gap: 0.25rem;
+}
+
+.add-metadata-btn .add-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 .add-metadata-btn:hover {
   border-style: solid;
   background: #f3f4f6;
