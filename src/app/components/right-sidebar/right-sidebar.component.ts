@@ -2,6 +2,7 @@ import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import { MetadataChipsComponent } from '../metadata-chips/metadata-chips.component';
 import { CharactersPanelComponent } from '../characters-panel/characters-panel.component';
 import { EventsPanelComponent } from '../events-panel/events-panel.component';
 import { PlacesPanelComponent } from '../places-panel/places-panel.component';
@@ -70,7 +71,7 @@ type TabType = 'doc' | 'folder' | 'project';
 @Component({
   selector: 'app-right-sidebar',
   standalone: true,
-  imports: [CommonModule, FormsModule, DragDropModule, CharactersPanelComponent, EventsPanelComponent, PlacesPanelComponent, PersistTextareaHeightDirective],
+  imports: [CommonModule, FormsModule, DragDropModule, MetadataChipsComponent, CharactersPanelComponent, EventsPanelComponent, PlacesPanelComponent, PersistTextareaHeightDirective],
   templateUrl: './right-sidebar.component.html',
   styleUrls: ['./right-sidebar.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -321,50 +322,16 @@ export class RightSidebarComponent {
   }
 
   // ===== Drag and Drop Handlers =====
-  dropCharacter(event: CdkDragDrop<any[]>) {
-    const currentAttached = this.getAttachedCharacters();
-    moveItemInArray(currentAttached, event.previousIndex, event.currentIndex);
-    const newOrderIds = currentAttached.map(c => c.id);
-    this.charactersReorder.emit(newOrderIds);
+  onReorderCharacters(newOrder: number[]) {
+    this.charactersReorder.emit(newOrder);
   }
 
-  dropEvent(event: CdkDragDrop<any[]>) {
-    const currentAttached = this.getAttachedEvents();
-    moveItemInArray(currentAttached, event.previousIndex, event.currentIndex);
-    const newOrderIds = currentAttached.map(e => e.id);
-    this.eventsReorder.emit(newOrderIds);
+  onReorderEvents(newOrder: number[]) {
+    this.eventsReorder.emit(newOrder);
   }
 
-  dropPlace(event: CdkDragDrop<any[]>) {
-    const currentAttached = this.getAttachedPlaces();
-    moveItemInArray(currentAttached, event.previousIndex, event.currentIndex);
-    const newOrderIds = currentAttached.map(p => p.id);
-    this.placesReorder.emit(newOrderIds);
-  }
-
-  // ===== Dropdown Logic =====
-  activeDropdown: { type: 'characters' | 'events' | 'places', top: number, left: number } | null = null;
-
-  toggleAddDropdown(type: 'characters' | 'events' | 'places', event: MouseEvent) {
-    event.stopPropagation();
-    if (this.activeDropdown && this.activeDropdown.type === type) {
-      this.activeDropdown = null;
-    } else {
-      const button = event.currentTarget as HTMLElement;
-      const rect = button.getBoundingClientRect();
-      // Position dropdown below the button, aligned to the right if possible, or left
-      // Since sidebar is on the right, aligning to the right might clip. Align to the right edge of button minus width?
-      // Let's just position it below-left of the button
-      this.activeDropdown = {
-        type,
-        top: rect.bottom + 4,
-        left: rect.left
-      };
-    }
-  }
-
-  closeDropdown() {
-    this.activeDropdown = null;
+  onReorderPlaces(newOrder: number[]) {
+    this.placesReorder.emit(newOrder);
   }
 
   // Helper to get items NOT already attached to the current doc
@@ -386,7 +353,6 @@ export class RightSidebarComponent {
   // Actions
   addCharacter(id: number) {
     this.characterToggle.emit({ characterId: id, checked: true });
-    this.closeDropdown();
   }
 
   removeCharacter(id: number, event?: MouseEvent) {
@@ -397,14 +363,10 @@ export class RightSidebarComponent {
   createAndAddCharacter(name: string) {
     if (!name.trim()) return;
     this.characterCreate.emit({ name: name.trim(), desc: '' });
-    // Note: The parent component handles creation and auto-attaching if selectedDoc is present.
-    // We just need to close the dropdown.
-    this.closeDropdown();
   }
 
   addEvent(id: number) {
     this.eventToggle.emit({ eventId: id, checked: true });
-    this.closeDropdown();
   }
 
   removeEvent(id: number, event?: MouseEvent) {
@@ -415,12 +377,10 @@ export class RightSidebarComponent {
   createAndAddEvent(name: string) {
     if (!name.trim()) return;
     this.eventCreate.emit({ name: name.trim(), desc: '', start_date: null, end_date: null });
-    this.closeDropdown();
   }
 
   addPlace(id: number) {
     this.placeToggle.emit({ placeId: id, checked: true });
-    this.closeDropdown();
   }
 
   removePlace(id: number, event?: MouseEvent) {
@@ -431,7 +391,6 @@ export class RightSidebarComponent {
   createAndAddPlace(name: string) {
     if (!name.trim()) return;
     this.placeCreate.emit({ name: name.trim(), desc: '' });
-    this.closeDropdown();
   }
 
   // Get attached items for display

@@ -1,0 +1,45 @@
+<div class="metadata-row" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="onDrop($event)">
+  @for (item of items; track item.id) {
+    <span class="metadata-chip" [ngClass]="getChipClass()" cdkDrag>
+      {{ item.name }}
+      <button class="chip-delete-btn" (click)="onRemove(item.id, $event)">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>
+      </button>
+    </span>
+  }
+  <button class="add-metadata-btn" [ngClass]="getAddBtnClass()" (click)="toggleDropdown($event)">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
+  </button>
+</div>
+
+<!-- Dropdown Backdrop -->
+@if (dropdownVisible) {
+  <div class="fixed inset-0 z-[999]" (click)="closeDropdown()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 999;"></div>
+}
+
+<!-- Dropdown -->
+@if (dropdownVisible) {
+  <div class="add-metadata-dropdown" 
+       [style.top.px]="dropdownPosition.top" 
+       [style.left.px]="dropdownPosition.left"
+       (click)="$event.stopPropagation()">
+    
+    <div class="dropdown-create-row">
+      <input 
+        #createInput
+        type="text" 
+        class="dropdown-create-input" 
+        [placeholder]="placeholder"
+        (keydown.enter)="$event.preventDefault(); onCreate(createInput.value); createInput.value = ''"
+        autofocus />
+    </div>
+    
+    @for (item of availableItems; track item.id) {
+      <button class="dropdown-item" (click)="onAdd(item.id)">{{ item.name }}</button>
+    }
+    
+    @if (availableItems.length === 0) {
+      <span class="dropdown-empty">No more items</span>
+    }
+  </div>
+}

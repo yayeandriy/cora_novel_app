@@ -9,11 +9,11 @@ import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
 import { DocumentEditorComponent } from '../../components/document-editor/document-editor.component';
 import { GroupViewComponent } from '../../components/group-view/group-view.component';
 import { RightSidebarComponent } from '../../components/right-sidebar/right-sidebar.component';
+import { MetadataChipsComponent } from '../../components/metadata-chips/metadata-chips.component';
 import { ProjectTimelineComponent } from '../../components/project-timeline/project-timeline.component';
 import { AppFooterComponent } from '../../components/app-footer/app-footer.component';
 import { FolderDraftsComponent } from '../../components/folder-drafts/folder-drafts.component';
 import type { Timeline, FolderDraft } from '../../shared/models';
-import { PersistTextareaHeightDirective } from '../../shared/persist-textarea-height.directive';
 
 interface DocGroup {
   id: number;
@@ -63,10 +63,10 @@ interface Event {
     DocumentEditorComponent,
     GroupViewComponent,
     RightSidebarComponent,
+    MetadataChipsComponent,
     ProjectTimelineComponent,
     AppFooterComponent,
-    FolderDraftsComponent,
-    PersistTextareaHeightDirective
+    FolderDraftsComponent
   ],
   templateUrl: './project-view.component.html',
   styleUrls: ['./project-view.component.css'],
@@ -228,16 +228,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private projectHeaderDocCharactersCache: Map<number, number[]> = new Map();
   private projectHeaderDocEventsCache: Map<number, number[]> = new Map();
   private projectHeaderDocPlacesCache: Map<number, number[]> = new Map();
-  // Track which add dropdown is open: { docId, type: 'characters' | 'events' | 'places' }
-  projectHeaderAddDropdown: { docId: number; type: 'characters' | 'events' | 'places' } | null = null;
-  dropdownPosition: { top: number, left: number } | null = null;
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
-    if (this.projectHeaderAddDropdown) {
-      this.projectHeaderAddDropdown = null;
-      this.dropdownPosition = null;
-    }
+    // No-op
   }
 
   constructor(
@@ -303,8 +297,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Handle doc card click in project header - just highlight, don't navigate
   onProjectDocCardClick(doc: Doc, event: MouseEvent) {
     event.stopPropagation();
-    // Close any open dropdown
-    this.projectHeaderAddDropdown = null;
     // Toggle highlight
     if (this.projectHeaderHighlightedDocId === doc.id) {
       this.projectHeaderHighlightedDocId = null;
@@ -315,12 +307,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   // Handle wheel scroll on docs cards container - enable horizontal scroll with vertical wheel
   onDocsContainerWheel(event: WheelEvent) {
-    // Close dropdown on scroll
-    if (this.projectHeaderAddDropdown) {
-      this.projectHeaderAddDropdown = null;
-      this.dropdownPosition = null;
-    }
-
     const container = event.currentTarget as HTMLElement;
     if (!container) return;
     
@@ -437,23 +423,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     return this.places.filter(p => placeIds.includes(p.id));
   }
 
-  // Toggle add dropdown for a doc card metadata
-  toggleProjectHeaderAddDropdown(docId: number, type: 'characters' | 'events' | 'places', event: MouseEvent) {
-    event.stopPropagation();
-    if (this.projectHeaderAddDropdown?.docId === docId && this.projectHeaderAddDropdown?.type === type) {
-      this.projectHeaderAddDropdown = null;
-      this.dropdownPosition = null;
-    } else {
-      this.projectHeaderAddDropdown = { docId, type };
-      const button = event.currentTarget as HTMLElement;
-      const rect = button.getBoundingClientRect();
-      this.dropdownPosition = {
-        top: rect.bottom + 5,
-        left: rect.left
-      };
-    }
-  }
-
   // Get available items to add (not already linked to doc)
   getAvailableCharactersForDoc(docId: number): Character[] {
     const linkedIds = this.projectHeaderDocCharactersCache.get(docId) || [];
@@ -471,43 +440,34 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   // Add item to doc metadata
-  async addCharacterToDocCard(docId: number, characterId: number, event: MouseEvent) {
-    event.stopPropagation();
+  async addCharacterToDocCard(docId: number, characterId: number) {
     try {
       await this.projectService.attachCharacterToDoc(docId, characterId);
       // Update cache
       const current = this.projectHeaderDocCharactersCache.get(docId) || [];
       this.projectHeaderDocCharactersCache.set(docId, [...current, characterId]);
-      // Close dropdown
-      this.projectHeaderAddDropdown = null;
     } catch (error) {
       console.error('Failed to add character to doc:', error);
     }
   }
 
-  async addEventToDocCard(docId: number, eventId: number, event: MouseEvent) {
-    event.stopPropagation();
+  async addEventToDocCard(docId: number, eventId: number) {
     try {
       await this.projectService.attachEventToDoc(docId, eventId);
       // Update cache
       const current = this.projectHeaderDocEventsCache.get(docId) || [];
       this.projectHeaderDocEventsCache.set(docId, [...current, eventId]);
-      // Close dropdown
-      this.projectHeaderAddDropdown = null;
     } catch (error) {
       console.error('Failed to add event to doc:', error);
     }
   }
 
-  async addPlaceToDocCard(docId: number, placeId: number, event: MouseEvent) {
-    event.stopPropagation();
+  async addPlaceToDocCard(docId: number, placeId: number) {
     try {
       await this.projectService.attachPlaceToDoc(docId, placeId);
       // Update cache
       const current = this.projectHeaderDocPlacesCache.get(docId) || [];
       this.projectHeaderDocPlacesCache.set(docId, [...current, placeId]);
-      // Close dropdown
-      this.projectHeaderAddDropdown = null;
     } catch (error) {
       console.error('Failed to add place to doc:', error);
     }
@@ -523,7 +483,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.projectService.attachCharacterToDoc(docId, created.id);
       const current = this.projectHeaderDocCharactersCache.get(docId) || [];
       this.projectHeaderDocCharactersCache.set(docId, [...current, created.id]);
-      this.projectHeaderAddDropdown = null;
     } catch (error) {
       console.error('Failed to create character:', error);
     }
@@ -538,7 +497,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.projectService.attachEventToDoc(docId, created.id);
       const current = this.projectHeaderDocEventsCache.get(docId) || [];
       this.projectHeaderDocEventsCache.set(docId, [...current, created.id]);
-      this.projectHeaderAddDropdown = null;
     } catch (error) {
       console.error('Failed to create event:', error);
     }
@@ -553,15 +511,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.projectService.attachPlaceToDoc(docId, created.id);
       const current = this.projectHeaderDocPlacesCache.get(docId) || [];
       this.projectHeaderDocPlacesCache.set(docId, [...current, created.id]);
-      this.projectHeaderAddDropdown = null;
     } catch (error) {
       console.error('Failed to create place:', error);
     }
   }
 
   // Remove item from doc metadata
-  async removeCharacterFromDocCard(docId: number, characterId: number, event: MouseEvent) {
-    event.stopPropagation();
+  async removeCharacterFromDocCard(docId: number, characterId: number, event?: MouseEvent) {
+    if (event) event.stopPropagation();
     try {
       await this.projectService.detachCharacterFromDoc(docId, characterId);
       const current = this.projectHeaderDocCharactersCache.get(docId) || [];
@@ -571,8 +528,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  async removeEventFromDocCard(docId: number, eventId: number, event: MouseEvent) {
-    event.stopPropagation();
+  async removeEventFromDocCard(docId: number, eventId: number, event?: MouseEvent) {
+    if (event) event.stopPropagation();
     try {
       await this.projectService.detachEventFromDoc(docId, eventId);
       const current = this.projectHeaderDocEventsCache.get(docId) || [];
@@ -582,8 +539,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  async removePlaceFromDocCard(docId: number, placeId: number, event: MouseEvent) {
-    event.stopPropagation();
+  async removePlaceFromDocCard(docId: number, placeId: number, event?: MouseEvent) {
+    if (event) event.stopPropagation();
     try {
       await this.projectService.detachPlaceFromDoc(docId, placeId);
       const current = this.projectHeaderDocPlacesCache.get(docId) || [];
