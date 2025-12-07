@@ -73,27 +73,33 @@
   </div>
   
   @if (!selectedDraft) {
-    <textarea 
-      #editorTextarea
-      [(ngModel)]="selectedDoc.text"
-      (input)="onTextChange()"
-      class="editor-textarea"
-      [style.width.px]="editorWidthPx"
-      (blur)="onBlur()"
-      placeholder="Start writing...">
-    </textarea>
+    <div class="resizable-editor-container" [style.width.px]="editorWidthPx">
+      <div class="resize-handle left" (mousedown)="initResize($event, 'left')"></div>
+      <textarea 
+        #editorTextarea
+        [(ngModel)]="selectedDoc.text"
+        (input)="onTextChange()"
+        class="editor-textarea"
+        (blur)="onBlur()"
+        placeholder="Start writing...">
+      </textarea>
+      <div class="resize-handle right" (mousedown)="initResize($event, 'right')"></div>
+    </div>
   } @else {
     <div class="editor-split" #splitContainer>
       <div class="pane">
-        <textarea 
-          #editorTextarea
-          [(ngModel)]="selectedDoc.text"
-          (input)="onTextChange()"
-          class="editor-textarea"
-          [style.width.px]="editorWidthPx"
-          (blur)="onBlur()"
-          placeholder="Start writing...">
-        </textarea>
+        <div class="resizable-editor-container" [style.width.px]="editorWidthPx">
+          <div class="resize-handle left" (mousedown)="initResize($event, 'left')"></div>
+          <textarea 
+            #editorTextarea
+            [(ngModel)]="selectedDoc.text"
+            (input)="onTextChange()"
+            class="editor-textarea"
+            (blur)="onBlur()"
+            placeholder="Start writing...">
+          </textarea>
+          <div class="resize-handle right" (mousedown)="initResize($event, 'right')"></div>
+        </div>
       </div>
       <div class="split-divider" 
            [class.collapsed]="isSplitCollapsed"

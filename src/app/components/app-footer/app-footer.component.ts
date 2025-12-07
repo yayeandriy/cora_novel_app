@@ -20,7 +20,6 @@ export class AppFooterComponent {
   // Inputs
   @Input() selectedDoc: Doc | null = null;
   @Input() allDocs: Doc[] = [];
-  @Input() editorWidthPx: number = 800;
   @Input() leftCollapsed: boolean = false;
   @Input() rightCollapsed: boolean = false;
 
@@ -29,7 +28,7 @@ export class AppFooterComponent {
   @Output() importFolders = new EventEmitter<void>();
   @Output() importFiles = new EventEmitter<void>();
   @Output() exportProject = new EventEmitter<void>();
-  @Output() editorWidthPxChange = new EventEmitter<number>();
+  // editorWidthPxChange removed as control moved to editor
   @Output() toggleLeft = new EventEmitter<void>();
   @Output() toggleRight = new EventEmitter<void>();
   @Output() toggleAll = new EventEmitter<void>();
@@ -39,7 +38,6 @@ export class AppFooterComponent {
   }
 
   // === Stats (mirroring previous editor footer logic) ===
-  private clampWidth(px: number): number { return Math.max(400, Math.min(1400, px | 0)); }
 
   get docCharCount(): number {
     if (!this.selectedDoc?.text) return 0;
@@ -64,11 +62,5 @@ export class AppFooterComponent {
   formatNumber(num: number): string {
     if (num >= 1000) return Math.floor(num / 1000) + 'K';
     return num.toString();
-  }
-
-  onWidthInput(value: string) {
-    const px = this.clampWidth(parseInt(value, 10));
-    this.editorWidthPx = px;
-    this.editorWidthPxChange.emit(px);
   }
 }

@@ -230,7 +230,7 @@
   line-height: 1.75;
   color: #111827;
   resize: none; /* we'll auto-resize via TS */
-  width: var(--editor-col, 100%);
+  width: 100%; /* Takes full width of resizable container */
   margin-left: auto;
   margin-right: auto;
   overflow: hidden; /* prevent internal scrollbars */
@@ -238,6 +238,45 @@
   min-height: 50vh; /* comfortable initial height */
 }
 
+.resizable-editor-container {
+  position: relative;
+  margin: 0 auto;
+  /* width is set via inline style */
+}
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  cursor: col-resize;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resize-handle:hover, .resize-handle.active {
+  opacity: 1;
+}
+
+.resize-handle::after {
+  content: '';
+  width: 4px;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+}
+
+.resize-handle.left {
+  left: -16px;
+}
+
+.resize-handle.right {
+  right: -16px;
+}
 
 .page-icon {
   width: 0.875rem;

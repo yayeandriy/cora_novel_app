@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy, OnInit, OnDestroy, OnChanges, SimpleChanges, AfterViewInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy, OnInit, OnDestroy, OnChanges, SimpleChanges, AfterViewInit, HostListener } from '@angular/core';
 import { ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -233,6 +233,58 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
     // Emit delete without triggering input blur-save
     this.draftDeleted.emit(draftId);
     this.editingDraftId = null;
+  }
+
+  // Editor width resize state
+  private isResizingEditor = false;
+  private resizeStartX = 0;
+  private resizeStartWidth = 0;
+  private resizeSide: 'left' | 'right' = 'right';
+
+  initResize(event: MouseEvent, side: 'left' | 'right') {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isResizingEditor = true;
+    this.resizeStartX = event.clientX;
+    this.resizeStartWidth = this.editorWidthPx;
+    this.resizeSide = side;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }
+
+  @HostListener('window:mousemove', ['$event'])
+  onWindowMouseMove(event: MouseEvent) {
+    if (this.isResizingEditor) {
+      event.preventDefault();
+      const deltaX = event.clientX - this.resizeStartX;
+      // Symmetric resizing: dragging one side affects total width by 2x delta
+      // If dragging right handle: moving right (+) increases width
+      // If dragging left handle: moving left (-) increases width (so -delta)
+      const effectiveDelta = this.resizeSide === 'right' ? deltaX : -deltaX;
+      
+      const newWidth = this.resizeStartWidth + (effectiveDelta * 2);
+      this.editorWidthPx = Math.max(400, Math.min(1400, newWidth));
+      this.cdr.markForCheck();
+    }
+  }
+
+  @HostListener('window:mouseup', ['$event'])
+  onWindowMouseUp(event: MouseEvent) {
+    if (this.isResizingEditor) {
+      this.isResizingEditor = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      this.saveEditorWidth();
+    }
+  }
+  
+  private saveEditorWidth() {
+      try {
+        const key = this.getColumnPxKey();
+        localStorage.setItem(key, Math.round(this.editorWidthPx).toString());
+        // Also save to global as fallback
+        localStorage.setItem(this.COLUMN_PX_KEY_GLOBAL, Math.round(this.editorWidthPx).toString());
+      } catch {}
   }
 
   // Split handlers
