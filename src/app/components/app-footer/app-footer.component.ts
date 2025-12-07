@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -8,6 +8,28 @@ interface Doc {
   text?: string | null;
 }
 
+export type FontFamily = 'mono' | 'serif' | 'sans';
+export type FontSize = 'S' | 'M' | 'L';
+export type LineHeight = 'S' | 'M' | 'L';
+
+const FONT_FAMILIES: Record<FontFamily, string> = {
+  'mono': "'PT Mono', 'Courier New', Courier, monospace",
+  'serif': "'Times New Roman', Georgia, serif",
+  'sans': "'Helvetica Neue', Helvetica, Arial, sans-serif"
+};
+
+const FONT_SIZES: Record<FontSize, string> = {
+  'S': '0.875rem',
+  'M': '1rem',
+  'L': '1.125rem'
+};
+
+const LINE_HEIGHTS: Record<LineHeight, string> = {
+  'S': '1.5',
+  'M': '1.75',
+  'L': '2'
+};
+
 @Component({
   selector: 'app-footer',
   standalone: true,
@@ -16,7 +38,7 @@ interface Doc {
   styleUrls: ['./app-footer.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AppFooterComponent {
+export class AppFooterComponent implements OnInit {
   // Inputs
   @Input() selectedDoc: Doc | null = null;
   @Input() allDocs: Doc[] = [];
@@ -29,10 +51,69 @@ export class AppFooterComponent {
   @Output() importFolders = new EventEmitter<void>();
   @Output() importFiles = new EventEmitter<void>();
   @Output() exportProject = new EventEmitter<void>();
-  // editorWidthPxChange removed as control moved to editor
   @Output() toggleLeft = new EventEmitter<void>();
   @Output() toggleRight = new EventEmitter<void>();
   @Output() toggleAll = new EventEmitter<void>();
+
+  // Typography settings
+  fontFamily: FontFamily = 'mono';
+  fontSize: FontSize = 'M';
+  lineHeight: LineHeight = 'M';
+
+  ngOnInit() {
+    this.loadTypographySettings();
+    this.applyTypographySettings();
+  }
+
+  private loadTypographySettings() {
+    try {
+      const savedFont = localStorage.getItem('cora-typography-font') as FontFamily;
+      const savedSize = localStorage.getItem('cora-typography-size') as FontSize;
+      const savedLeading = localStorage.getItem('cora-typography-leading') as LineHeight;
+      
+      if (savedFont && ['mono', 'serif', 'sans'].includes(savedFont)) {
+        this.fontFamily = savedFont;
+      }
+      if (savedSize && ['S', 'M', 'L'].includes(savedSize)) {
+        this.fontSize = savedSize;
+      }
+      if (savedLeading && ['S', 'M', 'L'].includes(savedLeading)) {
+        this.lineHeight = savedLeading;
+      }
+    } catch {}
+  }
+
+  private saveTypographySettings() {
+    try {
+      localStorage.setItem('cora-typography-font', this.fontFamily);
+      localStorage.setItem('cora-typography-size', this.fontSize);
+      localStorage.setItem('cora-typography-leading', this.lineHeight);
+    } catch {}
+  }
+
+  private applyTypographySettings() {
+    document.documentElement.style.setProperty('--editor-font-family', FONT_FAMILIES[this.fontFamily]);
+    document.documentElement.style.setProperty('--editor-font-size', FONT_SIZES[this.fontSize]);
+    document.documentElement.style.setProperty('--editor-line-height', LINE_HEIGHTS[this.lineHeight]);
+  }
+
+  setFontFamily(font: FontFamily) {
+    this.fontFamily = font;
+    this.saveTypographySettings();
+    this.applyTypographySettings();
+  }
+
+  setFontSize(size: FontSize) {
+    this.fontSize = size;
+    this.saveTypographySettings();
+    this.applyTypographySettings();
+  }
+
+  setLineHeight(height: LineHeight) {
+    this.lineHeight = height;
+    this.saveTypographySettings();
+    this.applyTypographySettings();
+  }
 
   get isFullWidth(): boolean {
     return this.leftCollapsed && this.rightCollapsed;

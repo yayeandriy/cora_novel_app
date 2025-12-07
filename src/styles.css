@@ -12,6 +12,27 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'Times New Roman';
+  src: url('/assets/fonts/Times-NEW_Roman/Times New Roman.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Helvetica Neue';
+  src: url('/assets/fonts/helvetica_neu/HelveticaNeue.ttc') format('collection');
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* Typography CSS Variables */
+:root {
+  --editor-font-family: 'PT Mono', 'Courier New', Courier, monospace;
+  --editor-font-size: 0.9375rem;
+  --editor-line-height: 1.75;
+}
+
 /* Reset & Base */
 *, ::before, ::after {
   box-sizing: border-box;

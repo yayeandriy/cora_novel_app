@@ -225,9 +225,9 @@
   padding: 2rem;
   border: none;
   outline: none;
-  font-family: "PT Mono", "Courier New", Courier, monospace;
-  font-size: 0.9375rem;
-  line-height: 1.75;
+  font-family: var(--editor-font-family, "PT Mono", "Courier New", Courier, monospace);
+  font-size: var(--editor-font-size, 0.9375rem);
+  line-height: var(--editor-line-height, 1.75);
   color: #111827;
   resize: none; /* we'll auto-resize via TS */
   width: 100%; /* Takes full width of resizable container */

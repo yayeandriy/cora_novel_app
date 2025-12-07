@@ -26,6 +26,37 @@
       <img class="export-icon" src="assets/icons/square.and.arrow.up.svg" alt="" />
     </button>
   </div>
+
+  <!-- Typography Settings -->
+  <div class="footer-typography">
+    <!-- Font Family -->
+    <div class="typography-group" title="Font">
+      <button class="typo-tab" [class.active]="fontFamily === 'mono'" (click)="setFontFamily('mono')">Mono</button>
+      <button class="typo-tab" [class.active]="fontFamily === 'serif'" (click)="setFontFamily('serif')">Serif</button>
+      <button class="typo-tab" [class.active]="fontFamily === 'sans'" (click)="setFontFamily('sans')">Sans</button>
+    </div>
+    <div class="typo-divider"></div>
+    <!-- Font Size -->
+    <div class="typography-group" title="Size">
+      <button class="typo-tab" [class.active]="fontSize === 'S'" (click)="setFontSize('S')">S</button>
+      <button class="typo-tab" [class.active]="fontSize === 'M'" (click)="setFontSize('M')">M</button>
+      <button class="typo-tab" [class.active]="fontSize === 'L'" (click)="setFontSize('L')">L</button>
+    </div>
+    <div class="typo-divider"></div>
+    <!-- Line Height / Leading -->
+    <div class="typography-group" title="Leading">
+      <button class="typo-tab leading-icon" [class.active]="lineHeight === 'S'" (click)="setLineHeight('S')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1H2zM2 7h12v1H2zM2 11h12v1H2z"/></svg>
+      </button>
+      <button class="typo-tab leading-icon" [class.active]="lineHeight === 'M'" (click)="setLineHeight('M')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v1H2zM2 7h12v1H2zM2 12h12v1H2z"/></svg>
+      </button>
+      <button class="typo-tab leading-icon" [class.active]="lineHeight === 'L'" (click)="setLineHeight('L')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 1h12v1H2zM2 7h12v1H2zM2 13h12v1H2z"/></svg>
+      </button>
+    </div>
+  </div>
+
   <div class="footer-right" *ngIf="selectedDoc">
     <div class="stats-container">
       <span class="stat-item">
@@ -44,9 +75,6 @@
         </svg>
         <span class="stat-value">{{ docPageCount }}</span>
         <span class="stat-project">({{ projectPageCount }})</span>
-      </span>
-      <span class="stat-item width-control">
-        <!-- Slider removed in favor of direct editor resizing -->
       </span>
     </div>
   </div>

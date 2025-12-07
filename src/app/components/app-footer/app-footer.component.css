@@ -61,3 +61,61 @@
   box-shadow: 0 0 0 1px #000000; 
 }
 .page-icon { width: 0.875rem; height: 0.875rem; color: #374151; flex-shrink: 0; }
+
+/* Typography Settings */
+.footer-typography {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.typography-group {
+  display: flex;
+  align-items: center;
+  background: #f3f4f6;
+  border-radius: 0.25rem;
+  padding: 0.125rem;
+  gap: 0.125rem;
+}
+
+.typo-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 0.1875rem;
+  transition: all 120ms ease;
+  min-width: 1.5rem;
+}
+
+.typo-tab:hover {
+  color: #374151;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.typo-tab.active {
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.typo-tab.leading-icon {
+  padding: 0.25rem 0.375rem;
+}
+
+.typo-tab.leading-icon svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.typo-divider {
+  width: 1px;
+  height: 1rem;
+  background: #e5e7eb;
+}
