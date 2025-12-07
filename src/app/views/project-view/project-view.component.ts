@@ -3092,19 +3092,29 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   async onSidebarCharacterUpdate(payload: { id: number; name: string; desc: string }): Promise<void> {
     try {
-      await this.projectService.updateCharacter(payload.id, { name: payload.name, desc: payload.desc });
+      // Find existing character to preserve desc if not provided
+      const existingChar = this.characters.find(c => c.id === payload.id);
+      const updatedDesc = payload.desc || existingChar?.desc || '';
+      
+      await this.projectService.updateCharacter(payload.id, { name: payload.name, desc: updatedDesc });
       const idx = this.characters.findIndex(c => c.id === payload.id);
       if (idx !== -1) {
-        this.characters[idx] = { ...this.characters[idx], name: payload.name, desc: payload.desc } as any;
+        this.characters[idx] = { ...this.characters[idx], name: payload.name, desc: updatedDesc } as any;
         this.characters = [...this.characters];
       }
       // Exit edit mode after successful save
       if (this.editingCharacterId === payload.id) {
         this.editingCharacterId = null;
       }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to update character:', error);
     }
+  }
+
+  // Inline edit handler (name only)
+  onInlineCharacterEdit(payload: { id: number; name: string }): void {
+    this.onSidebarCharacterUpdate({ id: payload.id, name: payload.name, desc: '' });
   }
 
   // ===== Events handlers =====
@@ -3150,18 +3160,30 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   async onSidebarEventUpdate(payload: { id: number; name: string; desc: string; start_date: string | null; end_date: string | null }): Promise<void> {
     try {
-      await this.projectService.updateEvent(payload.id, { name: payload.name, desc: payload.desc, start_date: payload.start_date, end_date: payload.end_date });
+      // Find existing event to preserve fields if not provided
+      const existingEvent = this.events.find(e => e.id === payload.id);
+      const updatedDesc = payload.desc || existingEvent?.desc || '';
+      const updatedStartDate = payload.start_date ?? existingEvent?.start_date ?? null;
+      const updatedEndDate = payload.end_date ?? existingEvent?.end_date ?? null;
+      
+      await this.projectService.updateEvent(payload.id, { name: payload.name, desc: updatedDesc, start_date: updatedStartDate, end_date: updatedEndDate });
       const idx = this.events.findIndex(e => e.id === payload.id);
       if (idx !== -1) {
-        this.events[idx] = { ...this.events[idx], name: payload.name, desc: payload.desc, start_date: payload.start_date, end_date: payload.end_date } as any;
+        this.events[idx] = { ...this.events[idx], name: payload.name, desc: updatedDesc, start_date: updatedStartDate, end_date: updatedEndDate } as any;
         this.events = [...this.events];
       }
       if (this.editingEventId === payload.id) {
         this.editingEventId = null;
       }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to update event:', error);
     }
+  }
+
+  // Inline edit handler (name only)
+  onInlineEventEdit(payload: { id: number; name: string }): void {
+    this.onSidebarEventUpdate({ id: payload.id, name: payload.name, desc: '', start_date: null, end_date: null });
   }
 
   async onSidebarEventDelete(id: number): Promise<void> {
@@ -3352,18 +3374,28 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   async onSidebarPlaceUpdate(payload: { id: number; name: string; desc: string }): Promise<void> {
     try {
-      await this.projectService.updatePlace(payload.id, { name: payload.name, desc: payload.desc });
+      // Find existing place to preserve desc if not provided
+      const existingPlace = this.places.find(p => p.id === payload.id);
+      const updatedDesc = payload.desc || existingPlace?.desc || '';
+      
+      await this.projectService.updatePlace(payload.id, { name: payload.name, desc: updatedDesc });
       const idx = this.places.findIndex(p => p.id === payload.id);
       if (idx !== -1) {
-        this.places[idx] = { ...this.places[idx], name: payload.name, desc: payload.desc };
+        this.places[idx] = { ...this.places[idx], name: payload.name, desc: updatedDesc };
         this.places = [...this.places];
       }
       if (this.editingPlaceId === payload.id) {
         this.editingPlaceId = null;
       }
+      this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to update place:', error);
     }
+  }
+
+  // Inline edit handler (name only)
+  onInlinePlaceEdit(payload: { id: number; name: string }): void {
+    this.onSidebarPlaceUpdate({ id: payload.id, name: payload.name, desc: '' });
   }
 
   async onSidebarPlaceDelete(id: number): Promise<void> {

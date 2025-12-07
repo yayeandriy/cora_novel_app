@@ -21,17 +21,31 @@ export type MetadataType = 'character' | 'event' | 'place';
 export class MetadataChipsComponent {
   @Input() items: MetadataItem[] = [];
   @Input() availableItems: MetadataItem[] = [];
+  @Input() allItems: MetadataItem[] = []; // All items in the system
   @Input() type: MetadataType = 'character';
   @Input() placeholder: string = 'New item...';
   
   @Output() add = new EventEmitter<number>();
   @Output() remove = new EventEmitter<number>();
   @Output() deleteItem = new EventEmitter<number>();
+  @Output() editItem = new EventEmitter<{ id: number; name: string }>();
   @Output() create = new EventEmitter<string>();
   @Output() reorder = new EventEmitter<number[]>();
 
   dropdownVisible = false;
   dropdownPosition = { top: 0, left: 0 };
+  editingItemId: number | null = null;
+  editingItemName: string = '';
+
+  // Check if an item is currently assigned to the doc
+  isItemAssigned(id: number): boolean {
+    return this.items.some(item => item.id === id);
+  }
+
+  // Get dropdown items - prefer allItems if provided, otherwise use availableItems
+  get dropdownItems(): MetadataItem[] {
+    return this.allItems.length > 0 ? this.allItems : this.availableItems;
+  }
 
   toggleDropdown(event: MouseEvent) {
     event.stopPropagation();
@@ -50,6 +64,44 @@ export class MetadataChipsComponent {
 
   closeDropdown() {
     this.dropdownVisible = false;
+    this.editingItemId = null;
+    this.editingItemName = '';
+  }
+
+  startEdit(item: MetadataItem, event: MouseEvent) {
+    event.stopPropagation();
+    this.editingItemId = item.id;
+    this.editingItemName = item.name;
+  }
+
+  // Called when clicking edit button on the chip itself
+  onEditItem(item: MetadataItem, event: MouseEvent) {
+    event.stopPropagation();
+    // Open dropdown and start editing the item
+    const button = event.currentTarget as HTMLElement;
+    const rect = button.getBoundingClientRect();
+    this.dropdownPosition = {
+      top: rect.bottom + 4,
+      left: rect.left
+    };
+    this.dropdownVisible = true;
+    this.editingItemId = item.id;
+    this.editingItemName = item.name;
+  }
+
+  saveEdit(event?: Event) {
+    if (event) event.stopPropagation();
+    if (this.editingItemId !== null && this.editingItemName.trim()) {
+      this.editItem.emit({ id: this.editingItemId, name: this.editingItemName.trim() });
+    }
+    this.editingItemId = null;
+    this.editingItemName = '';
+  }
+
+  cancelEdit(event?: Event) {
+    if (event) event.stopPropagation();
+    this.editingItemId = null;
+    this.editingItemName = '';
   }
 
   onDrop(event: CdkDragDrop<MetadataItem[]>) {
@@ -61,7 +113,13 @@ export class MetadataChipsComponent {
   }
 
   onAdd(id: number) {
-    this.add.emit(id);
+    if (this.isItemAssigned(id)) {
+      // Already assigned - remove it
+      this.remove.emit(id);
+    } else {
+      // Not assigned - add it
+      this.add.emit(id);
+    }
     this.closeDropdown();
   }
 

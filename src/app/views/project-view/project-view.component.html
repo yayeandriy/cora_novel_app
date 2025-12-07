@@ -123,36 +123,42 @@
                           <app-metadata-chips
                             [items]="getProjectHeaderDocCharacters(doc.id)"
                             [availableItems]="getAvailableCharactersForDoc(doc.id)"
+                            [allItems]="characters"
                             type="character"
                             placeholder="New character..."
                             (remove)="removeCharacterFromDocCard(doc.id, $event)"
                             (add)="addCharacterToDocCard(doc.id, $event)"
                             (create)="createAndAddCharacterToDoc(doc.id, $event)"
-                            (deleteItem)="onSidebarCharacterDelete($event)">
+                            (deleteItem)="onSidebarCharacterDelete($event)"
+                            (editItem)="onInlineCharacterEdit($event)">
                           </app-metadata-chips>
 
                           <!-- Events row -->
                           <app-metadata-chips
                             [items]="getProjectHeaderDocEvents(doc.id)"
                             [availableItems]="getAvailableEventsForDoc(doc.id)"
+                            [allItems]="events"
                             type="event"
                             placeholder="New event..."
                             (remove)="removeEventFromDocCard(doc.id, $event)"
                             (add)="addEventToDocCard(doc.id, $event)"
                             (create)="createAndAddEventToDoc(doc.id, $event)"
-                            (deleteItem)="onSidebarEventDelete($event)">
+                            (deleteItem)="onSidebarEventDelete($event)"
+                            (editItem)="onInlineEventEdit($event)">
                           </app-metadata-chips>
 
                           <!-- Places row -->
                           <app-metadata-chips
                             [items]="getProjectHeaderDocPlaces(doc.id)"
                             [availableItems]="getAvailablePlacesForDoc(doc.id)"
+                            [allItems]="places"
                             type="place"
                             placeholder="New place..."
                             (remove)="removePlaceFromDocCard(doc.id, $event)"
                             (add)="addPlaceToDocCard(doc.id, $event)"
                             (create)="createAndAddPlaceToDoc(doc.id, $event)"
-                            (deleteItem)="onSidebarPlaceDelete($event)">
+                            (deleteItem)="onSidebarPlaceDelete($event)"
+                            (editItem)="onInlinePlaceEdit($event)">
                           </app-metadata-chips>
                         </div>
                       </div>
@@ -257,36 +263,42 @@
                       <app-metadata-chips
                         [items]="getProjectHeaderDocCharacters(doc.id)"
                         [availableItems]="getAvailableCharactersForDoc(doc.id)"
+                        [allItems]="characters"
                         type="character"
                         placeholder="New character..."
                         (remove)="removeCharacterFromDocCard(doc.id, $event)"
                         (add)="addCharacterToDocCard(doc.id, $event)"
                         (create)="createAndAddCharacterToDoc(doc.id, $event)"
-                        (deleteItem)="onSidebarCharacterDelete($event)">
+                        (deleteItem)="onSidebarCharacterDelete($event)"
+                        (editItem)="onInlineCharacterEdit($event)">
                       </app-metadata-chips>
 
                       <!-- Events row -->
                       <app-metadata-chips
                         [items]="getProjectHeaderDocEvents(doc.id)"
                         [availableItems]="getAvailableEventsForDoc(doc.id)"
+                        [allItems]="events"
                         type="event"
                         placeholder="New event..."
                         (remove)="removeEventFromDocCard(doc.id, $event)"
                         (add)="addEventToDocCard(doc.id, $event)"
                         (create)="createAndAddEventToDoc(doc.id, $event)"
-                        (deleteItem)="onSidebarEventDelete($event)">
+                        (deleteItem)="onSidebarEventDelete($event)"
+                        (editItem)="onInlineEventEdit($event)">
                       </app-metadata-chips>
 
                       <!-- Places row -->
                       <app-metadata-chips
                         [items]="getProjectHeaderDocPlaces(doc.id)"
                         [availableItems]="getAvailablePlacesForDoc(doc.id)"
+                        [allItems]="places"
                         type="place"
                         placeholder="New place..."
                         (remove)="removePlaceFromDocCard(doc.id, $event)"
                         (add)="addPlaceToDocCard(doc.id, $event)"
                         (create)="createAndAddPlaceToDoc(doc.id, $event)"
-                        (deleteItem)="onSidebarPlaceDelete($event)">
+                        (deleteItem)="onSidebarPlaceDelete($event)"
+                        (editItem)="onInlinePlaceEdit($event)">
                       </app-metadata-chips>
                     </div>
                   </div>

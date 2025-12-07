@@ -342,6 +342,11 @@ export class RightSidebarComponent {
     this.characterDelete.emit(id);
   }
 
+  editCharacter(payload: { id: number; name: string }) {
+    // Emit update with empty desc - the parent will handle preserving existing desc
+    this.characterUpdate.emit({ id: payload.id, name: payload.name, desc: '' });
+  }
+
   createAndAddCharacter(name: string) {
     if (!name.trim()) return;
     this.characterCreate.emit({ name: name.trim(), desc: '' });
@@ -361,6 +366,11 @@ export class RightSidebarComponent {
     this.eventDelete.emit(id);
   }
 
+  editEvent(payload: { id: number; name: string }) {
+    // Emit update with minimal data - the parent will handle preserving existing fields
+    this.eventUpdate.emit({ id: payload.id, name: payload.name, desc: '', start_date: null, end_date: null });
+  }
+
   createAndAddEvent(name: string) {
     if (!name.trim()) return;
     this.eventCreate.emit({ name: name.trim(), desc: '', start_date: null, end_date: null });
@@ -378,6 +388,11 @@ export class RightSidebarComponent {
   deletePlace(id: number) {
     console.log('[RightSidebar] deletePlace called with id:', id);
     this.placeDelete.emit(id);
+  }
+
+  editPlace(payload: { id: number; name: string }) {
+    // Emit update with empty desc - the parent will handle preserving existing desc
+    this.placeUpdate.emit({ id: payload.id, name: payload.name, desc: '' });
   }
 
   createAndAddPlace(name: string) {

@@ -38,11 +38,13 @@
           <app-metadata-chips
             [items]="getAttachedCharacters()"
             [availableItems]="getAvailableCharacters()"
+            [allItems]="characters"
             type="character"
             placeholder="New character..."
             (remove)="removeCharacter($event)"
             (add)="addCharacter($event)"
             (deleteItem)="deleteCharacter($event)"
+            (editItem)="editCharacter($event)"
             (create)="createAndAddCharacter($event)"
             (reorder)="onReorderCharacters($event)">
           </app-metadata-chips>
@@ -58,11 +60,13 @@
           <app-metadata-chips
             [items]="getAttachedEvents()"
             [availableItems]="getAvailableEvents()"
+            [allItems]="events"
             type="event"
             placeholder="New event..."
             (remove)="removeEvent($event)"
             (add)="addEvent($event)"
             (deleteItem)="deleteEvent($event)"
+            (editItem)="editEvent($event)"
             (create)="createAndAddEvent($event)"
             (reorder)="onReorderEvents($event)">
           </app-metadata-chips>
@@ -78,11 +82,13 @@
           <app-metadata-chips
             [items]="getAttachedPlaces()"
             [availableItems]="getAvailablePlaces()"
+            [allItems]="places"
             type="place"
             placeholder="New place..."
             (remove)="removePlace($event)"
             (add)="addPlace($event)"
             (deleteItem)="deletePlace($event)"
+            (editItem)="editPlace($event)"
             (create)="createAndAddPlace($event)"
             (reorder)="onReorderPlaces($event)">
           </app-metadata-chips>
