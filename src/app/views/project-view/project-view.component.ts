@@ -215,6 +215,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Header notes expansion state
   projectHeaderExpanded = false;
   folderHeaderExpanded = false;
+  // Track which folder is expanded in project header view
+  projectHeaderSelectedGroupId: number | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -244,6 +246,34 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   onProjectHeaderClick(event: MouseEvent) {
     if (this.isInteractiveHeaderClick(event)) return;
     this.projectHeaderExpanded = !this.projectHeaderExpanded;
+    // Clear folder selection when collapsing project header
+    if (!this.projectHeaderExpanded) {
+      this.projectHeaderSelectedGroupId = null;
+    }
+  }
+
+  // Handle folder chip click in project header - toggle expansion without navigation
+  onProjectFolderChipClick(group: DocGroup, event: MouseEvent) {
+    event.stopPropagation();
+    // Toggle: if already selected, deselect; otherwise select
+    if (this.projectHeaderSelectedGroupId === group.id) {
+      this.projectHeaderSelectedGroupId = null;
+    } else {
+      this.projectHeaderSelectedGroupId = group.id;
+    }
+  }
+
+  // Get docs for the folder selected in project header
+  getProjectHeaderSelectedGroupDocs(): Doc[] {
+    if (!this.projectHeaderSelectedGroupId) return [];
+    const group = this.docGroups.find(g => g.id === this.projectHeaderSelectedGroupId);
+    return group?.docs || [];
+  }
+
+  // Get the folder selected in project header
+  getProjectHeaderSelectedGroup(): DocGroup | null {
+    if (!this.projectHeaderSelectedGroupId) return null;
+    return this.docGroups.find(g => g.id === this.projectHeaderSelectedGroupId) || null;
   }
 
   // Toggle folder header expansion (show/hide folder notes editor)

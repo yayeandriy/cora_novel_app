@@ -62,7 +62,7 @@
     <!-- Editor -->
     <main class="editor-area">
       <!-- Project title moved to the middle section on top of the doc header -->
-      <div class="project-title-bar">
+      <div class="project-title-bar" (click)="onProjectHeaderClick($event)">
         <div class="project-title-center">
           @if (!editingProjectName) {
             <div class="project-name">
@@ -79,6 +79,45 @@
           }
         </div>
       </div>
+
+      <!-- Project content (folders list) - visible when project header is expanded -->
+      @if (projectHeaderExpanded) {
+        <div class="project-content">
+          <div class="folders-scroll-container">
+            @for (group of docGroups; track group.id; let i = $index) {
+              <button 
+                class="folder-chip" 
+                [class.selected]="projectHeaderSelectedGroupId === group.id"
+                (click)="onProjectFolderChipClick(group, $event)">
+                <span class="folder-chip-index">{{ i + 1 }}.</span>
+                <span class="folder-chip-name">{{ group.name }}</span>
+              </button>
+            }
+            @if (docGroups.length === 0) {
+              <span class="no-folders-hint">No folders yet</span>
+            }
+          </div>
+          <!-- Docs row for selected folder -->
+          @if (projectHeaderSelectedGroupId) {
+            <div class="folder-docs-row">
+              <div class="docs-scroll-container">
+                @for (doc of getProjectHeaderSelectedGroupDocs(); track doc.id; let j = $index) {
+                  <button 
+                    class="doc-chip" 
+                    [class.selected]="selectedDoc?.id === doc.id"
+                    (click)="selectDoc(doc)">
+                    <span class="doc-chip-index">{{ j + 1 }}.</span>
+                    <span class="doc-chip-name">{{ doc.name }}</span>
+                  </button>
+                }
+                @if (getProjectHeaderSelectedGroupDocs().length === 0) {
+                  <span class="no-docs-hint">No documents in this folder</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
 
       <!-- Folder name row (under project name) -->
       @if (selectedGroup || currentGroup) {

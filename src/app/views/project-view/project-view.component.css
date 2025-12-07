@@ -211,8 +211,131 @@ app-doc-tree {
 }
 .project-title-bar:hover {
   background: rgb(244, 244, 244);
-
 }
+
+/* Project content (expanded folder list) */
+.project-content {
+  flex-shrink: 0;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.75rem 1.5rem;
+}
+
+.folders-scroll-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.folder-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 1rem;
+  font-size: 0.8125rem;
+  color: #374151;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+
+.folder-chip:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.folder-chip.selected {
+  background: #111827;
+  border-color: #111827;
+  color: #ffffff;
+}
+
+.folder-chip-index {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.folder-chip.selected .folder-chip-index {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.folder-chip-name {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.no-folders-hint {
+  color: #9ca3af;
+  font-size: 0.8125rem;
+  font-style: italic;
+}
+
+/* Folder docs row (shows docs when folder is selected in project header) */
+.folder-docs-row {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.docs-scroll-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.doc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 1rem;
+  font-size: 0.8125rem;
+  color: #374151;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+
+.doc-chip:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.doc-chip.selected {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.doc-chip-index {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.doc-chip.selected .doc-chip-index {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.doc-chip-name {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.no-docs-hint {
+  color: #9ca3af;
+  font-size: 0.8125rem;
+  font-style: italic;
+}
+
 .project-title-center {
   display: flex;
   justify-content: flex-start;
@@ -711,4 +834,28 @@ app-right-sidebar {
 .left-sidebar{} 
  
 .right-sidebar{} 
+ 
+.project-content{} 
+ 
+.folders-scroll-container{} 
+ 
+.folder-chip{} 
+ 
+.folder-chip-index{} 
+ 
+.folder-chip-name{} 
+ 
+.no-folders-hint{} 
+ 
+.folder-docs-row{} 
+ 
+.docs-scroll-container{} 
+ 
+.doc-chip{} 
+ 
+.doc-chip-index{} 
+ 
+.doc-chip-name{} 
+ 
+.no-docs-hint{} 
  
