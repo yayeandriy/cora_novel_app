@@ -55,24 +55,39 @@ export class FolderDraftsComponent implements OnChanges, OnDestroy {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['drafts']) {
-      const prevLength = changes['drafts'].previousValue?.length ?? 0;
+      const prevDrafts: FolderDraft[] = changes['drafts'].previousValue ?? [];
+      const prevLength = prevDrafts.length;
       const currLength = this.drafts.length;
+      console.log('[DEBUG] folder-drafts ngOnChanges - prevLength:', prevLength, 'currLength:', currLength);
       // Only auto-focus when exactly 1 new draft was added (user created a draft),
       // not when loading multiple drafts from backend
       if (currLength === prevLength + 1 && prevLength > 0) {
-        // New draft added - scroll to the end and focus the new textarea
-        setTimeout(() => {
-          const el = this.scrollContainer?.nativeElement;
-          if (el) {
-            el.scrollTo({ left: el.scrollWidth, behavior: 'smooth' });
-            // Focus the last textarea (newest draft)
-            const textareas = el.querySelectorAll<HTMLTextAreaElement>('.folder-draft-textarea');
-            if (textareas.length > 0) {
-              textareas[textareas.length - 1].focus();
+        // Find the new draft by comparing IDs
+        const prevIds = new Set(prevDrafts.map(d => d.id));
+        const newDraft = this.drafts.find(d => !prevIds.has(d.id));
+        const newDraftIndex = newDraft ? this.drafts.findIndex(d => d.id === newDraft.id) : -1;
+        console.log('[DEBUG] folder-drafts ngOnChanges - new draft:', newDraft?.id, 'at index:', newDraftIndex);
+        
+        if (newDraftIndex !== -1) {
+          // New draft added - scroll to the new draft and focus its textarea
+          setTimeout(() => {
+            const el = this.scrollContainer?.nativeElement;
+            if (el) {
+              const textareas = el.querySelectorAll<HTMLTextAreaElement>('.folder-draft-textarea');
+              console.log('[DEBUG] folder-drafts ngOnChanges - found', textareas.length, 'textareas, focusing index', newDraftIndex);
+              if (textareas.length > newDraftIndex) {
+                const targetTextarea = textareas[newDraftIndex];
+                // Scroll the new draft into view
+                targetTextarea.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+                targetTextarea.focus();
+              }
             }
-          }
-        }, 50);
+          }, 50);
+        }
       }
+    }
+    if (changes['selectedDraftId']) {
+      console.log('[DEBUG] folder-drafts ngOnChanges - selectedDraftId changed to:', this.selectedDraftId);
     }
     this.previousDraftsLength = this.drafts.length;
   }

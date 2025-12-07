@@ -1977,11 +1977,25 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         }
       }
       
-      // console.log('Creating draft with insertIndex:', insertIndex, 'selectedId:', this.selectedFolderDraftId);
-
-      await this.projectService.createFolderDraft(group.id, draftName, '', insertIndex);
-      await this.loadFolderDrafts(group.id);
+      console.log('[DEBUG] createFolderDraft - creating draft with insertIndex:', insertIndex);
+      
+      // Create the draft and get the new draft's ID
+      const newDraft = await this.projectService.createFolderDraft(group.id, draftName, '', insertIndex);
+      console.log('[DEBUG] createFolderDraft - newDraft created with id:', newDraft.id);
+      
+      // Load drafts but don't restore previous selection
+      await this.loadFolderDrafts(group.id, /*restoreSelection*/ false);
       this.folderDraftsCount = this.folderDrafts.length;
+      
+      console.log('[DEBUG] createFolderDraft - after load, setting selectedFolderDraftId to:', newDraft.id);
+      // Select the newly created draft and persist to localStorage
+      this.selectedFolderDraftId = newDraft.id;
+      try {
+        const key = this.getFolderDraftSelectionKey(group.id);
+        localStorage.setItem(key, String(newDraft.id));
+        console.log('[DEBUG] createFolderDraft - saved to localStorage, key:', key, 'value:', newDraft.id);
+      } catch {}
+      console.log('[DEBUG] createFolderDraft - final selectedFolderDraftId:', this.selectedFolderDraftId);
     } catch (e) {
       console.error('Failed to create folder draft:', e);
       alert('Failed to create folder draft: ' + e);
@@ -2090,8 +2104,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   onFolderDraftSelect(draftId: number) {
+    console.log('[DEBUG] onFolderDraftSelect called with draftId:', draftId, 'current selectedFolderDraftId:', this.selectedFolderDraftId);
     // Pure selection logic - no toggling
     if (this.selectedFolderDraftId !== draftId) {
+      console.log('[DEBUG] onFolderDraftSelect - changing selection from', this.selectedFolderDraftId, 'to', draftId);
       if (this.folderDraftClickTimer) { clearTimeout(this.folderDraftClickTimer); this.folderDraftClickTimer = null; }
       this.selectedFolderDraftId = draftId;
       
