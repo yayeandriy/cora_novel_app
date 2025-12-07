@@ -179,7 +179,7 @@
           @if (selectedGroup || currentGroup) {
             <div class="folder-title-bar floating" (click)="selectedDoc ? onFolderHeaderClick($event) : null">
               <div class="folder-title-center">
-                @if (getFolderIndexLabel()) { <span class="header-index" style="margin-right: 1rem;">{{ getFolderIndexLabel() }}.</span> }
+                @if (getFolderIndexLabel()) { <span class="header-index">{{ getFolderIndexLabel() }}.</span> }
                 @if (!editingFolderName) {
                   <div class="project-name">
                     <span class="cursor-text" title="Click to rename folder" (click)="startEditFolderName($event)">{{ (selectedGroup || currentGroup)?.name }}</span>
@@ -322,7 +322,7 @@
       @if (selectedGroup || currentGroup) {
       <div class="folder-title-bar" (click)="selectedDoc ? onFolderHeaderClick($event) : null">
         <div class="folder-title-center">
-          @if (getFolderIndexLabel()) { <span class="header-index" style="margin-right: 1rem;">{{ getFolderIndexLabel() }}.</span> }
+          @if (getFolderIndexLabel()) { <span class="header-index">{{ getFolderIndexLabel() }}.</span> }
           @if (!editingFolderName) {
             <div class="project-name">
               <span class="cursor-text" title="Click to rename folder" (click)="startEditFolderName($event)">{{ (selectedGroup || currentGroup)?.name }}</span>
