@@ -201,6 +201,46 @@ app-doc-tree {
   height: 100%;
 }
 
+/* Floating headers overlay */
+.floating-headers-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: fadeSlideIn 0.2s ease-out;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Floating header variants */
+.project-title-bar.floating,
+.folder-title-bar.floating {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.project-content.floating {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.floating-folder-drafts {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
 /* Middle section project title bar */
 .project-title-bar {
   flex-shrink: 0;
@@ -1175,4 +1215,14 @@ app-right-sidebar {
 .dropdown-create-input{} 
  
 .chip-delete-btn{} 
+ 
+.header-hover-trigger{} 
+ 
+.floating-headers-overlay{} 
+ 
+.floating{} 
+ 
+.floating{} 
+ 
+.floating-folder-drafts{} 
  

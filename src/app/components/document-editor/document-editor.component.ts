@@ -50,6 +50,7 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   @Output() docNameChange = new EventEmitter<Doc>();
   @Output() docTextChange = new EventEmitter<void>();
   @Output() docSaved = new EventEmitter<void>();
+  @Output() docHeaderClick = new EventEmitter<void>();
   
   @ViewChild('docTitleInput') docTitleInput?: ElementRef<HTMLInputElement>;
   @ViewChild('editorTextarea') editorTextarea?: ElementRef<HTMLTextAreaElement>;
@@ -390,6 +391,26 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
 
   onTitleChange(doc: Doc) {
     this.docNameChange.emit(doc);
+  }
+
+  // Handle click on toolbar - emit event unless clicking on interactive elements
+  onToolbarClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    console.log('[DEBUG] onToolbarClick - target:', target.tagName, target.className);
+    // Don't emit if clicking on inputs, buttons, or other interactive elements
+    if (target.tagName === 'INPUT' || target.tagName === 'BUTTON' || target.closest('button') || target.closest('input')) {
+      console.log('[DEBUG] onToolbarClick - blocked by interactive element');
+      return;
+    }
+    console.log('[DEBUG] onToolbarClick - emitting docHeaderClick');
+    this.docHeaderClick.emit();
+  }
+
+  // Handle click on header index - always emit (dedicated click target)
+  onHeaderIndexClick(event: MouseEvent) {
+    console.log('[DEBUG] onHeaderIndexClick - clicked!');
+    event.stopPropagation();
+    this.docHeaderClick.emit();
   }
 
   // Compute an appropriate input size so the full title is visible in the header

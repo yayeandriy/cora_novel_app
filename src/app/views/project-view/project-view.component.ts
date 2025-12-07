@@ -215,6 +215,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Header notes expansion state
   projectHeaderExpanded = false;
   folderHeaderExpanded = false;
+  // Scroll-based header visibility
+  headersHiddenByScroll = false;
+  headersHoverVisible = false;
   // Track which folder is expanded in project header view
   projectHeaderSelectedGroupId: number | null = null;
   // Track which doc is expanded in project header view to show its characters/events/places
@@ -310,6 +313,39 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     if (event.deltaY !== 0) {
       event.preventDefault();
       container.scrollLeft += event.deltaY;
+    }
+  }
+
+  // Handle scroll on editor area to detect when headers are hidden
+  onEditorAreaScroll(scrollTop: number) {
+    const wasHidden = this.headersHiddenByScroll;
+    // Headers are considered hidden if scrolled more than 50px
+    this.headersHiddenByScroll = scrollTop > 50;
+    if (wasHidden !== this.headersHiddenByScroll) {
+      console.log('[DEBUG] onEditorAreaScroll - scrollTop:', scrollTop, 'headersHiddenByScroll changed to:', this.headersHiddenByScroll);
+    }
+    // If headers become visible due to scrolling up, hide the hover overlay
+    if (!this.headersHiddenByScroll) {
+      this.headersHoverVisible = false;
+    }
+  }
+
+  // Handle doc header click - toggle floating headers when scrolled
+  onDocHeaderClick() {
+    console.log('[DEBUG] onDocHeaderClick - headersHiddenByScroll:', this.headersHiddenByScroll, 'headersHoverVisible:', this.headersHoverVisible);
+    if (this.headersHiddenByScroll) {
+      this.headersHoverVisible = !this.headersHoverVisible;
+      console.log('[DEBUG] onDocHeaderClick - toggled headersHoverVisible to:', this.headersHoverVisible);
+    } else {
+      console.log('[DEBUG] onDocHeaderClick - headers not hidden by scroll, not toggling');
+    }
+  }
+
+  // Handle click on floating headers overlay (outside of header bars) - dismiss
+  onFloatingHeadersClick(event: MouseEvent) {
+    // Only dismiss if clicking directly on the overlay, not on child elements
+    if (event.target === event.currentTarget) {
+      this.headersHoverVisible = false;
     }
   }
 

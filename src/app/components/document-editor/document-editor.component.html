@@ -1,8 +1,8 @@
 @if (selectedDoc) {
 <div class="editor-container">
-  <div class="editor-toolbar">
+  <div class="editor-toolbar" (click)="onToolbarClick($event)">
     <div class="title-group">
-      @if (docIndexLabel) { <span class="header-index">{{ docIndexLabel }}.</span> }
+      @if (docIndexLabel) { <span class="header-index clickable" (click)="onHeaderIndexClick($event)" title="Click to show project/folder headers">{{ docIndexLabel }}.</span> }
       <input 
         #docTitleInput
         type="text" 

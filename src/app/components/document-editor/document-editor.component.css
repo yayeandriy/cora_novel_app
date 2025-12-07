@@ -24,6 +24,15 @@
 .draft-controls {  }
 .draft-tabs {  }
 .header-index { color: #6b7280; font-size: 0.8125rem; padding: 0.25rem 0.15rem 0.25rem 0; margin-left: 0.5rem; }
+.header-index.clickable { 
+  cursor: pointer; 
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  transition: background 150ms;
+}
+.header-index.clickable:hover { 
+  background: #f3f4f6;
+}
 .draft-controls {
   display: flex;
   align-items: center;

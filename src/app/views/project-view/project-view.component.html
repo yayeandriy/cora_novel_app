@@ -60,7 +60,208 @@
     </div>
 
     <!-- Editor -->
-    <main class="editor-area">
+    <main class="editor-area" #editorArea (scroll)="onEditorAreaScroll(editorArea.scrollTop)">
+      <!-- Floating headers overlay (visible when triggered by doc header click when scrolled) -->
+      @if (headersHoverVisible) {
+        <div class="floating-headers-overlay" (click)="onFloatingHeadersClick($event)">
+          <!-- Project title bar -->
+          <div class="project-title-bar floating" (click)="onProjectHeaderClick($event)">
+            <div class="project-title-center">
+              @if (!editingProjectName) {
+                <div class="project-name">
+                  <span class="cursor-text" title="Click to rename" (click)="startEditProjectName($event)">{{ projectName }}</span>
+                </div>
+              } @else {
+                <input
+                  #projectNameInput
+                  class="project-name-input"
+                  [(ngModel)]="projectNameEdit"
+                  (blur)="saveProjectName()"
+                  (keydown)="onProjectNameKeydown($event)"
+                  placeholder="Project name" />
+              }
+            </div>
+          </div>
+          
+          <!-- Project content (folders list) - visible when project header is expanded -->
+          @if (projectHeaderExpanded) {
+            <div class="project-content floating" (click)="$event.stopPropagation()">
+              <div class="folders-scroll-container">
+                @for (group of docGroups; track group.id; let i = $index) {
+                  <button 
+                    class="folder-chip" 
+                    [class.selected]="projectHeaderSelectedGroupId === group.id"
+                    (click)="onProjectFolderChipClick(group, $event)">
+                    <span class="folder-chip-index">{{ i + 1 }}.</span>
+                    <span class="folder-chip-name">{{ group.name }}</span>
+                  </button>
+                }
+                @if (docGroups.length === 0) {
+                  <span class="no-folders-hint">No folders yet</span>
+                }
+              </div>
+              <!-- Docs cards for selected folder -->
+              @if (projectHeaderSelectedGroupId) {
+                <div class="folder-docs-row">
+                  <div class="docs-cards-container" (wheel)="onDocsContainerWheel($event)">
+                    @for (doc of getProjectHeaderSelectedGroupDocs(); track doc.id; let j = $index) {
+                      <div class="doc-card" [class.selected]="projectHeaderHighlightedDocId === doc.id" (click)="onProjectDocCardClick(doc, $event)">
+                        <div class="doc-card-header">
+                          <span class="doc-card-index">{{ j + 1 }}.</span>
+                          <span class="doc-card-name">{{ doc.name }}</span>
+                        </div>
+                        <div class="doc-card-metadata">
+                          <!-- Characters row -->
+                          <div class="card-metadata-row">
+                            @for (char of getProjectHeaderDocCharacters(doc.id); track char.id) {
+                              <span class="metadata-chip character-chip">
+                                {{ char.name }}
+                                <button class="chip-delete-btn" (click)="removeCharacterFromDocCard(doc.id, char.id, $event)">
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>
+                                </button>
+                              </span>
+                            }
+                            <button class="add-metadata-btn character-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'characters', $event)">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
+                            </button>
+                            @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'characters') {
+                              <div class="add-metadata-dropdown" (click)="$event.stopPropagation()">
+                                <div class="dropdown-create-row">
+                                  <input 
+                                    #charInputFloat
+                                    type="text" 
+                                    class="dropdown-create-input" 
+                                    placeholder="New character..."
+                                    (keydown.enter)="$event.preventDefault(); createAndAddCharacterToDoc(doc.id, charInputFloat.value); charInputFloat.value = ''"
+                                    (click)="$event.stopPropagation()" />
+                                </div>
+                                @for (char of getAvailableCharactersForDoc(doc.id); track char.id) {
+                                  <button class="dropdown-item" (click)="addCharacterToDocCard(doc.id, char.id, $event)">{{ char.name }}</button>
+                                }
+                                @if (getAvailableCharactersForDoc(doc.id).length === 0) {
+                                  <span class="dropdown-empty">No more characters</span>
+                                }
+                              </div>
+                            }
+                          </div>
+                          <!-- Events row -->
+                          <div class="card-metadata-row">
+                            @for (evt of getProjectHeaderDocEvents(doc.id); track evt.id) {
+                              <span class="metadata-chip event-chip">
+                                {{ evt.name }}
+                                <button class="chip-delete-btn" (click)="removeEventFromDocCard(doc.id, evt.id, $event)">
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>
+                                </button>
+                              </span>
+                            }
+                            <button class="add-metadata-btn event-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'events', $event)">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
+                            </button>
+                            @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'events') {
+                              <div class="add-metadata-dropdown" (click)="$event.stopPropagation()">
+                                <div class="dropdown-create-row">
+                                  <input 
+                                    #eventInputFloat
+                                    type="text" 
+                                    class="dropdown-create-input" 
+                                    placeholder="New event..."
+                                    (keydown.enter)="$event.preventDefault(); createAndAddEventToDoc(doc.id, eventInputFloat.value); eventInputFloat.value = ''"
+                                    (click)="$event.stopPropagation()" />
+                                </div>
+                                @for (evt of getAvailableEventsForDoc(doc.id); track evt.id) {
+                                  <button class="dropdown-item" (click)="addEventToDocCard(doc.id, evt.id, $event)">{{ evt.name }}</button>
+                                }
+                                @if (getAvailableEventsForDoc(doc.id).length === 0) {
+                                  <span class="dropdown-empty">No more events</span>
+                                }
+                              </div>
+                            }
+                          </div>
+                          <!-- Places row -->
+                          <div class="card-metadata-row">
+                            @for (place of getProjectHeaderDocPlaces(doc.id); track place.id) {
+                              <span class="metadata-chip place-chip">
+                                {{ place.name }}
+                                <button class="chip-delete-btn" (click)="removePlaceFromDocCard(doc.id, place.id, $event)">
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>
+                                </button>
+                              </span>
+                            }
+                            <button class="add-metadata-btn place-add" (click)="toggleProjectHeaderAddDropdown(doc.id, 'places', $event)">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/></svg>
+                            </button>
+                            @if (projectHeaderAddDropdown?.docId === doc.id && projectHeaderAddDropdown?.type === 'places') {
+                              <div class="add-metadata-dropdown" (click)="$event.stopPropagation()">
+                                <div class="dropdown-create-row">
+                                  <input 
+                                    #placeInputFloat
+                                    type="text" 
+                                    class="dropdown-create-input" 
+                                    placeholder="New place..."
+                                    (keydown.enter)="$event.preventDefault(); createAndAddPlaceToDoc(doc.id, placeInputFloat.value); placeInputFloat.value = ''"
+                                    (click)="$event.stopPropagation()" />
+                                </div>
+                                @for (place of getAvailablePlacesForDoc(doc.id); track place.id) {
+                                  <button class="dropdown-item" (click)="addPlaceToDocCard(doc.id, place.id, $event)">{{ place.name }}</button>
+                                }
+                                @if (getAvailablePlacesForDoc(doc.id).length === 0) {
+                                  <span class="dropdown-empty">No more places</span>
+                                }
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    }
+                    @if (getProjectHeaderSelectedGroupDocs().length === 0) {
+                      <span class="no-docs-hint">No documents in this folder</span>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+          
+          <!-- Folder title bar -->
+          @if (selectedGroup || currentGroup) {
+            <div class="folder-title-bar floating" (click)="selectedDoc ? onFolderHeaderClick($event) : null">
+              <div class="folder-title-center">
+                @if (getFolderIndexLabel()) { <span class="header-index" style="margin-right: 1rem;">{{ getFolderIndexLabel() }}.</span> }
+                @if (!editingFolderName) {
+                  <div class="project-name">
+                    <span class="cursor-text" title="Click to rename folder" (click)="startEditFolderName($event)">{{ (selectedGroup || currentGroup)?.name }}</span>
+                  </div>
+                } @else {
+                  <input
+                    #folderNameInput
+                    class="project-name-input folder-name-input"
+                    [(ngModel)]="folderNameEdit"
+                    (blur)="saveFolderName()"
+                    (keydown)="onFolderNameKeydown($event)"
+                    placeholder="Folder name" />
+                }
+              </div>
+            </div>
+            
+            <!-- Folder drafts - visible when folder header is expanded -->
+            @if (folderHeaderExpanded && selectedDoc) {
+              <div class="floating-folder-drafts" (click)="$event.stopPropagation()">
+                <app-folder-drafts
+                  [drafts]="folderDrafts"
+                  [selectedDraftId]="selectedFolderDraftId"
+                  (draftCreate)="createFolderDraft()"
+                  (draftChange)="onFolderDraftChange($event.draftId, $event.content, $event.cursorPosition)"
+                  (draftNameChange)="onFolderDraftNameChange($event.draftId, $event.name)"
+                  (draftDelete)="deleteFolderDraft($event)"
+                  (draftMove)="onFolderDraftMove($event)"
+                  (draftSelect)="onFolderDraftSelect($event)">
+                </app-folder-drafts>
+              </div>
+            }
+          }
+        </div>
+      }
+      
       <!-- Project title moved to the middle section on top of the doc header -->
       <div class="project-title-bar" (click)="onProjectHeaderClick($event)">
         <div class="project-title-center">
@@ -270,6 +471,7 @@
         (docNameChange)="renameDoc($event)"
         (docTextChange)="onDocumentTextChange()"
         (docSaved)="saveDoc()"
+        (docHeaderClick)="onDocHeaderClick()"
         (draftRenamed)="onDocumentDraftRenamed($event)"
         (draftAdd)="onDocumentDraftAdd()"
         (draftSelect)="onDocumentDraftSelect($event)"
