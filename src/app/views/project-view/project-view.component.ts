@@ -401,22 +401,25 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Get characters for a doc in project header view
+  // Get characters for a doc in project header view (preserves cache order)
   getProjectHeaderDocCharacters(docId: number): Character[] {
     const charIds = this.projectHeaderDocCharactersCache.get(docId) || [];
-    return this.characters.filter(c => charIds.includes(c.id));
+    const charMap = new Map(this.characters.map(c => [c.id, c]));
+    return charIds.map(id => charMap.get(id)).filter((c): c is Character => c !== undefined);
   }
 
-  // Get events for a doc in project header view
+  // Get events for a doc in project header view (preserves cache order)
   getProjectHeaderDocEvents(docId: number): Event[] {
     const eventIds = this.projectHeaderDocEventsCache.get(docId) || [];
-    return this.events.filter(e => eventIds.includes(e.id));
+    const eventMap = new Map(this.events.map(e => [e.id, e]));
+    return eventIds.map(id => eventMap.get(id)).filter((e): e is Event => e !== undefined);
   }
 
-  // Get places for a doc in project header view
+  // Get places for a doc in project header view (preserves cache order)
   getProjectHeaderDocPlaces(docId: number): any[] {
     const placeIds = this.projectHeaderDocPlacesCache.get(docId) || [];
-    return this.places.filter(p => placeIds.includes(p.id));
+    const placeMap = new Map(this.places.map(p => [p.id, p]));
+    return placeIds.map(id => placeMap.get(id)).filter((p): p is any => p !== undefined);
   }
 
   // Get available items to add (not already linked to doc)
@@ -601,6 +604,22 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Failed to remove place from doc:', error);
     }
+  }
+
+  // Reorder handlers for doc card metadata
+  reorderDocCardCharacters(docId: number, orderIds: number[]): void {
+    this.projectHeaderDocCharactersCache.set(docId, orderIds);
+    this.changeDetector.markForCheck();
+  }
+
+  reorderDocCardEvents(docId: number, orderIds: number[]): void {
+    this.projectHeaderDocEventsCache.set(docId, orderIds);
+    this.changeDetector.markForCheck();
+  }
+
+  reorderDocCardPlaces(docId: number, orderIds: number[]): void {
+    this.projectHeaderDocPlacesCache.set(docId, orderIds);
+    this.changeDetector.markForCheck();
   }
 
   // Toggle folder header expansion (show/hide folder notes editor)

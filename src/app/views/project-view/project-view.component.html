@@ -130,7 +130,8 @@
                             (add)="addCharacterToDocCard(doc.id, $event)"
                             (create)="createAndAddCharacterToDoc(doc.id, $event)"
                             (deleteItem)="onSidebarCharacterDelete($event)"
-                            (editItem)="onInlineCharacterEdit($event)">
+                            (editItem)="onInlineCharacterEdit($event)"
+                            (reorder)="reorderDocCardCharacters(doc.id, $event)">
                           </app-metadata-chips>
 
                           <!-- Events row -->
@@ -144,7 +145,8 @@
                             (add)="addEventToDocCard(doc.id, $event)"
                             (create)="createAndAddEventToDoc(doc.id, $event)"
                             (deleteItem)="onSidebarEventDelete($event)"
-                            (editItem)="onInlineEventEdit($event)">
+                            (editItem)="onInlineEventEdit($event)"
+                            (reorder)="reorderDocCardEvents(doc.id, $event)">
                           </app-metadata-chips>
 
                           <!-- Places row -->
@@ -158,7 +160,8 @@
                             (add)="addPlaceToDocCard(doc.id, $event)"
                             (create)="createAndAddPlaceToDoc(doc.id, $event)"
                             (deleteItem)="onSidebarPlaceDelete($event)"
-                            (editItem)="onInlinePlaceEdit($event)">
+                            (editItem)="onInlinePlaceEdit($event)"
+                            (reorder)="reorderDocCardPlaces(doc.id, $event)">
                           </app-metadata-chips>
                         </div>
                       </div>
@@ -270,7 +273,8 @@
                         (add)="addCharacterToDocCard(doc.id, $event)"
                         (create)="createAndAddCharacterToDoc(doc.id, $event)"
                         (deleteItem)="onSidebarCharacterDelete($event)"
-                        (editItem)="onInlineCharacterEdit($event)">
+                        (editItem)="onInlineCharacterEdit($event)"
+                        (reorder)="reorderDocCardCharacters(doc.id, $event)">
                       </app-metadata-chips>
 
                       <!-- Events row -->
@@ -284,7 +288,8 @@
                         (add)="addEventToDocCard(doc.id, $event)"
                         (create)="createAndAddEventToDoc(doc.id, $event)"
                         (deleteItem)="onSidebarEventDelete($event)"
-                        (editItem)="onInlineEventEdit($event)">
+                        (editItem)="onInlineEventEdit($event)"
+                        (reorder)="reorderDocCardEvents(doc.id, $event)">
                       </app-metadata-chips>
 
                       <!-- Places row -->
@@ -298,7 +303,8 @@
                         (add)="addPlaceToDocCard(doc.id, $event)"
                         (create)="createAndAddPlaceToDoc(doc.id, $event)"
                         (deleteItem)="onSidebarPlaceDelete($event)"
-                        (editItem)="onInlinePlaceEdit($event)">
+                        (editItem)="onInlinePlaceEdit($event)"
+                        (reorder)="reorderDocCardPlaces(doc.id, $event)">
                       </app-metadata-chips>
                     </div>
                   </div>
