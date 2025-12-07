@@ -112,6 +112,8 @@ pub fn run() {
             commands::folder_draft_update,
             commands::folder_draft_delete,
             commands::folder_draft_delete_all,
+            commands::folder_draft_reorder,
+            commands::folder_draft_move,
             commands::timeline_create,
             commands::timeline_get,
             commands::timeline_get_by_entity,

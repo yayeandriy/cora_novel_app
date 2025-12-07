@@ -324,6 +324,10 @@ export class ProjectService {
     return invoke<void>("folder_draft_delete", { id });
   }
 
+  async moveFolderDraft(id: number, newIndex: number): Promise<void> {
+    return invoke<void>("folder_draft_move", { id, newIndex });
+  }
+
   async deleteAllFolderDrafts(docGroupId: number): Promise<void> {
     return invoke<void>("folder_draft_delete_all", { docGroupId });
   }

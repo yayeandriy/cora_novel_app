@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ViewChild, ElementRef, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
@@ -9,12 +10,13 @@ export interface FolderDraft {
   name: string;
   content?: string;
   updated_at?: string;
+  sort_order?: number;
 }
 
 @Component({
   selector: 'app-folder-drafts',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DragDropModule],
   templateUrl: './folder-drafts.component.html',
   styleUrls: ['./folder-drafts.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -29,6 +31,7 @@ export class FolderDraftsComponent implements OnChanges, OnDestroy {
   @Output() draftChange = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();
   @Output() draftNameChange = new EventEmitter<{ draftId: number; name: string }>();
   @Output() draftDelete = new EventEmitter<number>();
+  @Output() draftMove = new EventEmitter<{ draftId: number; newIndex: number }>();
 
   private previousDraftsLength = 0;
   private nameChangeSubject = new Subject<{ draftId: number; name: string }>();
@@ -36,6 +39,17 @@ export class FolderDraftsComponent implements OnChanges, OnDestroy {
     debounceTime(500),
     distinctUntilChanged((prev, curr) => prev.draftId === curr.draftId && prev.name === curr.name)
   ).subscribe(change => this.draftNameChange.emit(change));
+
+  drop(event: CdkDragDrop<FolderDraft[]>) {
+    if (event.previousIndex === event.currentIndex) return;
+    
+    const draft = this.drafts[event.previousIndex];
+    
+    // Optimistic update
+    moveItemInArray(this.drafts, event.previousIndex, event.currentIndex);
+    
+    this.draftMove.emit({ draftId: draft.id, newIndex: event.currentIndex });
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['drafts']) {

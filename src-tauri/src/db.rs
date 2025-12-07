@@ -122,6 +122,15 @@ pub fn init_pool() -> anyhow::Result<DbPool> {
         conn.execute_batch(include_str!("../migrations/012_add_places.sql")).context("running migrations 012")?;
     }
 
+    // Conditionally run 013: add sort_order column to folder_drafts
+    let mut stmt = conn.prepare("PRAGMA table_info(folder_drafts)")?;
+    let cols = stmt.query_map([], |row| Ok::<String, rusqlite::Error>(row.get(1)?))?;
+    let mut has_sort_order = false;
+    for c in cols { let name = c?; if name == "sort_order" { has_sort_order = true; break; } }
+    if !has_sort_order {
+        conn.execute_batch(include_str!("../migrations/013_add_folder_drafts_order.sql")).context("running migrations 013")?;
+    }
+
     Ok(pool)
 }
 

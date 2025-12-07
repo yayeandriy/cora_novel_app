@@ -494,6 +494,18 @@ pub async fn folder_draft_delete_all(state: State<'_, AppState>, doc_group_id: i
     crate::services::folder_drafts::delete_all_for_group(pool, doc_group_id).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub async fn folder_draft_reorder(state: State<'_, AppState>, id: i64, direction: String) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::folder_drafts::reorder(pool, id, &direction).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn folder_draft_move(state: State<'_, AppState>, id: i64, new_index: usize) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::folder_drafts::move_to_index(pool, id, new_index).map_err(|e| e.to_string())
+}
+
 // Timeline Commands
 #[tauri::command]
 pub async fn timeline_create(state: State<'_, AppState>, payload: TimelineCreate) -> Result<Timeline, String> {

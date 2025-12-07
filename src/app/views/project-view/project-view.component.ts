@@ -1978,6 +1978,16 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  async onFolderDraftMove(payload: { draftId: number; newIndex: number }) {
+    try {
+      await this.projectService.moveFolderDraft(payload.draftId, payload.newIndex);
+    } catch (e) {
+      console.error('Failed to move folder draft:', e);
+      const group = this.selectedGroup || this.currentGroup;
+      if (group) await this.loadFolderDrafts(group.id);
+    }
+  }
+
   startEditFolderDraft(d: FolderDraft) {
     // Cancel pending click-based deselection so double-click doesn't clear selection
     if (this.folderDraftClickTimer) { clearTimeout(this.folderDraftClickTimer); this.folderDraftClickTimer = null; }

@@ -7,11 +7,16 @@
       </svg>
     </button>
   </div>
-  <div class="folder-expanded-content" #scrollContainer [class.grid-content]="layout === 'grid'">
+  <div class="folder-expanded-content" #scrollContainer [class.grid-content]="layout === 'grid'" cdkDropList [cdkDropListOrientation]="layout === 'grid' ? 'mixed' : 'horizontal'" (cdkDropListDropped)="drop($event)">
     @if (drafts.length > 0) {
-      @for (draft of drafts.slice().reverse(); track draft.id) {
-        <div class="draft-card">
+      @for (draft of drafts; track draft.id) {
+        <div class="draft-card" cdkDrag>
           <div class="draft-card-header">
+            <div class="drag-handle" cdkDragHandle title="Drag to reorder">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon-drag" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM14 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM14 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/>
+              </svg>
+            </div>
             <input 
               type="text"
               class="draft-name-input"

@@ -125,6 +125,7 @@ pub struct FolderDraft {
     pub content: String,
     pub created_at: String,
     pub updated_at: String,
+    pub sort_order: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
