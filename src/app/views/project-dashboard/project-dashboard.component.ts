@@ -1,4 +1,4 @@
-import { Component, signal, computed } from "@angular/core";
+import { Component, signal, computed, ViewChild, ElementRef, AfterViewChecked } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { ReactiveFormsModule, FormGroup, FormControl } from "@angular/forms";
 import { ProjectService } from "../../services/project.service";
@@ -21,13 +21,19 @@ interface ProjectStats {
   templateUrl: "./project-dashboard.component.html",
   styleUrls: ["./project-dashboard.component.css"],
 })
-export class ProjectDashboardComponent {
+export class ProjectDashboardComponent implements AfterViewChecked {
+  @ViewChild('newProjectInput') newProjectInput?: ElementRef<HTMLInputElement>;
+  
   // Signals for reactive state
   projects = signal<Project[]>([]);
   projectStats = signal<Map<number, ProjectStats>>(new Map());
   showCreate = signal(false);
   editingId = signal<number | null>(null);
   isLoading = signal(false);
+  
+  // For inline editing
+  nameControl = new FormControl('');
+  private shouldFocusInput = false;
   
   // Computed values
   hasProjects = computed(() => this.projects().length > 0);
@@ -51,6 +57,13 @@ export class ProjectDashboardComponent {
       desc: new FormControl(null) as FormControl<string | null>,
       path: new FormControl(null) as FormControl<string | null>,
     });
+  }
+  
+  ngAfterViewChecked() {
+    if (this.shouldFocusInput && this.newProjectInput) {
+      this.newProjectInput.nativeElement.focus();
+      this.shouldFocusInput = false;
+    }
   }
 
   async ngOnInit() {
@@ -122,6 +135,32 @@ export class ProjectDashboardComponent {
     return cells;
   }
   
+  getFirstEmptyIndex(): number {
+    return this.sortedProjects().length;
+  }
+  
+  async createQuick() {
+    const name = this.nameControl.value?.trim();
+    if (!name) {
+      this.cancelEdit();
+      return;
+    }
+    
+    await this.svc.createProject({ name, desc: null, path: null });
+    this.nameControl.reset();
+    this.showCreate.set(false);
+    await this.reload();
+  }
+  
+  onInputBlur() {
+    // Small delay to allow for Enter key to fire first
+    setTimeout(() => {
+      if (this.showCreate() && !this.nameControl.value?.trim()) {
+        this.cancelEdit();
+      }
+    }, 150);
+  }
+  
   formatNumber(n: number): string {
     if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
     if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
@@ -175,7 +214,9 @@ export class ProjectDashboardComponent {
     this.showCreate.update(v => !v);
     this.editingId.set(null);
     if (this.showCreate()) {
+      this.nameControl.reset();
       this.form.reset({ name: '', desc: null, path: null });
+      this.shouldFocusInput = true;
     }
   }
 
@@ -204,6 +245,7 @@ export class ProjectDashboardComponent {
   cancelEdit() {
     this.editingId.set(null);
     this.showCreate.set(false);
+    this.nameControl.reset();
     this.form.reset({ name: '', desc: null, path: null });
   }
 

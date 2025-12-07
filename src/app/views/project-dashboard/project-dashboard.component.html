@@ -1,34 +1,5 @@
 <main class="dashboard-main">
 <section class="dashboard-section">
-  @if (showCreate()) {
-  <div class="absolute top-0 left-0 right-0 z-10 p-8 bg-white shadow-lg">
-    <form [formGroup]="form" (ngSubmit)="create()" class="bg-white p-6">
-      <h3 class="text-lg font-semibold mb-4">{{ editingId() ? 'Edit Project' : 'New Project' }}</h3>
-      <div class="space-y-4">
-        <div>
-          <input formControlName="name" placeholder="Project name" class="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" />
-        </div>
-        <div>
-          <label class="block text-xs text-gray-600 mb-1.5">Working Folder</label>
-          <div class="flex gap-2">
-            <input formControlName="path" placeholder="Select folder path..." class="flex-1 border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" readonly />
-            <button type="button" (click)="selectFolder()" class="shrink-0 inline-flex items-center gap-2 border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
-              <span>Browse</span>
-            </button>
-          </div>
-        </div>
-        <div>
-          <input formControlName="desc" placeholder="Description (optional)" class="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" />
-        </div>
-        <div class="flex gap-3">
-          <button type="submit" class="bg-black text-white px-6 py-2 text-sm font-medium hover:bg-gray-800 transition">{{ editingId() ? 'Save' : 'Create' }}</button>
-          <button type="button" (click)="cancelEdit()" class="px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition">Cancel</button>
-        </div>
-      </div>
-    </form>
-  </div>
-  }
-
   <!-- Loading state -->
   @if (isLoading()) {
   <div class="loading-container">
@@ -48,6 +19,25 @@
           </div>
           <div class="card-pages">
             <span>{{ getStats(cell.project.id).pageCount === 0 ? 'No pages' : getStats(cell.project.id).pageCount + ' ' + (getStats(cell.project.id).pageCount === 1 ? 'page' : 'pages') }}</span>
+          </div>
+        </div>
+      } @else if (showCreate() && cell.index === getFirstEmptyIndex()) {
+        <!-- New Project Card (inline edit) -->
+        <div class="card card-project card-editing">
+          <div class="card-title">
+            <div class="inline-edit-wrapper">
+              <input #newProjectInput
+                     type="text"
+                     [formControl]="nameControl"
+                     class="inline-title-input"
+                     placeholder="Title of the story"
+                     (keydown.enter)="createQuick()"
+                     (keydown.escape)="cancelEdit()"
+                     (blur)="onInputBlur()" />
+            </div>
+          </div>
+          <div class="card-pages">
+            <span>No pages</span>
           </div>
         </div>
       } @else {
