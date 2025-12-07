@@ -1,23 +1,110 @@
 /* Project Dashboard Component Styles */
-/* Tailwind classes handle most of the styling, this file is reserved for component-specific styles */
+/* Minimal, clean design matching reference */
 
 :host {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.dashboard-main {
+  width: 100%;
+  height: 100%;
+  background-color: #f3f4f6;
+  overflow: hidden;
+}
+
+.dashboard-section {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.loading-container {
   display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   height: 100%;
 }
 
-main {
+/* Fixed 4x3 grid */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  width: 100%;
+  height: 100%;
+}
+
+/* Card base styles */
+.card {
+  background-color: white;
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.card:hover {
+  background-color: #f9fafb;
+}
+
+/* Project card with content */
+.card-project {
   display: flex;
   flex-direction: column;
-  width: 100%;
-  height: 100%;
+  justify-content: space-between;
+  padding: 24px;
 }
 
-/* Ensure the inner container spans full width/height without a max constraint */
-section {
-  width: 100%;
-  height: 100%;
-  max-width: none !important;
-  margin: 0 !important;
+.card-title h3 {
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: #111827;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.card-pages {
+  margin-top: auto;
+}
+
+.card-pages span {
+  font-size: 1rem;
+  color: #111827;
+}
+
+/* Empty card */
+.card-empty {
+  /* No content, just empty space */
+}
+
+/* Remove border on last column */
+.card:nth-child(4n) {
+  border-right: none;
+}
+
+/* Remove border on last row */
+.card:nth-child(n+9) {
+  border-bottom: none;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }

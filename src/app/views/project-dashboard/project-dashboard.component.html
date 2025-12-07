@@ -1,111 +1,62 @@
-<main class="min-h-screen bg-gray-50 p-8">
-<section class="w-full h-full">
-  <header class="flex items-start justify-between mb-8">
-    <div>
-      <h1 class="text-3xl font-bold text-gray-900">Projects</h1>
-      <p class="text-sm text-gray-500 mt-1">Select a project to open or create a new one</p>
-    </div>
-    <div class="flex items-center gap-2">
-      <button (click)="toggleCreate()" class="inline-flex items-center gap-2 bg-black text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 transition">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-      </svg>
-      <span>New Project</span>
-      </button>
-      <button (click)="importProject()" class="inline-flex items-center gap-2 border border-gray-300 bg-white px-4 py-2.5 rounded-lg text-sm font-medium text-gray-800 hover:bg-gray-50 transition">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v6m0 0l-3-3m3 3l3-3" />
-        </svg>
-        <span>Import Project</span>
-      </button>
-    </div>
-  </header>
-
-  @if (showCreate) {
-  <div class="mb-8">
-    <form [formGroup]="form" (ngSubmit)="create()" class="bg-white border border-gray-200 rounded-lg p-6">
-      <h3 class="text-lg font-semibold mb-4">{{ editingId ? 'Edit Project' : 'New Project' }}</h3>
+<main class="dashboard-main">
+<section class="dashboard-section">
+  @if (showCreate()) {
+  <div class="absolute top-0 left-0 right-0 z-10 p-8 bg-white shadow-lg">
+    <form [formGroup]="form" (ngSubmit)="create()" class="bg-white p-6">
+      <h3 class="text-lg font-semibold mb-4">{{ editingId() ? 'Edit Project' : 'New Project' }}</h3>
       <div class="space-y-4">
         <div>
-          <input formControlName="name" placeholder="Project name" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" />
+          <input formControlName="name" placeholder="Project name" class="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" />
         </div>
         <div>
           <label class="block text-xs text-gray-600 mb-1.5">Working Folder</label>
           <div class="flex gap-2">
-            <input formControlName="path" placeholder="Select folder path..." class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" readonly />
-            <button type="button" (click)="selectFolder()" class="shrink-0 inline-flex items-center gap-2 border border-gray-300 bg-white px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-              </svg>
+            <input formControlName="path" placeholder="Select folder path..." class="flex-1 border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" readonly />
+            <button type="button" (click)="selectFolder()" class="shrink-0 inline-flex items-center gap-2 border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
               <span>Browse</span>
             </button>
           </div>
         </div>
         <div>
-          <input formControlName="desc" placeholder="Description (optional)" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" />
+          <input formControlName="desc" placeholder="Description (optional)" class="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent" />
         </div>
         <div class="flex gap-3">
-          <button type="submit" class="bg-black text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition">{{ editingId ? 'Save' : 'Create' }}</button>
-          <button type="button" (click)="cancelEdit()" class="px-6 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition">Cancel</button>
+          <button type="submit" class="bg-black text-white px-6 py-2 text-sm font-medium hover:bg-gray-800 transition">{{ editingId() ? 'Save' : 'Create' }}</button>
+          <button type="button" (click)="cancelEdit()" class="px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition">Cancel</button>
         </div>
       </div>
     </form>
   </div>
   }
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-    @for (p of projects; track p.id) {
-    <div 
-         class="bg-white border border-gray-200 rounded-xl p-5 hover:border-gray-300 transition-all group relative">
-      <div class="cursor-pointer" (click)="openProject(p)">
-        <div class="flex items-start gap-4 mb-4">
-          <div class="shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-            </svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="text-base font-semibold text-gray-900 truncate group-hover:text-black">{{ p.name }}</h3>
-            <p class="text-xs text-gray-500 truncate mt-0.5">{{ p.path || '/Users/pluton/Documents/Writer/cora_3' }}</p>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-1.5 text-xs text-gray-500">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>{{ timeAgo(p) }}</span>
-        </div>
-      </div>
-
-      <!-- Action buttons -->
-      <div class="absolute top-3 right-3 flex gap-1">
-        <button (click)="editProject(p, $event)" 
-                class="p-1.5 bg-white/90 backdrop-blur-sm border border-gray-300 rounded-md hover:bg-gray-50 transition"
-                title="Edit project">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </button>
-        <button (click)="deleteProject(p.id, $event)" 
-                class="p-1.5 bg-white/90 backdrop-blur-sm border border-red-200 rounded-md hover:bg-red-50 transition"
-                title="Delete project">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </button>
-      </div>
-    </div>
-    }
+  <!-- Loading state -->
+  @if (isLoading()) {
+  <div class="loading-container">
+    <div class="animate-spin h-8 w-8 border-b-2 border-gray-900"></div>
   </div>
-
-  @if (!projects.length && !showCreate) {
-  <div class="text-center py-16">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-    </svg>
-    <p class="text-sm text-gray-500">No projects yet. Click "New Project" to add one.</p>
+  } @else {
+  <!-- Fixed 4x3 grid that fills the screen -->
+  <div class="dashboard-grid">
+    @for (cell of getGridCells(); track cell.index) {
+      @if (cell.project) {
+        <!-- Project Card -->
+        <div class="card card-project"
+             (click)="openProject(cell.project)"
+             (contextmenu)="onProjectContextMenu(cell.project, $event)">
+          <div class="card-title">
+            <h3>{{ cell.project.name }}</h3>
+          </div>
+          <div class="card-pages">
+            <span>{{ getStats(cell.project.id).pageCount === 0 ? 'No pages' : getStats(cell.project.id).pageCount + ' ' + (getStats(cell.project.id).pageCount === 1 ? 'page' : 'pages') }}</span>
+          </div>
+        </div>
+      } @else {
+        <!-- Empty Card -->
+        <div class="card card-empty"
+             (click)="toggleCreate()">
+        </div>
+      }
+    }
   </div>
   }
 </section>

@@ -1,10 +1,18 @@
-import { Component } from "@angular/core";
+import { Component, signal, computed } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { ReactiveFormsModule, FormGroup, FormControl } from "@angular/forms";
 import { ProjectService } from "../../services/project.service";
-import type { Project } from "../../shared/models";
+import type { Project, Doc } from "../../shared/models";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Router } from "@angular/router";
+
+interface ProjectStats {
+  docCount: number;
+  charCount: number;
+  pageCount: number;
+  wordCount: number;
+  folderCount: number;
+}
 
 @Component({
   selector: "app-project-dashboard",
@@ -14,10 +22,25 @@ import { Router } from "@angular/router";
   styleUrls: ["./project-dashboard.component.css"],
 })
 export class ProjectDashboardComponent {
-  projects: Project[] = [];
+  // Signals for reactive state
+  projects = signal<Project[]>([]);
+  projectStats = signal<Map<number, ProjectStats>>(new Map());
+  showCreate = signal(false);
+  editingId = signal<number | null>(null);
+  isLoading = signal(false);
+  
+  // Computed values
+  hasProjects = computed(() => this.projects().length > 0);
+  sortedProjects = computed(() => {
+    return [...this.projects()].sort((a, b) => {
+      // Sort by most recent activity (using timeline_start as proxy for now)
+      const aTime = a.timeline_start ? new Date(a.timeline_start).getTime() : 0;
+      const bTime = b.timeline_start ? new Date(b.timeline_start).getTime() : 0;
+      return bTime - aTime;
+    });
+  });
+  
   form: FormGroup;
-  editingId: number | null = null;
-  showCreate = false;
 
   constructor(
     private svc: ProjectService,
@@ -35,7 +58,74 @@ export class ProjectDashboardComponent {
   }
 
   async reload() {
-    this.projects = await this.svc.listProjects();
+    this.isLoading.set(true);
+    try {
+      const projectList = await this.svc.listProjects();
+      this.projects.set(projectList);
+      
+      // Fetch stats for each project in parallel
+      await this.loadAllProjectStats(projectList);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+  
+  private async loadAllProjectStats(projectList: Project[]) {
+    const statsMap = new Map<number, ProjectStats>();
+    
+    await Promise.all(projectList.map(async (project) => {
+      try {
+        const docs = await this.svc.listDocs(project.id);
+        const folders = await this.svc.listDocGroups(project.id);
+        
+        let totalChars = 0;
+        let totalWords = 0;
+        
+        for (const doc of docs) {
+          const text = doc.text || '';
+          totalChars += text.length;
+          totalWords += text.trim() ? text.trim().split(/\s+/).length : 0;
+        }
+        
+        statsMap.set(project.id, {
+          docCount: docs.length,
+          charCount: totalChars,
+          pageCount: Math.ceil(totalChars / 1800),
+          wordCount: totalWords,
+          folderCount: folders.length
+        });
+      } catch (err) {
+        console.error(`Failed to load stats for project ${project.id}:`, err);
+        statsMap.set(project.id, { docCount: 0, charCount: 0, pageCount: 0, wordCount: 0, folderCount: 0 });
+      }
+    }));
+    
+    this.projectStats.set(statsMap);
+  }
+  
+  getStats(projectId: number): ProjectStats {
+    return this.projectStats().get(projectId) || { docCount: 0, charCount: 0, pageCount: 0, wordCount: 0, folderCount: 0 };
+  }
+  
+  getGridCells(): { index: number; project: Project | null }[] {
+    const totalCells = 12; // 4 columns x 3 rows
+    const projects = this.sortedProjects();
+    const cells: { index: number; project: Project | null }[] = [];
+    
+    for (let i = 0; i < totalCells; i++) {
+      cells.push({
+        index: i,
+        project: i < projects.length ? projects[i] : null
+      });
+    }
+    
+    return cells;
+  }
+  
+  formatNumber(n: number): string {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return n.toString();
   }
 
   async selectFolder() {
@@ -58,14 +148,15 @@ export class ProjectDashboardComponent {
     const v = this.form.value;
     if (!v.name) return;
     
-    if (this.editingId) {
+    const currentEditingId = this.editingId();
+    if (currentEditingId) {
       // Update existing project
-      await this.svc.updateProject(this.editingId, { 
+      await this.svc.updateProject(currentEditingId, { 
         name: v.name, 
         desc: v.desc ?? null, 
         path: v.path ?? null 
       });
-      this.editingId = null;
+      this.editingId.set(null);
     } else {
       // Create new project
       await this.svc.createProject({ 
@@ -77,21 +168,21 @@ export class ProjectDashboardComponent {
     
     this.form.reset({ name: "", desc: null, path: null });
     await this.reload();
-    this.showCreate = false;
+    this.showCreate.set(false);
   }
 
   toggleCreate() {
-    this.showCreate = !this.showCreate;
-    this.editingId = null;
-    if (this.showCreate) {
+    this.showCreate.update(v => !v);
+    this.editingId.set(null);
+    if (this.showCreate()) {
       this.form.reset({ name: '', desc: null, path: null });
     }
   }
 
   editProject(p: Project, event: Event) {
     event.stopPropagation();
-    this.editingId = p.id;
-    this.showCreate = true;
+    this.editingId.set(p.id);
+    this.showCreate.set(true);
     this.form.setValue({ 
       name: p.name, 
       desc: p.desc ?? null, 
@@ -111,9 +202,30 @@ export class ProjectDashboardComponent {
   }
 
   cancelEdit() {
-    this.editingId = null;
-    this.showCreate = false;
+    this.editingId.set(null);
+    this.showCreate.set(false);
     this.form.reset({ name: '', desc: null, path: null });
+  }
+
+  onProjectContextMenu(p: Project, event: MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Simple context menu via confirm dialogs
+    const action = prompt('Enter action: edit, delete, or cancel');
+    if (action === 'edit') {
+      this.editingId.set(p.id);
+      this.showCreate.set(true);
+      this.form.setValue({ 
+        name: p.name, 
+        desc: p.desc ?? null, 
+        path: p.path ?? null 
+      });
+    } else if (action === 'delete') {
+      if (confirm('Are you sure you want to delete this project?')) {
+        this.svc.deleteProject(p.id).then(() => this.reload());
+      }
+    }
   }
 
   openProject(p: Project) {
