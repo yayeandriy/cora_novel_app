@@ -280,6 +280,7 @@ app-doc-tree {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
   border-top: 1px solid #e5e7eb;
+  position: relative;
 }
 
 /* Doc cards container */
@@ -287,21 +288,20 @@ app-doc-tree {
   display: flex;
   flex-wrap: nowrap;
   gap: 0.75rem;
-  align-items: flex-start;
+  align-items: stretch;
   overflow-x: auto;
-  overflow-y: visible;
   padding: 0.25rem;
-  margin: -0.25rem;
-  padding-bottom: 12rem; /* Extra space for dropdowns */
-  margin-bottom: -11.5rem; /* Compensate for extra padding */
+  padding-bottom: 0.5rem;
 }
 
 /* Doc card */
 .doc-card {
   display: flex;
   flex-direction: column;
-  min-width: 180px;
-  max-width: 240px;
+  width: 200px;
+  min-width: 200px;
+  max-width: 200px;
+  min-height: 140px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
@@ -406,7 +406,7 @@ app-doc-tree {
 /* Add metadata dropdown */
 .add-metadata-dropdown {
   position: absolute;
-  top: 100%;
+  bottom: 100%;
   left: 0;
   z-index: 1000;
   min-width: 150px;
@@ -418,6 +418,7 @@ app-doc-tree {
   border-radius: 0.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 0.25rem;
+  margin-bottom: 0.25rem;
   margin-top: 0.25rem;
 }
 
