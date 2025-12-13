@@ -504,6 +504,34 @@
       </div>
     </div>
   }
+  
+  <!-- Inline Delete Confirmations -->
+  @if (confirmingDeleteDoc) {
+    <div class="inline-confirm-overlay" (click)="cancelDeleteDoc()">
+      <div class="inline-confirm-box" (click)="$event.stopPropagation()">
+        <div class="inline-confirm-title">Delete Document</div>
+        <div class="inline-confirm-message">Delete "{{ confirmingDeleteDoc.name }}"?</div>
+        <div class="inline-confirm-actions">
+          <button class="btn-cancel" (click)="cancelDeleteDoc()">Cancel</button>
+          <button class="btn-delete" (click)="confirmDeleteDoc()">Delete</button>
+        </div>
+      </div>
+    </div>
+  }
+  
+  @if (confirmingDeleteGroup) {
+    <div class="inline-confirm-overlay" (click)="cancelDeleteGroup()">
+      <div class="inline-confirm-box" (click)="$event.stopPropagation()">
+        <div class="inline-confirm-title">Delete Folder</div>
+        <div class="inline-confirm-message">Delete folder "{{ confirmingDeleteGroup.name }}" and all its contents?</div>
+        <div class="inline-confirm-actions">
+          <button class="btn-cancel" (click)="cancelDeleteGroup()">Cancel</button>
+          <button class="btn-delete" (click)="confirmDeleteGroup()">Delete</button>
+        </div>
+      </div>
+    </div>
+  }
+  
   <!-- Global footer component -->
   <app-footer
     [selectedDoc]="selectedDoc"

@@ -97,6 +97,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   
   // Deletion state
   isDeletingItem = false;
+  confirmingDeleteDoc: Doc | null = null;
+  confirmingDeleteGroup: DocGroup | null = null;
   
   // Save state
   lastSaveTime: Date | null = null;
@@ -877,7 +879,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       setTimeout(() => this.focusTree(), 0);
     } catch (err) {
       console.error('Failed to import folders:', err);
-      alert('Failed to import folders: ' + err);
     }
   }
 
@@ -1517,14 +1518,19 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   async deleteDoc(doc: Doc) {
     console.log('deleteDoc called for:', doc.name);
+    // Show inline confirmation
+    this.confirmingDeleteDoc = doc;
+  }
+
+  cancelDeleteDoc() {
+    this.confirmingDeleteDoc = null;
+  }
+
+  async confirmDeleteDoc() {
+    if (!this.confirmingDeleteDoc) return;
+    const doc = this.confirmingDeleteDoc;
+    this.confirmingDeleteDoc = null;
     this.isDeletingItem = true;
-    const confirmed = await confirm(`Delete "${doc.name}"?`, { title: 'Confirm Delete', kind: 'warning' });
-    console.log('Confirmation result:', confirmed);
-    if (!confirmed) {
-      console.log('Delete cancelled by user');
-      this.isDeletingItem = false;
-      return;
-    }
 
     console.log('Proceeding with deletion');
     try {
@@ -1588,20 +1594,25 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       setTimeout(() => this.focusTree(), 0);
     } catch (error) {
       console.error('Failed to delete doc:', error);
-      alert('Failed to delete document: ' + error);
     } finally {
       this.isDeletingItem = false;
     }
   }
 
   async deleteGroup(group: DocGroup) {
+    // Show inline confirmation
+    this.confirmingDeleteGroup = group;
+  }
+
+  cancelDeleteGroup() {
+    this.confirmingDeleteGroup = null;
+  }
+
+  async confirmDeleteGroup() {
+    if (!this.confirmingDeleteGroup) return;
+    const group = this.confirmingDeleteGroup;
+    this.confirmingDeleteGroup = null;
     this.isDeletingItem = true;
-    const confirmed = await confirm(`Delete folder "${group.name}" and all its contents?`, { title: 'Confirm Delete', kind: 'warning' });
-    if (!confirmed) {
-      console.log('Delete cancelled');
-      this.isDeletingItem = false;
-      return;
-    }
 
     try {
       // Find item to select after deletion (previous or next)
@@ -2126,7 +2137,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }, 0);
     } catch (error) {
       console.error('Failed to create group:', error);
-      alert('Failed to create folder: ' + error);
     }
   }
 
@@ -2135,7 +2145,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     
     // Create doc in the current folder context
     if (!this.currentGroup) {
-      alert('Please select a folder first');
+      console.warn('No folder selected');
       return;
     }
 
@@ -2276,7 +2286,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   async createDraft() {
     if (!this.selectedDoc) {
-      alert('Please select a document first');
+      console.warn('No document selected');
       return;
     }
 
