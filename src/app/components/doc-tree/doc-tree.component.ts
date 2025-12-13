@@ -48,6 +48,7 @@ export class DocTreeComponent {
   @Output() groupToggled = new EventEmitter<DocGroup>();
   @Output() groupCreated = new EventEmitter<void>();
   @Output() docCreatedInGroup = new EventEmitter<DocGroup>();
+  @Output() docDeleted = new EventEmitter<Doc>();
   @Output() importRequested = new EventEmitter<void>();
   @Output() importFoldersRequested = new EventEmitter<void>();
   @Output() importFilesRequested = new EventEmitter<void>();
@@ -105,6 +106,11 @@ export class DocTreeComponent {
   createDocInGroup(group: DocGroup, event: MouseEvent) {
     event.stopPropagation();
     this.docCreatedInGroup.emit(group);
+  }
+
+  deleteDoc(doc: Doc, event: MouseEvent) {
+    event.stopPropagation();
+    this.docDeleted.emit(doc);
   }
 
   handleTreeKeyDown(event: KeyboardEvent) {

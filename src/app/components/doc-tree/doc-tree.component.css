@@ -155,6 +155,9 @@
 .tree-item-header > .add-doc-button {
   order: 3;
 }
+.tree-item-header > .delete-doc-button {
+  order: 4;
+}
 
 .name-with-mark {
   display: flex;
@@ -292,6 +295,34 @@
   background: #f3f4f6;
   border-color: #9ca3af;
   color: #374151;
+}
+
+.delete-doc-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  background: transparent;
+  border: none;
+  border-radius: 0.25rem;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 150ms;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.delete-doc-button svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.delete-doc-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
 }
 
 .tree-item.selected > .tree-item-header .add-doc-button {
