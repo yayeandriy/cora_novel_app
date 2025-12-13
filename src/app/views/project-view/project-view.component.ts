@@ -94,6 +94,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   leftWidth = 250;
   rightWidth = 300;
   timelineHeaderVisible = false;
+  projectMenuVisible = false;
   
   // Deletion state
   isDeletingItem = false;
@@ -3813,6 +3814,26 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   goBack() {
     this.router.navigate(['/']);
+  }
+
+  toggleProjectMenu() {
+    this.projectMenuVisible = !this.projectMenuVisible;
+    this.changeDetector.markForCheck();
+    
+    // Close menu when clicking outside
+    if (this.projectMenuVisible) {
+      setTimeout(() => {
+        const closeMenu = (event: MouseEvent) => {
+          const target = event.target as HTMLElement;
+          if (!target.closest('.floating-command-button') && !target.closest('.project-menu')) {
+            this.projectMenuVisible = false;
+            this.changeDetector.markForCheck();
+            document.removeEventListener('click', closeMenu);
+          }
+        };
+        document.addEventListener('click', closeMenu);
+      }, 0);
+    }
   }
 
   onTimelineUpdated(timeline: Timeline) {

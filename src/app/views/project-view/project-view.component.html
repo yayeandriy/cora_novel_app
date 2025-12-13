@@ -569,4 +569,35 @@
     (toggleRight)="toggleRightSidebar()"
     (toggleAll)="toggleBothSidebars()"
   ></app-footer>
+
+  <!-- Floating command button -->
+  @if (!leftCollapsed) {
+    <button class="floating-command-button" title="Project actions" (click)="toggleProjectMenu()">
+      <img src="assets/icons/command.svg" alt="Menu" />
+    </button>
+    
+    <!-- Project actions menu -->
+    @if (projectMenuVisible) {
+      <div class="project-menu" (click)="$event.stopPropagation()">
+        <button class="menu-item" (click)="onImportFoldersRequested(); projectMenuVisible = false">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v6m0 0l-3-3m3 3l3-3" />
+          </svg>
+          <span>Import folders</span>
+        </button>
+        <button class="menu-item" (click)="onImportFilesRequested(); projectMenuVisible = false">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v6m0 0l-3-3m3 3l3-3" />
+          </svg>
+          <span>Import files</span>
+        </button>
+        <button class="menu-item" (click)="onExportProjectRequested(); projectMenuVisible = false">
+          <img class="menu-icon" src="assets/icons/square.and.arrow.up.svg" alt="" />
+          <span>Export project</span>
+        </button>
+      </div>
+    }
+  }
 </div>
