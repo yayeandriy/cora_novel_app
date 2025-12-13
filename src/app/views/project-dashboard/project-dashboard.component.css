@@ -158,7 +158,10 @@
   font-size: 0.75rem;
   color: #6b7280;
   background-color: #f3f4f6;
- 
+  padding: 2px 8px;
+  border-radius: 4px;
+  width: fit-content;
+}
 
 .archive-action-btn {
   display: flex;
@@ -185,9 +188,6 @@
 
 .archive-action-btn svg {
   display: block;
-} padding: 2px 8px;
-  border-radius: 4px;
-  width: fit-content;
 }
 
 .card-pages {
