@@ -21,7 +21,15 @@ pub struct AppState {
 #[tauri::command]
 pub async fn project_create(state: State<'_, AppState>, payload: ProjectCreate) -> Result<Project, String> {
     let pool = &state.pool;
-    project_service::create(pool, payload).map_err(|e| e.to_string())
+    let project = project_service::create(pool, payload).map_err(|e| e.to_string())?;
+    
+    // Automatically create first folder "Part I" and first doc "Chapter One"
+    let folder = crate::services::doc_groups::create_doc_group(pool, project.id, "Part I", None)
+        .map_err(|e| e.to_string())?;
+    let _doc = crate::services::docs::create_doc(pool, project.id, "Chapter One", Some(folder.id))
+        .map_err(|e| e.to_string())?;
+    
+    Ok(project)
 }
 
 #[tauri::command]

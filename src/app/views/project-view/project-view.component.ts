@@ -1066,6 +1066,17 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Ignore docs without a group - we don't support root-level docs
     });
 
+    // Sort docs within each group by sort_order
+    groupMap.forEach(group => {
+      if (group.docs.length > 0) {
+        group.docs.sort((a, b) => {
+          const orderA = a.sort_order ?? 0;
+          const orderB = b.sort_order ?? 0;
+          return orderA - orderB;
+        });
+      }
+    });
+
     // Build hierarchy: find root groups and assign children
     const rootGroups: DocGroup[] = [];
     
@@ -1346,6 +1357,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // Try to select first doc
     const firstDoc = this.findFirstDoc(this.docGroups);
     if (firstDoc) {
+      // Expand the parent folder so the doc is visible
+      if (firstDoc.doc_group_id) {
+        this.ensureGroupExpanded(firstDoc.doc_group_id);
+      }
       this.selectDoc(firstDoc);
       // Focus tree so keyboard navigation works immediately
       setTimeout(() => this.focusTree(), 0);
@@ -1357,6 +1372,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.selectGroup(this.docGroups[0]);
       // Focus tree so keyboard navigation works immediately
       setTimeout(() => this.focusTree(), 0);
+    }
+  }
+
+  private ensureGroupExpanded(groupId: number): void {
+    const group = this.findGroupById(this.docGroups, groupId);
+    if (group) {
+      group.expanded = true;
+      this.expandedGroupIds.add(groupId);
     }
   }
 
