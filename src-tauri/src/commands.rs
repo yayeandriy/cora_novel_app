@@ -657,7 +657,7 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
         // Create project (prefer metadata project name)
         let project_name = parsed.project.name.clone();
     let payload = crate::models::ProjectCreate { name: project_name, desc: parsed.project.desc.clone(), path: Some(folder_path.clone()), notes: parsed.project.notes.clone(), grid_order: None };
-        let new_project = crate::services::projects::create(pool, payload).map_err(|e| e.to_string())?;;
+        let new_project = crate::services::projects::create(pool, payload).map_err(|e| e.to_string())?;
 
         use std::collections::HashMap;
         // Create groups in parent-first order using original ids for mapping
