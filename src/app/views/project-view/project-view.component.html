@@ -600,4 +600,19 @@
       </div>
     }
   }
+
+  <!-- Floating sidebar controls -->
+  <div class="floating-sidebar-controls">
+    <button class="sidebar-control-button" [class.active]="!leftCollapsed" title="Toggle tree (⌘1)" (click)="toggleLeftSidebar()">
+      <img src="assets/icons/sidebar.left.svg" alt="Left sidebar" />
+    </button>
+    <button class="sidebar-control-button" [class.active]="leftCollapsed && rightCollapsed" title="Full width (⌘2)" (click)="toggleBothSidebars()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" />
+      </svg>
+    </button>
+    <button class="sidebar-control-button" [class.active]="!rightCollapsed" title="Toggle sidebar (⌘3)" (click)="toggleRightSidebar()">
+      <img src="assets/icons/sidebar.right.svg" alt="Right sidebar" />
+    </button>
+  </div>
 </div>

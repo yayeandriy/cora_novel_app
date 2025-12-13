@@ -147,6 +147,56 @@
   flex: 1;
 }
 
+/* Floating sidebar controls at bottom-right */
+.floating-sidebar-controls {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 1.5rem;
+  padding: 0.375rem;
+  z-index: 70;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.sidebar-control-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  background: transparent;
+  border: none;
+  border-radius: 1rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 150ms ease;
+  padding: 0;
+}
+
+.sidebar-control-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #111827;
+}
+
+.sidebar-control-button.active {
+  background: rgba(0, 0, 0, 0.08);
+  color: #111827;
+}
+
+.sidebar-control-button img,
+.sidebar-control-button svg {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+}
+
 
 .header {
   display: flex;
