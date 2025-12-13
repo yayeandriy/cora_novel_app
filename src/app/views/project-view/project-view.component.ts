@@ -2049,9 +2049,36 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  private toRoman(num: number): string {
+    const romanNumerals: [number, string][] = [
+      [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
+      [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
+      [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']
+    ];
+    let result = '';
+    for (const [value, numeral] of romanNumerals) {
+      while (num >= value) {
+        result += numeral;
+        num -= value;
+      }
+    }
+    return result;
+  }
+
+  private toLiteral(num: number): string {
+    const literals = [
+      'Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+      'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty'
+    ];
+    return num < literals.length ? literals[num] : num.toString();
+  }
+
   async createGroup() {
     console.log('createGroup called');
-    const name = 'New Folder'; // Simple default name for now
+    // Count existing top-level groups for naming
+    const topLevelGroups = this.docGroups.filter(g => !g.parent_id);
+    const nextNumber = topLevelGroups.length + 1;
+    const name = `Part ${this.toRoman(nextNumber)}`;
     console.log('Folder name:', name);
 
     try {
@@ -2112,7 +2139,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const name = 'Untitled Document'; // Simple default name for now
+    // Count existing docs in this group for naming
+    const nextNumber = this.currentGroup.docs.length + 1;
+    const name = `Chapter ${this.toLiteral(nextNumber)}`;
     const groupId = this.currentGroup.id;
     console.log('Document name:', name, 'in group:', groupId);
 
@@ -2174,7 +2203,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
     async createDocInGroup(group: DocGroup) {
     console.log('createDocInGroup called for group:', group.id);
-    const name = 'Untitled Document';
+    // Count existing docs in this group for naming
+    const nextNumber = group.docs.length + 1;
+    const name = `Chapter ${this.toLiteral(nextNumber)}`;
     const groupId = group.id;
 
     try {
