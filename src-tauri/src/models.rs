@@ -165,3 +165,27 @@ pub struct TimelineUpdate {
     pub start_date: Option<String>,
     pub end_date: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Archive {
+    pub id: i64,
+    pub project_id: i64,
+    pub name: String,
+    pub desc: Option<String>,
+    pub created_at: String,
+    pub archived_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArchiveCreate {
+    pub name: String,
+    pub desc: Option<String>,
+    pub archived_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArchiveUpdate {
+    pub name: Option<String>,
+    pub desc: Option<String>,
+    pub archived_at: Option<String>,
+}

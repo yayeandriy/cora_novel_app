@@ -5,7 +5,8 @@ import type {
   Doc, Character, Event, Place,
   Draft, DraftCreate,
   ProjectDraft, ProjectDraftCreate, ProjectDraftUpdate,
-  FolderDraft, FolderDraftCreate, FolderDraftUpdate
+  FolderDraft, FolderDraftCreate, FolderDraftUpdate,
+  Archive, ArchiveCreate, ArchiveUpdate
 } from "../shared/models";
 
 @Injectable({ providedIn: "root" })
@@ -251,6 +252,27 @@ export class ProjectService {
 
   async detachPlaceFromDocGroup(docGroupId: number, placeId: number): Promise<void> {
     return invoke<void>("doc_group_place_detach", { docGroupId, placeId });
+  }
+
+  // Archives
+  async createArchive(projectId: number, payload: ArchiveCreate): Promise<Archive> {
+    return invoke<Archive>("archive_create", { projectId, payload });
+  }
+
+  async listArchives(projectId: number): Promise<Archive[]> {
+    return invoke<Archive[]>("archive_list", { projectId });
+  }
+
+  async getArchive(id: number): Promise<Archive | null> {
+    return invoke<Archive | null>("archive_get", { id });
+  }
+
+  async updateArchive(id: number, payload: ArchiveUpdate): Promise<Archive> {
+    return invoke<Archive>("archive_update", { id, payload });
+  }
+
+  async deleteArchive(id: number): Promise<void> {
+    return invoke<void>("archive_delete", { id });
   }
 
   // Drafts

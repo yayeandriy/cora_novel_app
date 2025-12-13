@@ -140,6 +140,17 @@ pub fn init_pool() -> anyhow::Result<DbPool> {
         conn.execute_batch(include_str!("../migrations/014_add_project_grid_order.sql")).context("running migrations 014")?;
     }
 
+    // Conditionally run 015: create archives table
+    let table_exists: bool = conn.query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='archives'",
+        [],
+        |row| row.get(0)
+    ).unwrap_or(0) > 0;
+    
+    if !table_exists {
+        conn.execute_batch(include_str!("../migrations/015_add_archives.sql")).context("running migrations 015")?;
+    }
+
     Ok(pool)
 }
 

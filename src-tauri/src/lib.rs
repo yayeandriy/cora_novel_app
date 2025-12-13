@@ -11,6 +11,7 @@ mod services {
     pub mod project_drafts;
     pub mod folder_drafts;
     pub mod timelines;
+    pub mod archives;
 }
 mod commands;
 
@@ -93,6 +94,11 @@ pub fn run() {
             commands::doc_group_places_from_docs,
             commands::doc_group_place_attach,
             commands::doc_group_place_detach,
+            commands::archive_create,
+            commands::archive_list,
+            commands::archive_get,
+            commands::archive_update,
+            commands::archive_delete,
             commands::draft_create,
             commands::draft_get,
             commands::draft_list,

@@ -156,3 +156,24 @@ export interface TimelineUpdate {
   start_date?: string | null;
   end_date?: string | null;
 }
+
+export interface Archive {
+  id: number;
+  project_id: number;
+  name: string;
+  desc?: string | null;
+  created_at: string;
+  archived_at?: string | null;
+}
+
+export interface ArchiveCreate {
+  name: string;
+  desc?: string | null;
+  archived_at?: string | null;
+}
+
+export interface ArchiveUpdate {
+  name?: string | null;
+  desc?: string | null;
+  archived_at?: string | null;
+}

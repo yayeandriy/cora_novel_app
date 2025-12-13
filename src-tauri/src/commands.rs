@@ -5,7 +5,8 @@ use crate::models::{
     DraftCreate, DraftUpdate, Draft,
     ProjectDraft, ProjectDraftCreate, ProjectDraftUpdate,
     FolderDraft, FolderDraftCreate, FolderDraftUpdate,
-    Timeline, TimelineCreate, TimelineUpdate
+    Timeline, TimelineCreate, TimelineUpdate,
+    Archive, ArchiveCreate, ArchiveUpdate
 };
 use crate::services::projects as project_service;
 use tauri::State;
@@ -375,6 +376,38 @@ pub async fn doc_group_place_attach(state: State<'_, AppState>, doc_group_id: i6
 pub async fn doc_group_place_detach(state: State<'_, AppState>, doc_group_id: i64, place_id: i64) -> Result<(), String> {
     let pool = &state.pool;
     crate::services::places::detach_from_doc_group(pool, doc_group_id, place_id).map_err(|e| e.to_string())
+}
+
+// Archive Commands
+
+#[tauri::command]
+pub async fn archive_create(state: State<'_, AppState>, project_id: i64, payload: ArchiveCreate) -> Result<Archive, String> {
+    let pool = &state.pool;
+    crate::services::archives::create(pool, project_id, payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn archive_list(state: State<'_, AppState>, project_id: i64) -> Result<Vec<Archive>, String> {
+    let pool = &state.pool;
+    crate::services::archives::list(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn archive_get(state: State<'_, AppState>, id: i64) -> Result<Option<Archive>, String> {
+    let pool = &state.pool;
+    crate::services::archives::get(pool, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn archive_update(state: State<'_, AppState>, id: i64, payload: ArchiveUpdate) -> Result<Archive, String> {
+    let pool = &state.pool;
+    crate::services::archives::update(pool, id, payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn archive_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::archives::delete(pool, id).map_err(|e| e.to_string())
 }
 
 // Draft Commands
