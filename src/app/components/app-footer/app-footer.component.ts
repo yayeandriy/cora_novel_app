@@ -52,7 +52,7 @@ export class AppFooterComponent implements OnInit {
   @Input() leftCollapsed: boolean = false;
   @Input() rightCollapsed: boolean = false;
 
-  // Action outputs (migrated from doc tree & editor footers)
+  // Action outputs (migrated from doc tree & editor docker)
   @Output() backToProjects = new EventEmitter<void>();
   @Output() createGroup = new EventEmitter<void>();
   @Output() deleteItem = new EventEmitter<void>();
@@ -127,7 +127,7 @@ export class AppFooterComponent implements OnInit {
     return this.leftCollapsed && this.rightCollapsed;
   }
 
-  // === Stats (mirroring previous editor footer logic) ===
+  // === Stats (mirroring previous editor docker logic) ===
 
   get docCharCount(): number {
     if (!this.selectedDoc?.text) return 0;

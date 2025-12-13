@@ -12,8 +12,6 @@
   width: 100%;
   background: #f9fafb;
   overflow: hidden;
-  /* Reserve space for fixed global footer */
-  padding-bottom: 3.25rem;
 }
 
 .header {
