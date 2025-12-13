@@ -49,6 +49,7 @@ export class DocTreeComponent {
   @Output() groupCreated = new EventEmitter<void>();
   @Output() docCreatedInGroup = new EventEmitter<DocGroup>();
   @Output() docDeleted = new EventEmitter<Doc>();
+  @Output() groupDeleted = new EventEmitter<DocGroup>();
   @Output() importRequested = new EventEmitter<void>();
   @Output() importFoldersRequested = new EventEmitter<void>();
   @Output() importFilesRequested = new EventEmitter<void>();
@@ -111,6 +112,11 @@ export class DocTreeComponent {
   deleteDoc(doc: Doc, event: MouseEvent) {
     event.stopPropagation();
     this.docDeleted.emit(doc);
+  }
+
+  deleteGroup(group: DocGroup, event: MouseEvent) {
+    event.stopPropagation();
+    this.groupDeleted.emit(group);
   }
 
   handleTreeKeyDown(event: KeyboardEvent) {

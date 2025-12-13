@@ -152,10 +152,10 @@
 .tree-item-header > .name-with-mark {
   order: 2;
 }
-.tree-item-header > .add-doc-button {
+.tree-item-header > .delete-doc-button {
   order: 3;
 }
-.tree-item-header > .delete-doc-button {
+.tree-item-header > .add-doc-button {
   order: 4;
 }
 

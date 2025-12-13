@@ -40,6 +40,7 @@
           (groupCreated)="createGroup()"
           (docCreatedInGroup)="createDocInGroup($event)"
           (docDeleted)="deleteDoc($event)"
+          (groupDeleted)="deleteGroup($event)"
           (importFoldersRequested)="onImportFoldersRequested()"
           (importFilesRequested)="onImportFilesRequested()"
           (exportProjectRequested)="onExportProjectRequested()"
@@ -405,7 +406,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
         <p class="empty-message">No document selected</p>
-        <p class="empty-hint">Create a folder and add documents to start writing</p>
+        <p class="empty-hint">Create a part and add chapters to start writing</p>
       </div>
       }
     </main>
@@ -509,7 +510,7 @@
   @if (confirmingDeleteDoc) {
     <div class="inline-confirm-overlay" (click)="cancelDeleteDoc()">
       <div class="inline-confirm-box" (click)="$event.stopPropagation()">
-        <div class="inline-confirm-title">Delete Document</div>
+        <div class="inline-confirm-title">Delete Chapter</div>
         <div class="inline-confirm-message">Delete "{{ confirmingDeleteDoc.name }}"?</div>
         <div class="inline-confirm-actions">
           <button class="btn-cancel" (click)="cancelDeleteDoc()">Cancel</button>
@@ -522,8 +523,8 @@
   @if (confirmingDeleteGroup) {
     <div class="inline-confirm-overlay" (click)="cancelDeleteGroup()">
       <div class="inline-confirm-box" (click)="$event.stopPropagation()">
-        <div class="inline-confirm-title">Delete Folder</div>
-        <div class="inline-confirm-message">Delete folder "{{ confirmingDeleteGroup.name }}" and all its contents?</div>
+        <div class="inline-confirm-title">Delete Part</div>
+        <div class="inline-confirm-message">Delete part "{{ confirmingDeleteGroup.name }}" and all its contents?</div>
         <div class="inline-confirm-actions">
           <button class="btn-cancel" (click)="cancelDeleteGroup()">Cancel</button>
           <button class="btn-delete" (click)="confirmDeleteGroup()">Delete</button>
