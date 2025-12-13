@@ -98,20 +98,25 @@
           <!-- Project content (folders list) - visible when project header is expanded -->
           @if (projectHeaderExpanded) {
             <div class="project-content floating" (click)="$event.stopPropagation()">
-              <div class="folders-scroll-container">
-                @for (group of docGroups; track group.id; let i = $index) {
-                  <button 
-                    class="folder-chip" 
-                    [class.selected]="projectHeaderSelectedGroupId === group.id"
-                    (click)="onProjectFolderChipClick(group, $event)">
-                    <span class="folder-chip-index">{{ i + 1 }}.</span>
-                    <span class="folder-chip-name">{{ group.name }}</span>
-                  </button>
-                }
-                @if (docGroups.length === 0) {
+              <!-- Only show folders list when there are multiple parts -->
+              @if (docGroups.length > 1) {
+                <div class="folders-scroll-container">
+                  @for (group of docGroups; track group.id; let i = $index) {
+                    <button 
+                      class="folder-chip" 
+                      [class.selected]="projectHeaderSelectedGroupId === group.id"
+                      (click)="onProjectFolderChipClick(group, $event)">
+                      <span class="folder-chip-index">{{ i + 1 }}.</span>
+                      <span class="folder-chip-name">{{ group.name }}</span>
+                    </button>
+                  }
+                </div>
+              }
+              @if (docGroups.length === 0) {
+                <div class="folders-scroll-container">
                   <span class="no-folders-hint">No folders yet</span>
-                }
-              </div>
+                </div>
+              }
               <!-- Docs cards for selected folder -->
               @if (projectHeaderSelectedGroupId) {
                 <div class="folder-docs-row">
@@ -241,20 +246,25 @@
       <!-- Project content (folders list) - visible when project header is expanded -->
       @if (projectHeaderExpanded) {
         <div class="project-content">
-          <div class="folders-scroll-container">
-            @for (group of docGroups; track group.id; let i = $index) {
-              <button 
-                class="folder-chip" 
-                [class.selected]="projectHeaderSelectedGroupId === group.id"
-                (click)="onProjectFolderChipClick(group, $event)">
-                <span class="folder-chip-index">{{ i + 1 }}.</span>
-                <span class="folder-chip-name">{{ group.name }}</span>
-              </button>
-            }
-            @if (docGroups.length === 0) {
+          <!-- Only show folders list when there are multiple parts -->
+          @if (docGroups.length > 1) {
+            <div class="folders-scroll-container">
+              @for (group of docGroups; track group.id; let i = $index) {
+                <button 
+                  class="folder-chip" 
+                  [class.selected]="projectHeaderSelectedGroupId === group.id"
+                  (click)="onProjectFolderChipClick(group, $event)">
+                  <span class="folder-chip-index">{{ i + 1 }}.</span>
+                  <span class="folder-chip-name">{{ group.name }}</span>
+                </button>
+              }
+            </div>
+          }
+          @if (docGroups.length === 0) {
+            <div class="folders-scroll-container">
               <span class="no-folders-hint">No folders yet</span>
-            }
-          </div>
+            </div>
+          }
           <!-- Docs cards for selected folder -->
           @if (projectHeaderSelectedGroupId) {
             <div class="folder-docs-row">

@@ -268,12 +268,18 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.projectHeaderExpandedDocId = null;
       this.projectHeaderHighlightedDocId = null;
     } else {
-      // When expanding, automatically select the current folder (if any)
-      const currentGroup = this.selectedGroup || this.currentGroup;
-      if (currentGroup) {
-        this.projectHeaderSelectedGroupId = currentGroup.id;
-        // Load metadata for all docs in this folder
-        await this.loadProjectHeaderFolderDocsMetadata(currentGroup);
+      // When expanding with a single part, auto-select it
+      if (this.docGroups.length === 1) {
+        this.projectHeaderSelectedGroupId = this.docGroups[0].id;
+        await this.loadProjectHeaderFolderDocsMetadata(this.docGroups[0]);
+      } else {
+        // When expanding with multiple parts, automatically select the current folder (if any)
+        const currentGroup = this.selectedGroup || this.currentGroup;
+        if (currentGroup) {
+          this.projectHeaderSelectedGroupId = currentGroup.id;
+          // Load metadata for all docs in this folder
+          await this.loadProjectHeaderFolderDocsMetadata(currentGroup);
+        }
       }
     }
   }

@@ -320,8 +320,6 @@ app-doc-tree {
 /* Folder docs row (shows docs when folder is selected in project header) */
 .folder-docs-row {
   margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #e5e7eb;
   position: relative;
 }
 
