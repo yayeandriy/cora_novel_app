@@ -174,6 +174,10 @@
   border-color: transparent transparent transparent #505053;
 }
 
+.tree-item.selected .working-marker.active {
+  border-color: transparent transparent transparent #ffffff;
+}
+
 .working-marker.ghost {
   border-color: transparent transparent transparent #d1d5db;
 }
@@ -344,6 +348,13 @@
   transition: all 150ms;
   margin-left: auto;
   flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.delete-doc-button.visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .delete-doc-button svg {
