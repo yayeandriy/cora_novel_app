@@ -117,6 +117,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   selectedDoc: Doc | null = null;
   selectedGroup: DocGroup | null = null;
   currentGroup: DocGroup | null = null;
+  currentWorkingDocId: number | null = null;
   expandedGroupIds: Set<number> = new Set();
   // Draft markers for doc tree
   groupsWithDrafts: Set<number> = new Set();
@@ -1037,6 +1038,19 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
       // Otherwise restore from localStorage or select first item
       this.restoreSelection();
+      
+      // Restore working doc from localStorage
+      try {
+        const savedWorkingDoc = localStorage.getItem(`project_${this.projectId}_working_doc`);
+        if (savedWorkingDoc) {
+          this.currentWorkingDocId = parseInt(savedWorkingDoc, 10);
+        } else if (!this.currentWorkingDocId && this.allProjectDocs.length > 0) {
+          // Set first doc as working doc if none set
+          this.currentWorkingDocId = this.allProjectDocs[0].id;
+        }
+      } catch (error) {
+        console.error('Failed to restore working doc:', error);
+      }
     } catch (error) {
       console.error('Failed to load project:', error);
     }
@@ -1123,6 +1137,16 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
     // Save tree state when toggling
     this.saveTreeState();
+  }
+
+  onWorkingDocChanged(docId: number) {
+    this.currentWorkingDocId = docId;
+    // Persist to localStorage
+    try {
+      localStorage.setItem(`project_${this.projectId}_working_doc`, docId.toString());
+    } catch (error) {
+      console.error('Failed to save working doc:', error);
+    }
   }
 
   async selectDoc(doc: Doc) {

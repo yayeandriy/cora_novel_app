@@ -42,6 +42,7 @@ export class DocTreeComponent {
   @Input() projectNameEdit: string = '';
   @Input() groupsWithDrafts: Set<number> = new Set<number>();
   @Input() docsWithDrafts: Set<number> = new Set<number>();
+  @Input() currentWorkingDocId: number | null = null;
   
   @Output() groupSelected = new EventEmitter<{ group: DocGroup; event?: MouseEvent }>();
   @Output() docSelected = new EventEmitter<Doc>();
@@ -50,6 +51,7 @@ export class DocTreeComponent {
   @Output() docCreatedInGroup = new EventEmitter<DocGroup>();
   @Output() docDeleted = new EventEmitter<Doc>();
   @Output() groupDeleted = new EventEmitter<DocGroup>();
+  @Output() workingDocChanged = new EventEmitter<number>();
   @Output() importRequested = new EventEmitter<void>();
   @Output() importFoldersRequested = new EventEmitter<void>();
   @Output() importFilesRequested = new EventEmitter<void>();
@@ -68,6 +70,7 @@ export class DocTreeComponent {
   
   leftWidth = 250;
   isResizing = false;
+  hoveredDocId: number | null = null;
 
   selectGroup(group: DocGroup, event?: MouseEvent) {
     this.groupSelected.emit({ group, event });
@@ -75,6 +78,11 @@ export class DocTreeComponent {
 
   selectDoc(doc: Doc) {
     this.docSelected.emit(doc);
+  }
+
+  setWorkingDoc(doc: Doc, event: MouseEvent) {
+    event.stopPropagation();
+    this.workingDocChanged.emit(doc.id);
   }
 
   toggleGroup(group: DocGroup, event?: MouseEvent) {

@@ -123,8 +123,17 @@
                     <div 
                       class="tree-item doc nested-2" 
                       [class.selected]="selectedDoc?.id === doc.id"
-                      (click)="selectDoc(doc)">
+                      (click)="selectDoc(doc)"
+                      (mouseenter)="hoveredDocId = doc.id"
+                      (mouseleave)="hoveredDocId = null">
                       <div class="tree-item-header">
+                        <div class="working-marker-container">
+                          @if (currentWorkingDocId === doc.id) {
+                            <div class="working-marker active"></div>
+                          } @else if (hoveredDocId === doc.id) {
+                            <div class="working-marker ghost" (click)="setWorkingDoc(doc, $event)"></div>
+                          }
+                        </div>
                         <span class="doc-index">{{ si + 1 }}.{{ di + 1 }}</span>
                         <div class="name-with-mark">
                           <span class="tree-item-name">{{ doc.name }}</span>
@@ -160,8 +169,17 @@
               <div 
                 class="tree-item doc nested" 
                 [class.selected]="selectedDoc?.id === doc.id"
-                (click)="selectDoc(doc)">
+                (click)="selectDoc(doc)"
+                (mouseenter)="hoveredDocId = doc.id"
+                (mouseleave)="hoveredDocId = null">
                 <div class="tree-item-header">
+                  <div class="working-marker-container">
+                    @if (currentWorkingDocId === doc.id) {
+                      <div class="working-marker active"></div>
+                    } @else if (hoveredDocId === doc.id) {
+                      <div class="working-marker ghost" (click)="setWorkingDoc(doc, $event)"></div>
+                    }
+                  </div>
                   <span class="doc-index">{{ gi + 1 }}.{{ di + 1 }}</span>
                   <div class="name-with-mark">
                     <span class="tree-item-name">{{ doc.name }}</span>

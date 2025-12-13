@@ -148,7 +148,40 @@
   border-radius: 0.375rem;
   cursor: pointer;
   transition: background-color 150ms;
+  position: relative;
 }
+
+.working-marker-container {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  width: 0;
+  height: 100%;
+}
+
+.working-marker {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 4px 0 4px 6px;
+  cursor: pointer;
+}
+
+.working-marker.active {
+  border-color: transparent transparent transparent #505053;
+}
+
+.working-marker.ghost {
+  border-color: transparent transparent transparent #d1d5db;
+}
+
+.working-marker.ghost:hover {
+  border-color: transparent transparent transparent #9ca3af;
+}
+
 .tree-item-header > .name-with-mark {
   order: 2;
 }
