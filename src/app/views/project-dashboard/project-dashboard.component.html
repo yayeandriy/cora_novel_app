@@ -18,7 +18,14 @@
             <h3>{{ cell.project.name }}</h3>
           </div>
           <div class="card-pages">
-            <span>{{ getStats(cell.project.id).pageCount === 0 ? 'No pages' : getStats(cell.project.id).pageCount + ' ' + (getStats(cell.project.id).pageCount === 1 ? 'page' : 'pages') }}</span>
+            @if (getStats(cell.project.id).pageCount === 0) {
+              <button class="delete-project-btn"
+                      (click)="deleteProject(cell.project.id, $event)">
+                Delete project
+              </button>
+            } @else {
+              <span>{{ getStats(cell.project.id).pageCount + ' ' + (getStats(cell.project.id).pageCount === 1 ? 'page' : 'pages') }}</span>
+            }
           </div>
         </div>
       } @else if (showCreate() && cell.index === editingCellIndex()) {

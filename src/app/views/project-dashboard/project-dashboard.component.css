@@ -80,6 +80,21 @@
   color: #111827;
 }
 
+.delete-project-btn {
+  font-size: 1rem;
+  color: #ef4444;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.delete-project-btn:hover {
+  color: #dc2626;
+  text-decoration: underline;
+}
+
 /* Empty card */
 .card-empty {
   /* No content, just empty space */
