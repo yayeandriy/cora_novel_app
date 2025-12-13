@@ -1,8 +1,10 @@
 <div class="project-view">
   <!-- Floating logo button -->
-  <button class="floating-logo" title="Back to dashboard" (click)="goBack()">
-    <img src="assets/logo.svg" alt="Cora" />
-  </button>
+  @if (!leftCollapsed) {
+    <button class="floating-logo" title="Back to dashboard" (click)="goBack()">
+      <img src="assets/logo.svg" alt="Cora" />
+    </button>
+  }
 
   <!-- Header with Timeline (hidden by default, full-width timeline when visible) -->
   @if (timelineHeaderVisible) {
