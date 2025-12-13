@@ -38,6 +38,7 @@ export class ProjectDashboardComponent implements AfterViewChecked {
   editingCellIndex = signal<number | null>(null);
   isLoading = signal(false);
   showImportMenu = signal(false);
+  showEmptyCellImportMenu = signal(false);
   showArchivedProjects = signal(false);
   confirmingArchive = signal<number | null>(null);
   confirmingDelete = signal<number | null>(null);
@@ -381,8 +382,23 @@ export class ProjectDashboardComponent implements AfterViewChecked {
     this.showImportMenu.set(false);
   }
 
-  async importFromFolder() {
+  closeEmptyCellImportMenu() {
+    this.showEmptyCellImportMenu.set(false);
+  }
+
+  closeAllMenus() {
     this.closeImportMenu();
+    this.closeEmptyCellImportMenu();
+  }
+
+  toggleEmptyCellImportMenu(event: MouseEvent) {
+    event.stopPropagation();
+    this.showEmptyCellImportMenu.update(v => !v);
+    this.showImportMenu.set(false); // Close dock menu when opening empty cell menu
+  }
+
+  async importFromFolder() {
+    this.closeAllMenus();
     try {
       const selected = await open({
         directory: true,
@@ -401,7 +417,7 @@ export class ProjectDashboardComponent implements AfterViewChecked {
   }
 
   async importFromExport() {
-    this.closeImportMenu();
+    this.closeAllMenus();
     try {
       const selected = await open({
         directory: true,

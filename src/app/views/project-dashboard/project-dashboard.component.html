@@ -1,4 +1,4 @@
-<main class="dashboard-main" (click)="closeImportMenu()">
+<main class="dashboard-main" (click)="closeAllMenus()">
 <section class="dashboard-section">
   <!-- Loading state -->
   @if (isLoading()) {
@@ -105,8 +105,49 @@
         </div>
       } @else {
         <!-- Empty Card -->
-        <div class="card card-empty"
-             (click)="startCreateAt(cell.index)">
+        <div class="card card-empty">
+          <div class="empty-cell-actions">
+            <button class="empty-cell-btn" (click)="startCreateAt(cell.index)" title="Create new project">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </button>
+            <div class="empty-cell-import-container">
+              <button class="empty-cell-btn" (click)="toggleEmptyCellImportMenu($event)" title="Import project">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </button>
+              @if (showEmptyCellImportMenu()) {
+                <div class="empty-cell-import-dropdown" (click)="$event.stopPropagation()">
+                  <button class="import-option" (click)="importFromFolder()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <div class="import-option-text">
+                      <span class="import-option-title">Import from folder</span>
+                      <span class="import-option-desc">Each subfolder becomes a chapter, .txt files become documents</span>
+                    </div>
+                  </button>
+                  <button class="import-option" (click)="importFromExport()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                      <line x1="16" y1="13" x2="8" y2="13"/>
+                      <line x1="16" y1="17" x2="8" y2="17"/>
+                    </svg>
+                    <div class="import-option-text">
+                      <span class="import-option-title">Import from export</span>
+                      <span class="import-option-desc">Re-import a previously exported project with all metadata</span>
+                    </div>
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
         </div>
       }
     }

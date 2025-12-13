@@ -230,6 +230,62 @@
 /* Empty card */
 .card-empty {
   /* No content, just empty space */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-cell-actions {
+  display: flex;
+  gap: 12px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.card-empty:hover .empty-cell-actions {
+  opacity: 1;
+}
+
+.empty-cell-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.15s ease;
+}
+
+.empty-cell-btn:hover {
+  background-color: rgba(243, 244, 246, 0.8);
+  border-color: #d1d5db;
+  color: #111827;
+}
+
+.empty-cell-btn svg {
+  display: block;
+}
+
+.empty-cell-import-container {
+  position: relative;
+}
+
+.empty-cell-import-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 300px;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  z-index: 200;
 }
 
 /* Remove border on last column */
