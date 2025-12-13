@@ -31,6 +31,7 @@ export class ProjectDashboardComponent implements AfterViewChecked {
   editingId = signal<number | null>(null);
   editingCellIndex = signal<number | null>(null);
   isLoading = signal(false);
+  showImportMenu = signal(false);
   
   // For inline editing
   nameControl = new FormControl('');
@@ -314,6 +315,55 @@ export class ProjectDashboardComponent implements AfterViewChecked {
 
   openProject(p: Project) {
     this.router.navigate(['/project', p.id]);
+  }
+
+  toggleImportMenu(event?: MouseEvent) {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.showImportMenu.update(v => !v);
+  }
+
+  closeImportMenu() {
+    this.showImportMenu.set(false);
+  }
+
+  async importFromFolder() {
+    this.closeImportMenu();
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select a folder to import (subfolders become chapters, .txt files become documents)'
+      });
+      if (!selected || Array.isArray(selected)) return;
+      const imported = await this.svc.importProject(selected as string);
+      await this.reload();
+      // Navigate to the newly imported project
+      this.openProject(imported);
+    } catch (err) {
+      console.error('Failed to import from folder:', err);
+      alert('Failed to import from folder: ' + err);
+    }
+  }
+
+  async importFromExport() {
+    this.closeImportMenu();
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select a previously exported project folder (contains metadata.json)'
+      });
+      if (!selected || Array.isArray(selected)) return;
+      const imported = await this.svc.importProject(selected as string);
+      await this.reload();
+      // Navigate to the newly imported project
+      this.openProject(imported);
+    } catch (err) {
+      console.error('Failed to import from export:', err);
+      alert('Failed to import from export: ' + err);
+    }
   }
 
   async importProject() {
