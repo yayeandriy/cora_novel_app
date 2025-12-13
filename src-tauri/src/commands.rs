@@ -8,10 +8,12 @@ use crate::models::{
     Timeline, TimelineCreate, TimelineUpdate,
     Archive, ArchiveCreate, ArchiveUpdate
 };
+use std::io::Cursor;
 use crate::services::projects as project_service;
 use tauri::State;
 use std::path::Path;
 use std::fs;
+use printpdf::*;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -1032,5 +1034,282 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
     let meta_path = export_root.join("metadata.json");
     fs::write(&meta_path, meta_json).map_err(|e| format!("Write metadata failed: {}", e))?;
 
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn export_project_to_pdf(state: State<'_, AppState>, project_id: i64, dest_path: String) -> Result<(), String> {
+    let pool = &state.pool;
+    let conn = pool.get().map_err(|e| e.to_string())?;
+    
+    // Get project
+    let project: Project = conn.query_row(
+        "SELECT id, name, desc, path, notes, timeline_start, timeline_end, grid_order FROM projects WHERE id = ?",
+        [project_id],
+        |row| Ok(Project {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            desc: row.get(2)?,
+            path: row.get(3)?,
+            notes: row.get(4)?,
+            timeline_start: row.get(5)?,
+            timeline_end: row.get(6)?,
+            grid_order: row.get(7)?,
+        })
+    ).map_err(|e| e.to_string())?;
+    
+    // PDF Configuration
+    let page_width = Mm(210.0);   // A4 width
+    let page_height = Mm(297.0);  // A4 height
+    let margin_top = Mm(25.0);
+    let margin_bottom = Mm(25.0);
+    let margin_left = Mm(25.0);
+    let margin_right = Mm(25.0);
+    let header_height = Mm(10.0);
+    let footer_height = Mm(10.0);
+    
+    let text_area_width = page_width - margin_left - margin_right;  // 160mm
+    let text_start_y = page_height - margin_top - header_height;
+    let text_end_y = margin_bottom + footer_height;
+    
+    // Font sizes
+    let title_size = 24.0;
+    let part_size = 18.0;
+    let chapter_size = 14.0;
+    let body_size = 11.0;
+    let header_size = 9.0;
+    let footer_size = 9.0;
+    
+    // Line heights (spacing between lines)
+    let body_line_height = Mm(5.0);
+    let paragraph_spacing = Mm(3.0);
+    
+    // Character width approximation for wrapping
+    // At 11pt Arial, average character width is approximately 2.0-2.2mm
+    let avg_char_width_mm = 2.0;
+    let max_chars = (text_area_width.0 / avg_char_width_mm) as usize;  // ~80 chars for 160mm
+    
+    // Create PDF document
+    let (doc, page1, layer1) = PdfDocument::new(&project.name, page_width, page_height, "Layer 1");
+    
+    // Load fonts that support Cyrillic characters
+    let font_paths = vec![
+        "/System/Library/Fonts/Supplemental/Arial.ttf",  // macOS
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  // Linux
+        "C:\\Windows\\Fonts\\arial.ttf",  // Windows
+    ];
+    
+    let bold_font_paths = vec![
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",  // macOS
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  // Linux
+        "C:\\Windows\\Fonts\\arialbd.ttf",  // Windows
+    ];
+    
+    let mut font_data = None;
+    for path in &font_paths {
+        if let Ok(data) = std::fs::read(path) {
+            font_data = Some(data);
+            break;
+        }
+    }
+    
+    let mut bold_font_data = None;
+    for path in &bold_font_paths {
+        if let Ok(data) = std::fs::read(path) {
+            bold_font_data = Some(data);
+            break;
+        }
+    }
+    
+    let font = if let Some(data) = font_data {
+        doc.add_external_font(Cursor::new(data)).map_err(|e| e.to_string())?
+    } else {
+        doc.add_builtin_font(BuiltinFont::TimesRoman).map_err(|e| e.to_string())?
+    };
+    
+    let font_bold = if let Some(data) = bold_font_data {
+        doc.add_external_font(Cursor::new(data)).map_err(|e| e.to_string())?
+    } else {
+        doc.add_builtin_font(BuiltinFont::TimesBold).map_err(|e| e.to_string())?
+    };
+    
+    // Helper function to add a new page with header and footer
+    let mut page_count = 1;
+    let mut current_part_name = String::new();
+    let mut current_chapter_name = String::new();
+    
+    let mut add_new_page = |doc: &PdfDocumentReference, 
+                           page_num: &mut i32, 
+                           part_name: &str,
+                           chapter_name: &str,
+                           font: &IndirectFontRef,
+                           font_bold: &IndirectFontRef| -> (PdfPageReference, PdfLayerReference) {
+        let (page_idx, layer_idx) = doc.add_page(page_width, page_height, "Layer 1");
+        let page = doc.get_page(page_idx);
+        let layer = page.get_layer(layer_idx);
+        
+        // Add header (part and chapter name)
+        if !part_name.is_empty() || !chapter_name.is_empty() {
+            let header_y = page_height - margin_top + Mm(3.0);
+            let header_text = if !chapter_name.is_empty() {
+                format!("{} / {}", part_name, chapter_name)
+            } else {
+                part_name.to_string()
+            };
+            
+            // Truncate header if too long
+            let max_header_chars = (text_area_width.0 * 2.5) as usize; // ~2.5 chars per mm at 9pt
+            let truncated_header = if header_text.len() > max_header_chars {
+                format!("{}...", &header_text[..max_header_chars - 3])
+            } else {
+                header_text
+            };
+            
+            layer.use_text(&truncated_header, header_size, margin_left, header_y, font);
+        }
+        
+        // Add footer (page number)
+        let footer_y = margin_bottom - Mm(5.0);
+        let page_number_text = format!("{}", page_num);
+        // Center the page number
+        let number_width = Mm(page_number_text.len() as f32 * 1.5); // Approximate width
+        let center_x = (page_width - number_width) / 2.0;
+        layer.use_text(&page_number_text, footer_size, center_x, footer_y, font);
+        
+        *page_num += 1;
+        (page, layer)
+    };
+    
+    // Initialize first page
+    let mut current_page = doc.get_page(page1);
+    let mut current_layer = current_page.get_layer(layer1);
+    let mut y_position = text_start_y;
+    
+    // Add title on first page
+    current_layer.use_text(&project.name, title_size, margin_left, y_position, &font_bold);
+    y_position = y_position - Mm(15.0);
+    
+    // Add page number to first page
+    let footer_y = margin_bottom - Mm(5.0);
+    let page_number_text = "1";
+    let number_width = Mm(page_number_text.len() as f32 * 1.5);
+    let center_x = (page_width - number_width) / 2.0;
+    current_layer.use_text(page_number_text, footer_size, center_x, footer_y, &font);
+    page_count += 1;
+    
+    // Get all groups and docs
+    let mut groups_stmt = conn.prepare(
+        "SELECT id, name, parent_id FROM doc_groups WHERE project_id = ? ORDER BY sort_order"
+    ).map_err(|e| e.to_string())?;
+    
+    let groups: Vec<(i64, String, Option<i64>)> = groups_stmt.query_map([project_id], |row| {
+        Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+    }).map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    
+    // Get all docs
+    let mut docs_stmt = conn.prepare(
+        "SELECT id, name, text, doc_group_id FROM docs WHERE project_id = ? ORDER BY sort_order"
+    ).map_err(|e| e.to_string())?;
+    
+    let docs: Vec<(i64, String, String, Option<i64>)> = docs_stmt.query_map([project_id], |row| {
+        Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+    }).map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+    
+    // Process groups and docs
+    for (group_id, group_name, _parent) in &groups {
+        current_part_name = group_name.clone();
+        
+        // Add group name (Part)
+        if y_position < text_end_y + Mm(20.0) {
+            let (page, layer) = add_new_page(&doc, &mut page_count, &current_part_name, "", &font, &font_bold);
+            current_page = page;
+            current_layer = layer;
+            y_position = text_start_y;
+        }
+        
+        current_layer.use_text(group_name, part_size, margin_left, y_position, &font_bold);
+        y_position = y_position - Mm(12.0);
+        
+        // Add docs in this group
+        for (_doc_id, doc_name, content, doc_group_id) in &docs {
+            if doc_group_id.as_ref() == Some(group_id) {
+                current_chapter_name = doc_name.clone();
+                
+                // Add chapter name
+                if y_position < text_end_y + Mm(15.0) {
+                    let (page, layer) = add_new_page(&doc, &mut page_count, &current_part_name, &current_chapter_name, &font, &font_bold);
+                    current_page = page;
+                    current_layer = layer;
+                    y_position = text_start_y;
+                }
+                
+                current_layer.use_text(doc_name, chapter_size, margin_left, y_position, &font_bold);
+                y_position = y_position - Mm(8.0);
+                
+                // Add content with text wrapping
+                for paragraph in content.split("\n\n") {
+                    if paragraph.trim().is_empty() {
+                        continue;
+                    }
+                    
+                    // Wrap long paragraphs
+                    let mut current_line = String::new();
+                    for word in paragraph.split_whitespace() {
+                        let test_line = if current_line.is_empty() {
+                            word.to_string()
+                        } else {
+                            format!("{} {}", current_line, word)
+                        };
+                        
+                        // Use chars().count() for proper Unicode character counting
+                        if test_line.chars().count() > max_chars {
+                            // Write current line before adding this word
+                            if !current_line.is_empty() {
+                                if y_position < text_end_y {
+                                    let (page, layer) = add_new_page(&doc, &mut page_count, &current_part_name, &current_chapter_name, &font, &font_bold);
+                                    current_page = page;
+                                    current_layer = layer;
+                                    y_position = text_start_y;
+                                }
+                                current_layer.use_text(&current_line, body_size, margin_left, y_position, &font);
+                                y_position = y_position - body_line_height;
+                            }
+                            current_line = word.to_string();
+                        } else {
+                            current_line = test_line;
+                        }
+                    }
+                    
+                    // Write remaining text
+                    if !current_line.is_empty() {
+                        if y_position < text_end_y {
+                            let (page, layer) = add_new_page(&doc, &mut page_count, &current_part_name, &current_chapter_name, &font, &font_bold);
+                            current_page = page;
+                            current_layer = layer;
+                            y_position = text_start_y;
+                        }
+                        current_layer.use_text(&current_line, body_size, margin_left, y_position, &font);
+                        y_position = y_position - body_line_height;
+                    }
+                    
+                    // Add space between paragraphs
+                    y_position = y_position - paragraph_spacing;
+                }
+                
+                // Extra space after chapter
+                y_position = y_position - Mm(5.0);
+            }
+        }
+    }
+    
+    // Save PDF
+    let pdf_path = Path::new(&dest_path).join(format!("{}.pdf", project.name));
+    doc.save(&mut std::io::BufWriter::new(std::fs::File::create(&pdf_path).map_err(|e| e.to_string())?))
+        .map_err(|e| e.to_string())?;
+    
     Ok(())
 }

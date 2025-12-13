@@ -374,4 +374,8 @@ export class ProjectService {
   async exportProject(projectId: number, destPath: string): Promise<void> {
     return invoke<void>("export_project", { projectId, destPath });
   }
+
+  async exportProjectToPdf(projectId: number, destPath: string): Promise<void> {
+    return invoke<void>("export_project_to_pdf", { projectId, destPath });
+  }
 }

@@ -130,6 +130,7 @@ pub fn run() {
             commands::import_txt_files,
             commands::import_project,
             commands::export_project,
+            commands::export_project_to_pdf,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
