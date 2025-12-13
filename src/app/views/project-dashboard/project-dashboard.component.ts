@@ -2,7 +2,7 @@ import { Component, signal, computed, ViewChild, ElementRef, AfterViewChecked } 
 import { CommonModule } from "@angular/common";
 import { ReactiveFormsModule, FormGroup, FormControl } from "@angular/forms";
 import { ProjectService } from "../../services/project.service";
-import type { Project, Doc } from "../../shared/models";
+import type { Project, Doc, Archive } from "../../shared/models";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Router } from "@angular/router";
 
@@ -12,6 +12,11 @@ interface ProjectStats {
   pageCount: number;
   wordCount: number;
   folderCount: number;
+}
+
+interface ProjectWithArchive extends Project {
+  isArchived: boolean;
+  archiveId?: number;
 }
 
 @Component({
@@ -27,11 +32,13 @@ export class ProjectDashboardComponent implements AfterViewChecked {
   // Signals for reactive state
   projects = signal<Project[]>([]);
   projectStats = signal<Map<number, ProjectStats>>(new Map());
+  archives = signal<Map<number, Archive>>(new Map()); // projectId -> Archive
   showCreate = signal(false);
   editingId = signal<number | null>(null);
   editingCellIndex = signal<number | null>(null);
   isLoading = signal(false);
   showImportMenu = signal(false);
+  showArchivedProjects = signal(false);
   
   // For inline editing
   nameControl = new FormControl('');
@@ -39,9 +46,25 @@ export class ProjectDashboardComponent implements AfterViewChecked {
   
   // Computed values
   hasProjects = computed(() => this.projects().length > 0);
+  projectsWithArchive = computed(() => {
+    const archivesMap = this.archives();
+    return this.projects().map(p => ({
+      ...p,
+      isArchived: archivesMap.has(p.id),
+      archiveId: archivesMap.get(p.id)?.id
+    }));
+  });
   sortedProjects = computed(() => {
+    const showArchived = this.showArchivedProjects();
+    const withArchive = this.projectsWithArchive();
+    
+    // Filter based on archive status
+    const filtered = showArchived 
+      ? withArchive 
+      : withArchive.filter(p => !p.isArchived);
+    
     // Sort by grid_order, then by id as fallback
-    return [...this.projects()].sort((a, b) => {
+    return filtered.sort((a, b) => {
       const aOrder = a.grid_order ?? 999;
       const bOrder = b.grid_order ?? 999;
       if (aOrder !== bOrder) return aOrder - bOrder;
@@ -79,11 +102,32 @@ export class ProjectDashboardComponent implements AfterViewChecked {
       const projectList = await this.svc.listProjects();
       this.projects.set(projectList);
       
-      // Fetch stats for each project in parallel
-      await this.loadAllProjectStats(projectList);
+      // Fetch stats and archives for each project in parallel
+      await Promise.all([
+        this.loadAllProjectStats(projectList),
+        this.loadAllArchives(projectList)
+      ]);
     } finally {
       this.isLoading.set(false);
     }
+  }
+  
+  private async loadAllArchives(projectList: Project[]) {
+    const archivesMap = new Map<number, Archive>();
+    
+    await Promise.all(projectList.map(async (project) => {
+      try {
+        const archives = await this.svc.listArchives(project.id);
+        // Store the most recent archive (first one, since list is ordered by created_at DESC)
+        if (archives.length > 0) {
+          archivesMap.set(project.id, archives[0]);
+        }
+      } catch (err) {
+        console.error(`Failed to load archives for project ${project.id}:`, err);
+      }
+    }));
+    
+    this.archives.set(archivesMap);
   }
   
   private async loadAllProjectStats(projectList: Project[]) {
@@ -126,10 +170,10 @@ export class ProjectDashboardComponent implements AfterViewChecked {
     return this.projectStats().get(projectId) || { docCount: 0, charCount: 0, pageCount: 0, wordCount: 0, folderCount: 0 };
   }
   
-  getGridCells(): { index: number; project: Project | null }[] {
+  getGridCells(): { index: number; project: ProjectWithArchive | null }[] {
     const totalCells = 12; // 4 columns x 3 rows
     const projects = this.sortedProjects();
-    const cells: { index: number; project: Project | null }[] = [];
+    const cells: { index: number; project: ProjectWithArchive | null }[] = [];
     
     // Separate projects with and without grid_order
     const projectsWithOrder = projects.filter(p => p.grid_order !== null && p.grid_order !== undefined);
@@ -137,7 +181,7 @@ export class ProjectDashboardComponent implements AfterViewChecked {
     
     // Track which cells are occupied
     const occupiedCells = new Set<number>();
-    const cellToProject = new Map<number, Project>();
+    const cellToProject = new Map<number, ProjectWithArchive>();
     
     // First, place projects that have a grid_order
     for (const p of projectsWithOrder) {
@@ -398,5 +442,52 @@ export class ProjectDashboardComponent implements AfterViewChecked {
     } catch {
       return '1 day ago';
     }
+  }
+
+  toggleShowArchived() {
+    this.showArchivedProjects.update(v => !v);
+  }
+
+  async archiveProject(project: ProjectWithArchive, event: Event) {
+    event.stopPropagation();
+    
+    if (!confirm(`Archive "${project.name}"? It will be hidden from the dashboard.`)) {
+      return;
+    }
+    
+    try {
+      const now = new Date().toISOString();
+      await this.svc.createArchive(project.id, {
+        name: `Archive of ${project.name}`,
+        desc: null,
+        archived_at: now
+      });
+      await this.reload();
+    } catch (err) {
+      console.error('Failed to archive project:', err);
+      alert('Failed to archive project: ' + err);
+    }
+  }
+
+  async unarchiveProject(project: ProjectWithArchive, event: Event) {
+    event.stopPropagation();
+    
+    if (!project.archiveId) return;
+    
+    if (!confirm(`Unarchive "${project.name}"?`)) {
+      return;
+    }
+    
+    try {
+      await this.svc.deleteArchive(project.archiveId);
+      await this.reload();
+    } catch (err) {
+      console.error('Failed to unarchive project:', err);
+      alert('Failed to unarchive project: ' + err);
+    }
+  }
+
+  isArchived(project: Project): boolean {
+    return this.archives().has(project.id);
   }
 }
