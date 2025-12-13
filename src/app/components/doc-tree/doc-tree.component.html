@@ -15,7 +15,7 @@
       <!-- Tree -->
       @for (group of docGroups; let gi = $index; track group.id) {
         <div class="tree-item" [class.selected]="selectedGroup?.id === group.id">
-          <div class="tree-item-header" (click)="selectGroup(group, $event)">
+          <div class="tree-item-header" (click)="selectGroup(group, $event)" (mouseenter)="hoveredGroupId = group.id" (mouseleave)="hoveredGroupId = null">
             <!-- <svg xmlns="http://www.w3.org/2000/svg" 
                  class="toggle-icon" 
                  [class.expanded]="group.expanded" 
@@ -33,7 +33,7 @@
                 <span class="draft-mark" title="Has drafts">•</span>
               }
             </div>
-            @if (selectedGroup?.id === group.id) {
+            @if (selectedGroup?.id === group.id && hoveredGroupId === group.id) {
               <button class="delete-doc-button" 
                       title="Delete part" 
                       (click)="deleteGroup(group, $event)">
@@ -68,7 +68,7 @@
             <!-- Nested groups -->
             @for (subGroup of group.groups; let si = $index; track subGroup.id) {
               <div class="tree-item nested" [class.selected]="selectedGroup?.id === subGroup.id">
-                <div class="tree-item-header" (click)="selectGroup(subGroup, $event)">
+                <div class="tree-item-header" (click)="selectGroup(subGroup, $event)" (mouseenter)="hoveredGroupId = subGroup.id" (mouseleave)="hoveredGroupId = null">
                   <svg xmlns="http://www.w3.org/2000/svg" 
                        class="toggle-icon" 
                        [class.expanded]="subGroup.expanded" 
@@ -86,7 +86,7 @@
                       <span class="draft-mark" title="Has drafts">•</span>
                     }
                   </div>
-                  @if (selectedGroup?.id === subGroup.id) {
+                  @if (selectedGroup?.id === subGroup.id && hoveredGroupId === subGroup.id) {
                     <button class="delete-doc-button" 
                             title="Delete part" 
                             (click)="deleteGroup(subGroup, $event)">
@@ -141,7 +141,7 @@
                             <span class="draft-mark" title="Has drafts">•</span>
                           }
                         </div>
-                        @if (selectedDoc?.id === doc.id) {
+                        @if (selectedDoc?.id === doc.id && hoveredDocId === doc.id) {
                           <button class="delete-doc-button" 
                                   title="Delete chapter" 
                                   (click)="deleteDoc(doc, $event)">
@@ -187,7 +187,7 @@
                       <span class="draft-mark" title="Has drafts">•</span>
                     }
                   </div>
-                  @if (selectedDoc?.id === doc.id) {
+                  @if (selectedDoc?.id === doc.id && hoveredDocId === doc.id) {
                     <button class="delete-doc-button" 
                             title="Delete chapter" 
                             (click)="deleteDoc(doc, $event)">

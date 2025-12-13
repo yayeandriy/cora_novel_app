@@ -71,6 +71,7 @@ export class DocTreeComponent {
   leftWidth = 250;
   isResizing = false;
   hoveredDocId: number | null = null;
+  hoveredGroupId: number | null = null;
 
   selectGroup(group: DocGroup, event?: MouseEvent) {
     this.groupSelected.emit({ group, event });
