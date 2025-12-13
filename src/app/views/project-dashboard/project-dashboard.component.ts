@@ -39,6 +39,8 @@ export class ProjectDashboardComponent implements AfterViewChecked {
   isLoading = signal(false);
   showImportMenu = signal(false);
   showArchivedProjects = signal(false);
+  confirmingArchive = signal<number | null>(null);
+  confirmingDelete = signal<number | null>(null);
   
   // For inline editing
   nameControl = new FormControl('');
@@ -319,13 +321,20 @@ export class ProjectDashboardComponent implements AfterViewChecked {
 
   async deleteProject(id: number, event: Event) {
     event.stopPropagation();
-    
-    if (!confirm('Are you sure you want to delete this project?')) {
-      return;
-    }
+    this.confirmingDelete.set(id);
+  }
+
+  async confirmDeleteAction(id: number, event: Event) {
+    event.stopPropagation();
+    this.confirmingDelete.set(null);
     
     await this.svc.deleteProject(id);
     await this.reload();
+  }
+
+  cancelDelete(event: Event) {
+    event.stopPropagation();
+    this.confirmingDelete.set(null);
   }
 
   cancelEdit() {
@@ -450,10 +459,12 @@ export class ProjectDashboardComponent implements AfterViewChecked {
 
   async archiveProject(project: ProjectWithArchive, event: Event) {
     event.stopPropagation();
-    
-    if (!confirm(`Archive "${project.name}"? It will be hidden from the dashboard.`)) {
-      return;
-    }
+    this.confirmingArchive.set(project.id);
+  }
+
+  async confirmArchiveAction(project: ProjectWithArchive, event: Event) {
+    event.stopPropagation();
+    this.confirmingArchive.set(null);
     
     try {
       const now = new Date().toISOString();
@@ -469,14 +480,15 @@ export class ProjectDashboardComponent implements AfterViewChecked {
     }
   }
 
+  cancelArchive(event: Event) {
+    event.stopPropagation();
+    this.confirmingArchive.set(null);
+  }
+
   async unarchiveProject(project: ProjectWithArchive, event: Event) {
     event.stopPropagation();
     
     if (!project.archiveId) return;
-    
-    if (!confirm(`Unarchive "${project.name}"?`)) {
-      return;
-    }
     
     try {
       await this.svc.deleteArchive(project.archiveId);
