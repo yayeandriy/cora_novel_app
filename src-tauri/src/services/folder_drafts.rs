@@ -8,13 +8,13 @@ pub fn create(pool: &DbPool, doc_group_id: i64, req: FolderDraftCreate) -> anyho
     let conn = pool.get()?;
     let now = Utc::now().to_rfc3339();
     
-    // Get max sort_order
-    let max_order: Option<i64> = conn.query_row(
-        "SELECT MAX(sort_order) FROM folder_drafts WHERE doc_group_id = ?1",
+    // Get max sort_order (handle NULL when no drafts exist)
+    let max_order: i64 = conn.query_row(
+        "SELECT COALESCE(MAX(sort_order), 0) FROM folder_drafts WHERE doc_group_id = ?1",
         rusqlite::params![doc_group_id],
         |row| row.get(0)
-    ).optional()?;
-    let sort_order = max_order.unwrap_or(0) + 1;
+    )?;
+    let sort_order = max_order + 1;
 
     conn.execute(
         "INSERT INTO folder_drafts (doc_group_id, name, content, created_at, updated_at, sort_order) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",

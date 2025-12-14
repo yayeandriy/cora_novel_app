@@ -682,6 +682,8 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
             doc_timelines: std::collections::HashMap<i64, Option<crate::models::Timeline>>,
             #[serde(default)]
             drafts_by_doc: std::collections::HashMap<i64, Vec<crate::models::Draft>>,
+            #[serde(default)]
+            folder_drafts_by_group: std::collections::HashMap<i64, Vec<crate::models::FolderDraft>>,
         }
         let parsed: ImportFile = match serde_json::from_str(&content) {
             Ok(v) => v,
@@ -716,6 +718,10 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
         if let Some(root) = groups_by_parent.get(&None) {
             for g in root {
                 let created = crate::services::doc_groups::create_doc_group(pool, new_project.id, &g.name, None).map_err(|e| e.to_string())?;
+                // Set notes if present
+                if let Some(notes) = &g.notes {
+                    crate::services::doc_groups::update_doc_group_notes(pool, created.id, notes).map_err(|e| e.to_string())?;
+                }
                 group_id_map.insert(g.id, created.id);
                 // Recurse children for this group
                 let mut stack: Vec<i64> = vec![g.id];
@@ -724,6 +730,10 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
                         for ch in children {
                             let new_parent_id = *group_id_map.get(&parent_old_id).expect("parent must be created");
                             let created_child = crate::services::doc_groups::create_doc_group(pool, new_project.id, &ch.name, Some(new_parent_id)).map_err(|e| e.to_string())?;
+                            // Set notes if present
+                            if let Some(notes) = &ch.notes {
+                                crate::services::doc_groups::update_doc_group_notes(pool, created_child.id, notes).map_err(|e| e.to_string())?;
+                            }
                             group_id_map.insert(ch.id, created_child.id);
                             stack.push(ch.id);
                         }
@@ -752,6 +762,17 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
                     let name = dr.name.clone();
                     let content = dr.content.clone();
                     crate::services::drafts::create_draft(pool, new_doc_id, crate::models::DraftCreate { name, content }).map_err(|e| e.to_string())?;
+                }
+            }
+        }
+
+        // Create folder_drafts per group if present
+        for (old_group_id, folder_drafts) in parsed.folder_drafts_by_group.iter() {
+            if let Some(&new_group_id) = group_id_map.get(old_group_id) {
+                for fd in folder_drafts {
+                    let name = fd.name.clone();
+                    let content = fd.content.clone();
+                    crate::services::folder_drafts::create(pool, new_group_id, crate::models::FolderDraftCreate { name, content, insert_at_index: None }).map_err(|e| e.to_string())?;
                 }
             }
         }
@@ -1010,6 +1031,13 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
         if !ds.is_empty() { drafts_by_doc.insert(d.id, ds); }
     }
 
+    // folder_drafts_by_group for robust import
+    let mut folder_drafts_by_group: HashMap<i64, Vec<crate::models::FolderDraft>> = HashMap::new();
+    for g in &groups {
+        let fds = crate::services::folder_drafts::list(pool, g.id).map_err(|e| e.to_string())?;
+        if !fds.is_empty() { folder_drafts_by_group.insert(g.id, fds); }
+    }
+
     let meta = serde_json::json!({
         "meta": {
             "app": "cora",
@@ -1028,6 +1056,7 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
         "project_timeline": project_timeline,
         "doc_timelines": doc_timelines,
         "drafts_by_doc": drafts_by_doc,
+        "folder_drafts_by_group": folder_drafts_by_group,
     });
 
     let meta_json = serde_json::to_string_pretty(&meta).map_err(|e| e.to_string())?;
