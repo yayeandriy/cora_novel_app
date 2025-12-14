@@ -77,6 +77,16 @@ export class ProjectDashboardComponent implements AfterViewChecked {
     });
   });
   
+  // Check if there are any archived projects
+  hasArchivedProjects = computed(() => {
+    return this.projectsWithArchive().some(p => p.isArchived);
+  });
+  
+  // Check if dock should be visible (has any buttons to show)
+  shouldShowDock = computed(() => {
+    return this.hasArchivedProjects();
+  });
+  
   // Dropdown positioning to prevent viewport clipping
 
   

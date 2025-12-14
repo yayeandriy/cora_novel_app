@@ -290,6 +290,40 @@
   display: block;
 }
 
+/* Inline actions for archived projects */
+.card-actions-inline {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.delete-project-btn-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  opacity: 0;
+}
+
+.card-project:hover .delete-project-btn-inline {
+  opacity: 1;
+}
+
+.delete-project-btn-inline:hover {
+  background-color: rgba(254, 226, 226, 0.8);
+  color: #ef4444;
+}
+
+.delete-project-btn-inline svg {
+  display: block;
+}
+
 .card-pages {
   margin-top: auto;
 }
