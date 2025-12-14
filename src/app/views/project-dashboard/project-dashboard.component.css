@@ -16,7 +16,7 @@
   width: 100%;
   height: 100%;
   background-color: #f3f4f6;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .dashboard-section {
@@ -139,6 +139,106 @@
   background-color: #e5e7eb;
 }
 
+/* Import Overlay Styles - Similar to confirm-overlay */
+.import-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.98);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  backdrop-filter: blur(2px);
+}
+
+.import-message {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 20px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.import-header {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.import-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.import-option-btn {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.import-option-btn:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.import-option-btn svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #6b7280;
+}
+
+.import-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.import-option-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+.import-option-desc {
+  font-size: 0.75rem;
+  color: #6b7280;
+  line-height: 1.3;
+}
+
+.import-cancel-btn {
+  margin-top: 4px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background-color: #f3f4f6;
+  color: #374151;
+  transition: all 0.15s ease;
+}
+
+.import-cancel-btn:hover {
+  background-color: #e5e7eb;
+}
+
 .card-title {
   display: flex;
   flex-direction: column;
@@ -233,6 +333,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 .empty-cell-actions {

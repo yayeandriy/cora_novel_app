@@ -28,6 +28,8 @@ interface ProjectWithArchive extends Project {
 })
 export class ProjectDashboardComponent implements AfterViewChecked {
   @ViewChild('newProjectInput') newProjectInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('importMenuContainer') importMenuContainer?: ElementRef<HTMLDivElement>;
+  @ViewChild('emptyCellImportContainer') emptyCellImportContainer?: ElementRef<HTMLDivElement>;
   
   // Signals for reactive state
   projects = signal<Project[]>([]);
@@ -38,7 +40,7 @@ export class ProjectDashboardComponent implements AfterViewChecked {
   editingCellIndex = signal<number | null>(null);
   isLoading = signal(false);
   showImportMenu = signal(false);
-  showEmptyCellImportMenu = signal(false);
+  importingCellIndex = signal<number | null>(null);
   showArchivedProjects = signal(false);
   confirmingArchive = signal<number | null>(null);
   confirmingDelete = signal<number | null>(null);
@@ -74,6 +76,9 @@ export class ProjectDashboardComponent implements AfterViewChecked {
       return a.id - b.id;
     });
   });
+  
+  // Dropdown positioning to prevent viewport clipping
+
   
   form: FormGroup;
 
@@ -375,7 +380,9 @@ export class ProjectDashboardComponent implements AfterViewChecked {
     if (event) {
       event.stopPropagation();
     }
-    this.showImportMenu.update(v => !v);
+    // Dock import button - for now just close any open import
+    this.importingCellIndex.set(null);
+    this.showImportMenu.set(false);
   }
 
   closeImportMenu() {
@@ -383,7 +390,7 @@ export class ProjectDashboardComponent implements AfterViewChecked {
   }
 
   closeEmptyCellImportMenu() {
-    this.showEmptyCellImportMenu.set(false);
+    this.importingCellIndex.set(null);
   }
 
   closeAllMenus() {
@@ -391,10 +398,15 @@ export class ProjectDashboardComponent implements AfterViewChecked {
     this.closeEmptyCellImportMenu();
   }
 
-  toggleEmptyCellImportMenu(event: MouseEvent) {
+  toggleEmptyCellImportMenu(cellIndex: number, event: MouseEvent) {
     event.stopPropagation();
-    this.showEmptyCellImportMenu.update(v => !v);
-    this.showImportMenu.set(false); // Close dock menu when opening empty cell menu
+    this.importingCellIndex.update(v => v === cellIndex ? null : cellIndex);
+    this.showImportMenu.set(false);
+  }
+
+  cancelImport(event: Event) {
+    event.stopPropagation();
+    this.importingCellIndex.set(null);
   }
 
   async importFromFolder() {
@@ -448,8 +460,8 @@ export class ProjectDashboardComponent implements AfterViewChecked {
       // Navigate to the newly imported project
       this.openProject(imported);
     } catch (err) {
-      console.error('Failed to import project:', err);
-      alert('Failed to import project: ' + err);
+      console.error('Failed to Import story:', err);
+      alert('Failed to Import story: ' + err);
     }
   }
 
