@@ -644,6 +644,29 @@ pub async fn import_txt_files(state: State<'_, AppState>, project_id: i64, doc_g
     Ok(imported)
 }
 
+// Helper function to find the next available grid position
+fn find_next_grid_position(pool: &crate::db::DbPool) -> Result<i64, String> {
+    // Get all projects with grid_order
+    let conn = pool.get().map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare("SELECT grid_order FROM projects WHERE grid_order IS NOT NULL")
+        .map_err(|e| e.to_string())?;
+    let positions: Result<Vec<i64>, _> = stmt
+        .query_map([], |row| row.get(0))
+        .map_err(|e| e.to_string())?
+        .collect();
+    let positions = positions.map_err(|e| e.to_string())?;
+    
+    // Find first available position from 0 to 11
+    for i in 0..12 {
+        if !positions.contains(&i) {
+            return Ok(i);
+        }
+    }
+    
+    // If all positions are occupied, return 0 (will overwrite)
+    Ok(0)
+}
+
 /// Import an entire project from a folder path.
 /// - Creates a new project named after the folder (path basename)
 /// - For each immediate subfolder: creates a root-level doc group and imports its immediate .txt files
@@ -656,6 +679,9 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
     if !base.exists() || !base.is_dir() {
         return Err("Selected path is not a directory".to_string());
     }
+    
+    // Find next available grid position
+    let grid_order = find_next_grid_position(pool)?;
 
     // First, check for metadata.json to detect exported project format
     let metadata_path = base.join("metadata.json");
@@ -689,19 +715,19 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
             Ok(v) => v,
             Err(_) => {
                 // Fallback to legacy import on parse error
-                return legacy_import_folder(pool, base, &folder_path);
+                return legacy_import_folder(pool, base, &folder_path, grid_order);
             }
         };
         if let Some(meta) = &parsed.meta {
             if meta.app.as_deref() != Some("cora") {
                 // Fallback to legacy import if not our format
-                return legacy_import_folder(pool, base, &folder_path);
+                return legacy_import_folder(pool, base, &folder_path, grid_order);
             }
         }
 
         // Create project (prefer metadata project name)
         let project_name = parsed.project.name.clone();
-    let payload = crate::models::ProjectCreate { name: project_name, desc: parsed.project.desc.clone(), path: Some(folder_path.clone()), notes: parsed.project.notes.clone(), grid_order: None };
+    let payload = crate::models::ProjectCreate { name: project_name, desc: parsed.project.desc.clone(), path: Some(folder_path.clone()), notes: parsed.project.notes.clone(), grid_order: Some(grid_order) };
         let new_project = crate::services::projects::create(pool, payload).map_err(|e| e.to_string())?;
 
         use std::collections::HashMap;
@@ -841,14 +867,14 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
     }
 
         // Fallback: legacy folder import (no metadata.json)
-        return legacy_import_folder(pool, base, &folder_path);
+        return legacy_import_folder(pool, base, &folder_path, grid_order);
 }
 
 // Helper to perform legacy folder import
-fn legacy_import_folder(pool: &crate::db::DbPool, base: &Path, folder_path: &str) -> Result<serde_json::Value, String> {
+fn legacy_import_folder(pool: &crate::db::DbPool, base: &Path, folder_path: &str, grid_order: i64) -> Result<serde_json::Value, String> {
         // Project name from folder basename
         let project_name = base.file_name().and_then(|s| s.to_str()).unwrap_or("Imported Project").to_string();
-    let payload = crate::models::ProjectCreate { name: project_name.clone(), desc: None, path: Some(folder_path.to_string()), notes: None, grid_order: None };
+    let payload = crate::models::ProjectCreate { name: project_name.clone(), desc: None, path: Some(folder_path.to_string()), notes: None, grid_order: Some(grid_order) };
         let project = crate::services::projects::create(pool, payload).map_err(|e| e.to_string())?;
 
         // Read entries and partition into subdirs and root .txt files

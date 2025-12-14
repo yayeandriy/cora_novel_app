@@ -201,28 +201,17 @@ export class ProjectDashboardComponent implements AfterViewChecked {
     const occupiedCells = new Set<number>();
     const cellToProject = new Map<number, ProjectWithArchive>();
     
-    // First, place projects that have a grid_order
+    // Place all projects in their grid_order positions
     for (const p of projectsWithOrder) {
       if (p.grid_order! < totalCells) {
-        occupiedCells.add(p.grid_order!);
         cellToProject.set(p.grid_order!, p);
       }
     }
     
-    // Then, place projects without grid_order in first available cells
-    let nextFreeCell = 0;
-    for (const p of projectsWithoutOrder) {
-      while (occupiedCells.has(nextFreeCell) && nextFreeCell < totalCells) {
-        nextFreeCell++;
-      }
-      if (nextFreeCell < totalCells) {
-        occupiedCells.add(nextFreeCell);
-        cellToProject.set(nextFreeCell, p);
-        nextFreeCell++;
-      }
-    }
+    // Projects without grid_order are not shown in the grid
+    // They should be assigned a grid_order when created
     
-    // Build the cells array
+    // Build the cells array - cells without projects remain empty
     for (let i = 0; i < totalCells; i++) {
       cells.push({
         index: i,
