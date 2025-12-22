@@ -30,10 +30,28 @@ const FONT_SIZES: Record<FontSize, string> = {
   'L': '1.125rem'
 };
 
+const SERIF_FONT_SIZES: Record<FontSize, string> = {
+  'S': '1rem',
+  'M': '1.125rem',
+  'L': '1.25rem'
+};
+
+const SANS_FONT_SIZES: Record<FontSize, string> = {
+  'S': '1rem',
+  'M': '1.125rem',
+  'L': '1.25rem'
+};
+
 const LINE_HEIGHTS: Record<LineHeight, string> = {
   'S': '1.5',
   'M': '1.75',
   'L': '2'
+};
+
+const SERIF_LINE_HEIGHTS: Record<LineHeight, string> = {
+  'S': '1.35',
+  'M': '1.5',
+  'L': '1.65'
 };
 
 @Component({
@@ -101,8 +119,16 @@ export class AppFooterComponent implements OnInit {
 
   private applyTypographySettings() {
     document.documentElement.style.setProperty('--editor-font-family', FONT_FAMILIES[this.fontFamily]);
-    document.documentElement.style.setProperty('--editor-font-size', FONT_SIZES[this.fontSize]);
-    document.documentElement.style.setProperty('--editor-line-height', LINE_HEIGHTS[this.lineHeight]);
+    const size = this.fontFamily === 'serif'
+      ? SERIF_FONT_SIZES[this.fontSize]
+      : this.fontFamily === 'sans'
+        ? SANS_FONT_SIZES[this.fontSize]
+        : FONT_SIZES[this.fontSize];
+    document.documentElement.style.setProperty('--editor-font-size', size);
+    const leading = this.fontFamily === 'serif'
+      ? SERIF_LINE_HEIGHTS[this.lineHeight]
+      : LINE_HEIGHTS[this.lineHeight];
+    document.documentElement.style.setProperty('--editor-line-height', leading);
   }
 
   setFontFamily(font: FontFamily) {
