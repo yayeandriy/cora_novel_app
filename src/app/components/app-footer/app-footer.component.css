@@ -68,6 +68,9 @@
 
 /* Match the height of other dock pills (2rem buttons + 0.375rem padding top/bottom). */
 .dock-stats {
+  /* Give stats pill more breathing room left/right without changing height. */
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
   min-height: calc(2rem + 0.75rem);
 }
 
