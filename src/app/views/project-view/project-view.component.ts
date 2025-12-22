@@ -1319,6 +1319,15 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       groupId: this.selectedGroup?.id || null
     };
     localStorage.setItem(`project_${this.projectId}_selection`, JSON.stringify(selection));
+
+    // Remember last open location so we can restore on next cold start.
+    // Use localStorage (persists across app restarts).
+    try {
+      localStorage.setItem('cora-last-route', 'project');
+      localStorage.setItem('cora-last-project-id', String(this.projectId));
+    } catch {
+      // ignore storage errors (private mode / quota)
+    }
   }
 
   private saveTreeState() {
@@ -3898,6 +3907,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   goBack() {
+    try { localStorage.setItem('cora-last-route', 'dashboard'); } catch {}
     this.router.navigate(['/']);
   }
 

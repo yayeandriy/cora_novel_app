@@ -111,7 +111,30 @@ export class ProjectDashboardComponent implements AfterViewChecked {
   }
 
   async ngOnInit() {
+    // Restore the last opened project on cold start.
+    // Use sessionStorage to avoid redirect loops when the user navigates back to the dashboard.
+    try {
+      const alreadyRestored = sessionStorage.getItem('cora-restored-last-project');
+      if (!alreadyRestored) {
+        sessionStorage.setItem('cora-restored-last-project', '1');
+
+        const lastRoute = localStorage.getItem('cora-last-route');
+        const lastProjectIdStr = localStorage.getItem('cora-last-project-id');
+        const lastProjectId = lastProjectIdStr ? Number(lastProjectIdStr) : NaN;
+
+        if (lastRoute === 'project' && Number.isFinite(lastProjectId) && lastProjectId > 0) {
+          this.router.navigate(['/project', lastProjectId]);
+          return;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     await this.reload();
+
+    // Mark current location (useful if the app is closed on the dashboard)
+    try { localStorage.setItem('cora-last-route', 'dashboard'); } catch {}
   }
 
   async reload() {
