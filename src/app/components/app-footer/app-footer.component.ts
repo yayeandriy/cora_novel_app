@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy, OnInit, AfterViewInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -63,6 +63,9 @@ const SERIF_LINE_HEIGHTS: Record<LineHeight, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppFooterComponent implements OnInit {
+  @ViewChild('statsDock', { read: ElementRef }) private statsDockEl?: ElementRef<HTMLElement>;
+  @ViewChild('toolsDock', { read: ElementRef }) private toolsDockEl?: ElementRef<HTMLElement>;
+
   // Inputs
   @Input() selectedDoc: Doc | null = null;
   @Input() selectedGroup: DocGroup | null = null;
@@ -89,13 +92,88 @@ export class AppFooterComponent implements OnInit {
   // Tools dock UI state
   toolsCollapsed = false;
 
+  // Inline style for shifting the centered stats dock when needed.
+  statsDockTransform = 'translateX(-50%)';
+
+  private resizeObserver?: ResizeObserver;
+  private layoutRaf: number | null = null;
+  private readonly dockGapPx = 16; // keep a small visual gap between pills
+  private readonly edgePaddingPx = 16; // keep stats pill at least 1rem from viewport edge
+
+  private onWindowResize = () => {
+    this.scheduleDockLayout();
+  };
+
   toggleToolsCollapsed() {
     this.toolsCollapsed = !this.toolsCollapsed;
+    this.scheduleDockLayout();
   }
 
   ngOnInit() {
     this.loadTypographySettings();
     this.applyTypographySettings();
+  }
+
+  ngAfterViewInit() {
+    // Watch for size changes so the centered stats pill can dodge the tools pill.
+    this.resizeObserver = new ResizeObserver(() => this.scheduleDockLayout());
+    if (this.statsDockEl?.nativeElement) this.resizeObserver.observe(this.statsDockEl.nativeElement);
+    if (this.toolsDockEl?.nativeElement) this.resizeObserver.observe(this.toolsDockEl.nativeElement);
+
+    window.addEventListener('resize', this.onWindowResize);
+    this.scheduleDockLayout();
+  }
+
+  ngOnDestroy() {
+    window.removeEventListener('resize', this.onWindowResize);
+    this.resizeObserver?.disconnect();
+    if (this.layoutRaf != null) {
+      cancelAnimationFrame(this.layoutRaf);
+      this.layoutRaf = null;
+    }
+  }
+
+  private scheduleDockLayout(): void {
+    if (this.layoutRaf != null) cancelAnimationFrame(this.layoutRaf);
+    this.layoutRaf = requestAnimationFrame(() => {
+      this.layoutRaf = null;
+      this.recomputeStatsDockShift();
+    });
+  }
+
+  private recomputeStatsDockShift(): void {
+    const statsEl = this.statsDockEl?.nativeElement;
+    const toolsEl = this.toolsDockEl?.nativeElement;
+    if (!statsEl || !toolsEl) {
+      this.statsDockTransform = 'translateX(-50%)';
+      return;
+    }
+
+    const statsRect = statsEl.getBoundingClientRect();
+    const toolsRect = toolsEl.getBoundingClientRect();
+
+    // Only care about horizontal overlap; the tools dock sits to the right.
+    const maxStatsRight = toolsRect.left - this.dockGapPx;
+    let shiftPx = 0;
+    const overlap = statsRect.right - maxStatsRight;
+    if (overlap > 0) {
+      // Shift stats left by the overlap amount.
+      shiftPx = -overlap;
+    }
+
+    // Clamp so stats pill doesn't go off-screen.
+    const desiredLeft = statsRect.left + shiftPx;
+    if (desiredLeft < this.edgePaddingPx) {
+      shiftPx += (this.edgePaddingPx - desiredLeft);
+    }
+
+    if (shiftPx === 0) {
+      this.statsDockTransform = 'translateX(-50%)';
+      return;
+    }
+    const abs = Math.round(Math.abs(shiftPx));
+    const sign = shiftPx < 0 ? '-' : '+';
+    this.statsDockTransform = `translateX(calc(-50% ${sign} ${abs}px))`;
   }
 
   private loadTypographySettings() {
@@ -142,18 +220,21 @@ export class AppFooterComponent implements OnInit {
     this.fontFamily = font;
     this.saveTypographySettings();
     this.applyTypographySettings();
+    this.scheduleDockLayout();
   }
 
   setFontSize(size: FontSize) {
     this.fontSize = size;
     this.saveTypographySettings();
     this.applyTypographySettings();
+    this.scheduleDockLayout();
   }
 
   setLineHeight(height: LineHeight) {
     this.lineHeight = height;
     this.saveTypographySettings();
     this.applyTypographySettings();
+    this.scheduleDockLayout();
   }
 
   get isFullWidth(): boolean {

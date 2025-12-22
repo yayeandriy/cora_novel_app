@@ -1,5 +1,5 @@
 <!-- Dock 1: project stats (center) -->
-<div class="dock dock-stats dock-center" *ngIf="allDocs.length">
+<div class="dock dock-stats dock-center" *ngIf="allDocs.length" #statsDock [style.transform]="statsDockTransform">
   <div class="stats-container">
     <span class="stat-item">
       <span class="stat-label">A:</span>
@@ -22,9 +22,7 @@
 </div>
 
 <!-- Dock 2: controls (right, appended to sidebar controls pill) -->
-<div class="dock dock-controls dock-right" [class.is-collapsed]="toolsCollapsed">
-  <div class="footer-left"></div>
-
+<div class="dock dock-controls dock-right" [class.is-collapsed]="toolsCollapsed" #toolsDock>
   <!-- Typography Settings -->
   <div class="footer-typography" *ngIf="!toolsCollapsed">
     <!-- Font Family -->
