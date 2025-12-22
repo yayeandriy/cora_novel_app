@@ -233,7 +233,13 @@
       }
       
       <!-- Project/folder headers - shown when viewing a folder OR when doc editor is scrolled to top -->
-      <div class="inline-headers-wrapper" [class.hidden]="selectedDoc && headersHiddenByScroll">
+      <div
+        class="inline-headers-wrapper"
+        [class.hidden]="selectedDoc && (headersHiddenByScroll || inlineHeadersDismissed)"
+        (clickOutside)="onInlineHeadersClickedOutside($event)"
+        [clickOutsideEnabled]="!!selectedDoc"
+        [clickOutsideEvents]="'click,touchstart'"
+        [clickOutsideExclude]="'.floating-headers-overlay,.editor-toolbar'">
       <!-- Project title moved to the middle section on top of the doc header -->
       <div class="project-title-bar" (click)="onProjectHeaderClick($event)">
         <div class="project-title-center">

@@ -13,6 +13,7 @@ import { MetadataChipsComponent } from '../../components/metadata-chips/metadata
 import { ProjectTimelineComponent } from '../../components/project-timeline/project-timeline.component';
 import { AppFooterComponent } from '../../components/app-footer/app-footer.component';
 import { FolderDraftsComponent } from '../../components/folder-drafts/folder-drafts.component';
+import { NgClickOutsideDirective, NgClickOutsideExcludeDirective } from 'ng-click-outside2';
 import type { Timeline, FolderDraft } from '../../shared/models';
 
 interface DocGroup {
@@ -59,6 +60,8 @@ interface Event {
   imports: [
     CommonModule, 
     FormsModule,
+    NgClickOutsideDirective,
+    NgClickOutsideExcludeDirective,
     DocTreeComponent,
     DocumentEditorComponent,
     GroupViewComponent,
@@ -219,6 +222,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Scroll-based header visibility
   headersHiddenByScroll = false;
   headersHoverVisible = false;
+  inlineHeadersDismissed = false;
   // Track which folder is expanded in project header view
   projectHeaderSelectedGroupId: number | null = null;
   // Track which doc is expanded in project header view to show its characters/events/places
@@ -340,13 +344,27 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   // Handle scroll events from the doc editor textarea to show/hide inline project+folder headers
   onEditorTextareaScroll(scrollTop: number) {
-    const wasHidden = this.headersHiddenByScroll;
     // Headers are considered hidden if scrolled more than 50px
     this.headersHiddenByScroll = scrollTop > 50;
+
+    // When returning to the top, re-enable inline headers (if they were dismissed by click-outside)
+    if (scrollTop <= 1) {
+      this.inlineHeadersDismissed = false;
+    }
+
     // If headers become visible due to scrolling up, hide the hover overlay
     if (!this.headersHiddenByScroll) {
       this.headersHoverVisible = false;
     }
+  }
+
+  onInlineHeadersClickedOutside(_event: globalThis.Event) {
+    if (!this.selectedDoc) return;
+    this.inlineHeadersDismissed = true;
+    this.projectHeaderExpanded = false;
+    this.folderHeaderExpanded = false;
+    this.headersHoverVisible = false;
+    this.changeDetector.markForCheck();
   }
 
   // Handle doc header click - toggle floating headers (project + folder) while a doc is open.
@@ -355,7 +373,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     if (!this.selectedDoc) return;
 
     // Only toggle overlay if headers are hidden by scroll; otherwise they're already visible inline
-    if (this.headersHiddenByScroll) {
+    if (this.headersHiddenByScroll || this.inlineHeadersDismissed) {
       this.headersHoverVisible = !this.headersHoverVisible;
     }
   }
