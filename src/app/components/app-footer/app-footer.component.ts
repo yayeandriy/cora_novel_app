@@ -92,6 +92,8 @@ export class AppFooterComponent implements OnInit {
   // Tools dock UI state
   toolsCollapsed = false;
 
+  private readonly toolsCollapsedStorageKey = 'cora-tools-collapsed';
+
   // Inline style for shifting the centered stats dock when needed.
   statsDockTransform = 'translateX(-50%)';
 
@@ -106,10 +108,17 @@ export class AppFooterComponent implements OnInit {
 
   toggleToolsCollapsed() {
     this.toolsCollapsed = !this.toolsCollapsed;
+    try {
+      localStorage.setItem(this.toolsCollapsedStorageKey, String(this.toolsCollapsed));
+    } catch {}
     this.scheduleDockLayout();
   }
 
   ngOnInit() {
+    try {
+      const saved = localStorage.getItem(this.toolsCollapsedStorageKey);
+      if (saved != null) this.toolsCollapsed = saved === 'true';
+    } catch {}
     this.loadTypographySettings();
     this.applyTypographySettings();
   }
