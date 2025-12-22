@@ -44,10 +44,15 @@
      it doesn't cover gaps between items. */
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(0, 0, 0, 0.10);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
   backdrop-filter: blur(8px);
   pointer-events: auto;
   flex-wrap: nowrap;
+  transition: box-shadow 150ms ease;
+}
+
+.dock:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 .dock-part {
   display: flex;
