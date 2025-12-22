@@ -382,12 +382,19 @@ app-doc-tree {
   display: flex;
   flex-direction: column;
   background: white;
-  /* Make the editor column the scroll container so Project/Folder can scroll away
-     while the Doc header inside the editor stays sticky */
-  overflow-y: auto;
+  /* No column-level scroll; each pane scrolls independently */
+  overflow: hidden;
   min-width: 0;
   width: 100%;
   height: 100%;
+}
+
+/* When split view is active, the document editor container should fill available height */
+.editor-area app-document-editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Floating headers overlay */

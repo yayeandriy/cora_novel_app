@@ -2,7 +2,9 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  overflow-x:clip ;
+  overflow-x: clip;
+  flex: 1;
+  min-height: 0;
 }
 
 .editor-toolbar {
@@ -108,11 +110,11 @@
 .draft-delete-btn:hover {
   background: #fef2f2;
 }
-.editor-split { display: flex; width: 100%; }
-.pane { flex: 1; display: flex; min-width: 0; }
+.editor-split { display: flex; width: 100%; flex: 1; min-height: 0; }
+.pane { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
 .border-l { border-left: 1px solid #e5e7eb; }
 .editor-split .editor-textarea { width: var(--editor-col, 100%); margin-left: auto; margin-right: auto; }
-.pane-right { flex: 0 0 auto; border-left: 1px solid #e5e7eb; }
+.pane-right { flex: 0 0 auto; border-left: 1px solid #e5e7eb; display: flex; flex-direction: column; overflow: hidden; }
 
 .split-divider {
   flex: 0 0 6px;
@@ -235,7 +237,7 @@
 
 .editor-textarea {
   /* Do not stretch to full width so slider-set width takes effect */
-  flex: 0 0 auto;
+  flex: 1;
   padding: 2rem;
   border: none;
   outline: none;
@@ -243,19 +245,26 @@
   font-size: var(--editor-font-size, 0.9375rem);
   line-height: var(--editor-line-height, 1.75);
   color: #111827;
-  resize: none; /* we'll auto-resize via TS */
+  resize: none;
   width: 100%; /* Takes full width of resizable container */
   margin-left: auto;
   margin-right: auto;
-  overflow: hidden; /* prevent internal scrollbars */
-  height: auto; /* grow with content via JS */
-  min-height: 50vh; /* comfortable initial height */
+  overflow-y: auto; /* each textarea scrolls independently */
+  overscroll-behavior: contain;
+  height: 100%;
+  min-height: 0;
 }
+
 
 .resizable-editor-container {
   position: relative;
   margin: 0 auto;
   /* width is set via inline style */
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: visible; /* allow resize handles to show outside */
 }
 
 .resize-handle {
