@@ -66,6 +66,11 @@
   gap: 0.5rem;
 }
 
+.dock-controls.is-collapsed {
+  padding: 8px 10px;
+  gap: 0.25rem;
+}
+
 .icon-button-small.export:hover { background: #f9fafb; }
 .export-icon { width: 1rem; height: 1rem; display: block; }
 .icon-button-small.delete { color: #9ca3af; }
@@ -114,6 +119,42 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.tools-collapse-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 9999px;
+  background: #f3f4f6;
+  color: #374151;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+  flex: 0 0 auto;
+}
+
+.tools-collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.75);
+  color: #111827;
+}
+
+.tools-collapse-btn:active {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.tools-collapse-icon-img {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.tools-collapse-icon-svg {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .typography-group {

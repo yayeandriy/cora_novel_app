@@ -86,6 +86,13 @@ export class AppFooterComponent implements OnInit {
   fontSize: FontSize = 'M';
   lineHeight: LineHeight = 'M';
 
+  // Tools dock UI state
+  toolsCollapsed = false;
+
+  toggleToolsCollapsed() {
+    this.toolsCollapsed = !this.toolsCollapsed;
+  }
+
   ngOnInit() {
     this.loadTypographySettings();
     this.applyTypographySettings();

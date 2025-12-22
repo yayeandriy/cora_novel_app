@@ -22,11 +22,11 @@
 </div>
 
 <!-- Dock 2: controls (right, appended to sidebar controls pill) -->
-<div class="dock dock-controls dock-right">
+<div class="dock dock-controls dock-right" [class.is-collapsed]="toolsCollapsed">
   <div class="footer-left"></div>
 
   <!-- Typography Settings -->
-  <div class="footer-typography">
+  <div class="footer-typography" *ngIf="!toolsCollapsed">
     <!-- Font Family -->
     <div class="typography-group" title="Font">
       <button class="typo-tab" [class.active]="fontFamily === 'mono'" (click)="setFontFamily('mono')">Mono</button>
@@ -52,4 +52,27 @@
       </button>
     </div>
   </div>
+
+  <button
+    type="button"
+    class="tools-collapse-btn"
+    (click)="toggleToolsCollapsed()"
+    [attr.aria-label]="toolsCollapsed ? 'Expand tools' : 'Collapse tools'"
+    [attr.aria-pressed]="toolsCollapsed"
+    title="Toggle tools"
+  >
+    <ng-container *ngIf="toolsCollapsed; else toolsExpandedIcon">
+      <img
+        class="tools-collapse-icon-img"
+        src="assets/icons/pencil.tip.crop.circle.svg"
+        alt=""
+        aria-hidden="true"
+      />
+    </ng-container>
+    <ng-template #toolsExpandedIcon>
+      <svg class="tools-collapse-icon-svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path d="M4.22 4.22a.75.75 0 0 1 1.06 0L10 8.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L11.06 10l4.72 4.72a.75.75 0 1 1-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 1 1-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 0 1 0-1.06Z" />
+      </svg>
+    </ng-template>
+  </button>
 </div>
