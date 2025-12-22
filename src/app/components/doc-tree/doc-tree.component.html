@@ -128,8 +128,6 @@
                         <div class="working-marker-container">
                           @if (currentWorkingDocId === doc.id) {
                             <div class="working-marker active"></div>
-                          } @else if (hoveredDocId === doc.id) {
-                            <div class="working-marker ghost" (click)="setWorkingDoc(doc, $event)"></div>
                           }
                         </div>
                         <span class="doc-index">{{ si + 1 }}.{{ di + 1 }}</span>
@@ -173,8 +171,6 @@
                   <div class="working-marker-container">
                     @if (currentWorkingDocId === doc.id) {
                       <div class="working-marker active"></div>
-                    } @else if (hoveredDocId === doc.id) {
-                      <div class="working-marker ghost" (click)="setWorkingDoc(doc, $event)"></div>
                     }
                   </div>
                   <span class="doc-index">{{ gi + 1 }}.{{ di + 1 }}</span>

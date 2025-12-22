@@ -175,7 +175,7 @@
 }
 
 .tree-item.selected .working-marker.active {
-  border-color: transparent transparent transparent #ffffff;
+  border-color: transparent transparent transparent #505053;
 }
 
 .working-marker.ghost {
@@ -183,7 +183,7 @@
 }
 
 .working-marker.ghost:hover {
-  border-color: transparent transparent transparent #9ca3af;
+  border-color: transparent transparent transparent #505053;
 }
 
 .tree-item-header > .name-with-mark {

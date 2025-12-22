@@ -1190,6 +1190,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.selectedDoc.notes = cachedState.notes;
       }
     }
+
+    // Seed the cache with the current values so subsequent change handlers
+    // can reliably compare previous vs current text (prevents Enter-only edits
+    // from looking like a change from an empty baseline).
+    this.docStateCache.set(this.selectedDoc.id, {
+      text: this.selectedDoc.text,
+      notes: this.selectedDoc.notes,
+    });
     
     this.selectedGroup = null; // Clear group selection - only ONE selection at a time
     
@@ -2001,8 +2009,33 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // Cache text immediately so we never lose it
     if (this.selectedDoc) {
       const cached = this.docStateCache.get(this.selectedDoc.id) || {};
-      cached.text = this.selectedDoc.text;
+      const prevText = (cached as any).text ?? '';
+      const nextText = this.selectedDoc.text ?? '';
+
+      cached.text = nextText;
       this.docStateCache.set(this.selectedDoc.id, cached);
+
+      // Auto-toggle the working doc marker once the user has typed 2+ meaningful characters.
+      // This reuses the existing persistence logic (localStorage key: project_${projectId}_working_doc).
+      if (this.currentWorkingDocId !== this.selectedDoc.id) {
+        // Only react to edits that actually change meaningful characters (letters/numbers/punctuation).
+        // Pressing Enter (newline) or changing whitespace should not toggle the marker.
+        const meaningfulOnlyRe = /[^\p{L}\p{N}\p{P}]/gu;
+        const prevMeaningfulOnly = prevText.replace(meaningfulOnlyRe, '');
+        const nextMeaningfulOnly = nextText.replace(meaningfulOnlyRe, '');
+
+        if (prevMeaningfulOnly !== nextMeaningfulOnly) {
+          const meaningfulCharRe = /[\p{L}\p{N}\p{P}]/gu;
+          let meaningfulCount = 0;
+          while (meaningfulCharRe.exec(nextText)) {
+            meaningfulCount += 1;
+            if (meaningfulCount >= 2) break;
+          }
+          if (meaningfulCount >= 2) {
+            this.onWorkingDocChanged(this.selectedDoc.id);
+          }
+        }
+      }
     }
 
     // Mark as having unsaved changes
