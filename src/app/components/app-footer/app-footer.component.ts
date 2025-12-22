@@ -19,7 +19,7 @@ export type FontSize = 'S' | 'M' | 'L';
 export type LineHeight = 'S' | 'M' | 'L';
 
 const FONT_FAMILIES: Record<FontFamily, string> = {
-  'mono': "'PT Mono', 'Courier New', Courier, monospace",
+  'mono': "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', Courier, monospace",
   'serif': "'Times New Roman', Georgia, serif",
   'sans': "'Helvetica Neue', Helvetica, Arial, sans-serif"
 };

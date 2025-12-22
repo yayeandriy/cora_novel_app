@@ -7,30 +7,95 @@
 /* Font Faces */
 @font-face {
   font-family: 'PT Mono';
-  src: url('/assets/fonts/PT_Mono/PTMono-Regular.ttf') format('truetype');
+  src: url('assets/fonts/PT_Mono/PTMono-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
 }
 
 @font-face {
+  font-family: 'iA Writer DuoSpace';
+  src: url('assets/fonts/ia-writer-duospace/iAWriterDuospace-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'iA Writer DuoSpace';
+  src: url('assets/fonts/ia-writer-duospace/iAWriterDuospace-Regular.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'iA Writer DuoSpace';
+  src: url('assets/fonts/ia-writer-duospace/iAWriterDuospace-RegularItalic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'iA Writer DuoSpace';
+  src: url('assets/fonts/ia-writer-duospace/iAWriterDuospace-RegularItalic.otf') format('opentype');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'iA Writer DuoSpace';
+  src: url('assets/fonts/ia-writer-duospace/iAWriterDuospace-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'iA Writer DuoSpace';
+  src: url('assets/fonts/ia-writer-duospace/iAWriterDuospace-BoldItalic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'Times New Roman';
-  src: url('/assets/fonts/Times-NEW_Roman/Times New Roman.ttf') format('truetype');
+  src: url('assets/fonts/Times-NEW_Roman/Times New Roman.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Helvetica Neue';
-  src: url('/assets/fonts/helvetica_neu/HelveticaNeue.ttc') format('collection');
+  src: url('assets/fonts/helvetica_neu/HelveticaNeue.ttc') format('collection');
   font-weight: 400;
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('assets/fonts/plex/IBMPlexMono-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('assets/fonts/plex/IBMPlexMono-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Typography CSS Variables */
 :root {
-  --editor-font-family: 'PT Mono', 'Courier New', Courier, monospace;
+  --editor-font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', Courier, monospace;
   --editor-font-size: 0.9375rem;
   --editor-line-height: 1.75;
+  --editor-font-weight: 400;
 }
 
 /* Reset & Base */
@@ -194,9 +259,10 @@ button, input, select {
   font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
 }
 
-/* PT Mono for all textareas with wider blue cursor */
+/* iA Writer DuoSpace for all textareas with wider blue cursor */
 textarea {
-  font-family: "PT Mono", "Courier New", Courier, monospace;
+  font-family: var(--editor-font-family, 'iA Writer DuoSpace', 'Courier New', Courier, monospace);
+  font-weight: var(--editor-font-weight, 500);
   caret-color: #3b82f6;
   /* Simulate wider cursor by adding shadow to the caret */
   caret-shape: bar;

@@ -826,7 +826,7 @@ app-doc-tree {
   border: 1px solid #d1d5db;
   border-radius: 0.25rem;
   font-size: 0.875rem;
-  font-family: "PT Mono", "Courier New", Courier, monospace;
+  font-family: var(--editor-font-family, "iA Writer DuoSpace", "Courier New", Courier, monospace);
   resize: vertical;
   outline: none;
   transition: border-color 150ms;
@@ -858,7 +858,7 @@ app-doc-tree {
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
   font-size: 0.875rem;
-  font-family: "PT Mono", "Courier New", Courier, monospace;
+  font-family: var(--editor-font-family, "iA Writer DuoSpace", "Courier New", Courier, monospace);
   resize: none;
   outline: none;
   transition: border-color 150ms;

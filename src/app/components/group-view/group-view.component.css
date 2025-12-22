@@ -181,7 +181,7 @@
   padding: 2rem;
   border: none;
   outline: none;
-  font-family: "PT Mono", "Courier New", Courier, monospace;
+  font-family: var(--editor-font-family, "iA Writer DuoSpace", "Courier New", Courier, monospace);
   font-size: 0.9375rem;
   line-height: 1.75;
   color: #111827;

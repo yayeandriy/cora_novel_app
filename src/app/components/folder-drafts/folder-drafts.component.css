@@ -199,7 +199,7 @@ color: #374151;
   padding: 0.75rem;
   border: none;
   font-size: 0.875rem;
-  font-family: "PT Mono", "Courier New", Courier, monospace;
+  font-family: var(--editor-font-family, "iA Writer DuoSpace", "Courier New", Courier, monospace);
   resize: none;
   outline: none;
   box-sizing: border-box;

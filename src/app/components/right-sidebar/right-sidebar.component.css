@@ -165,7 +165,7 @@
   min-height: 8rem;
   padding: 0.625rem;
   font-size: 0.8125rem;
-  font-family: "PT Mono", "Courier New", Courier, monospace;
+  font-family: var(--editor-font-family, "iA Writer DuoSpace", "Courier New", Courier, monospace);
   resize: vertical;
   outline: none;
   transition: border-color 150ms;
