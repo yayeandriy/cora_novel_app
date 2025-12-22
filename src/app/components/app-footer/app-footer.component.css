@@ -69,6 +69,11 @@
   border-radius: 1.5rem;
 }
 
+.dock-controls:not(.is-collapsed) {
+  /* Add a bit more breathing room on the left edge when expanded */
+  padding-left: 0.75rem;
+}
+
 .dock-controls.is-collapsed {
   /* Collapsed state should be a true circle (same footprint horizontally & vertically). */
   width: calc(2rem + 0.75rem);
@@ -85,11 +90,11 @@
 .icon-button-small.delete:hover { background: #fef2f2; color: #dc2626; }
 .icon-button-small.delete.disabled { opacity: 0.3; cursor: not-allowed; }
 .icon-button-small.delete.disabled:hover { background: transparent; color: #9ca3af; }
-.stats-container { display: flex; align-items: center; justify-content: flex-end; gap: 1.25rem; color: #6b7280; }
+.stats-container { display: flex; align-items: center; justify-content: flex-end; gap: 1.25rem; color: #6b7280; font-size: 0.7rem; }
 .stat-item { display: flex; align-items: center; gap: 0.25rem; }
 .stat-label { font-weight: 600; color: #374151; }
 .stat-value { color: #111827; font-weight: 500; }
-.stat-project { color: #9ca3af; font-size: 0.7rem; }
+.stat-project { color: #9ca3af; font-size: inherit; }
 .width-control { gap: 0.35rem; }
 .width-slider { 
   width: 6rem; 
