@@ -1819,6 +1819,42 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Drag-to-reorder docs within the same folder in the doc tree
+  async onDocDropped(payload: {
+    docId: number;
+    sourceGroupId: number;
+    targetGroupId: number;
+    previousIndex: number;
+    currentIndex: number;
+  }) {
+    try {
+      // CDK drop is already applied to the in-memory array in DocTreeComponent.
+      // We just persist the movement to the backend.
+      if (!payload.sourceGroupId || !payload.targetGroupId) return;
+      if (payload.sourceGroupId !== payload.targetGroupId) return;
+
+      const fromIndex = payload.previousIndex;
+      const toIndex = payload.currentIndex;
+      if (fromIndex === toIndex) return;
+
+      const direction: 'up' | 'down' = toIndex < fromIndex ? 'up' : 'down';
+      const steps = Math.abs(toIndex - fromIndex);
+      for (let i = 0; i < steps; i++) {
+        await this.projectService.reorderDoc(payload.docId, direction);
+      }
+
+      await this.loadProject(true);
+    } catch (error) {
+      console.error('Failed to reorder doc by drag/drop:', error);
+      // Fall back to reloading the project state
+      try {
+        await this.loadProject(true);
+      } catch {
+        // ignore
+      }
+    }
+  }
+
   private async reorderSelected(direction: 'up' | 'down') {
     try {
       if (this.selectedDoc) {

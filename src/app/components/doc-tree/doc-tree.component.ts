@@ -1,6 +1,9 @@
 import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DragDropModule, CdkDragPreview } from '@angular/cdk/drag-drop';
+import type { CdkDragDrop } from '@angular/cdk/drag-drop';
+import { moveItemInArray } from '@angular/cdk/drag-drop';
 
 export interface DocGroup {
   id: number;
@@ -28,7 +31,7 @@ export interface Doc {
 @Component({
   selector: 'app-doc-tree',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DragDropModule, CdkDragPreview],
   templateUrl: './doc-tree.component.html',
   styleUrls: ['./doc-tree.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -56,6 +59,13 @@ export class DocTreeComponent {
   @Output() importFoldersRequested = new EventEmitter<void>();
   @Output() importFilesRequested = new EventEmitter<void>();
   @Output() exportProjectRequested = new EventEmitter<void>();
+  @Output() docDropped = new EventEmitter<{
+    docId: number;
+    sourceGroupId: number;
+    targetGroupId: number;
+    previousIndex: number;
+    currentIndex: number;
+  }>();
   @Output() treeKeyDown = new EventEmitter<KeyboardEvent>();
   @Output() widthChanged = new EventEmitter<number>();
   @Output() collapseToggle = new EventEmitter<void>();
@@ -73,6 +83,8 @@ export class DocTreeComponent {
   hoveredDocId: number | null = null;
   hoveredGroupId: number | null = null;
 
+  // NOTE: doc reordering uses Angular CDK drag-drop (like metadata chips)
+
   selectGroup(group: DocGroup, event?: MouseEvent) {
     this.groupSelected.emit({ group, event });
   }
@@ -84,6 +96,27 @@ export class DocTreeComponent {
   setWorkingDoc(doc: Doc, event: MouseEvent) {
     event.stopPropagation();
     this.workingDocChanged.emit(doc.id);
+  }
+
+  onDocsDrop(groupId: number, event: CdkDragDrop<Doc[]>): void {
+    // Only allow reordering inside the same group list.
+    if (event.previousContainer !== event.container) return;
+    if (!event.container.data) return;
+    if (event.previousIndex === event.currentIndex) return;
+
+    // Mutate the underlying array immediately so the UI doesn't "snap back".
+    moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+
+    const dragged = event.item.data as Doc | undefined;
+    if (!dragged) return;
+
+    this.docDropped.emit({
+      docId: dragged.id,
+      sourceGroupId: groupId,
+      targetGroupId: groupId,
+      previousIndex: event.previousIndex,
+      currentIndex: event.currentIndex,
+    });
   }
 
   toggleGroup(group: DocGroup, event?: MouseEvent) {

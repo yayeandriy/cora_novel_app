@@ -117,10 +117,15 @@
                 @if (subGroup.expanded) {
                   <div class="tree-children">
                   <!-- Documents -->
+                  <div cdkDropList [cdkDropListData]="subGroup.docs" (cdkDropListDropped)="onDocsDrop(subGroup.id, $event)">
                   @for (doc of subGroup.docs; let di = $index; track doc.id) {
-                    <div 
-                      class="tree-item doc nested-2" 
+                    <div
+                      class="tree-item doc nested-2"
                       [class.selected]="selectedDoc?.id === doc.id"
+                      cdkDrag
+                      cdkDragLockAxis="y"
+                      cdkDragBoundary=".sidebar-content"
+                      [cdkDragData]="doc"
                       (click)="selectDoc(doc)"
                       (mouseenter)="hoveredDocId = doc.id"
                       (mouseleave)="hoveredDocId = null">
@@ -152,18 +157,25 @@
                             </svg>
                           </button>
                       </div>
+                      <div class="drag-preview" *cdkDragPreview>{{ doc.name }}</div>
                     </div>
                   }
+                  </div>
                 </div>
               }
               </div>
             }
             
             <!-- Direct docs in group -->
+            <div cdkDropList [cdkDropListData]="group.docs" (cdkDropListDropped)="onDocsDrop(group.id, $event)">
             @for (doc of group.docs; let di = $index; track doc.id) {
-              <div 
-                class="tree-item doc nested" 
+              <div
+                class="tree-item doc nested"
                 [class.selected]="selectedDoc?.id === doc.id"
+                cdkDrag
+                cdkDragLockAxis="y"
+                cdkDragBoundary=".sidebar-content"
+                [cdkDragData]="doc"
                 (click)="selectDoc(doc)"
                 (mouseenter)="hoveredDocId = doc.id"
                 (mouseleave)="hoveredDocId = null">
@@ -195,8 +207,10 @@
                       </svg>
                     </button>
                 </div>
+                <div class="drag-preview" *cdkDragPreview>{{ doc.name }}</div>
               </div>
             }
+            </div>
           </div>
         }
         </div>
