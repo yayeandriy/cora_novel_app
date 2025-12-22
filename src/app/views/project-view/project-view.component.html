@@ -232,6 +232,8 @@
         </div>
       }
       
+      <!-- Project/folder headers - shown when viewing a folder OR when doc editor is scrolled to top -->
+      @if (!selectedDoc || !headersHiddenByScroll) {
       <!-- Project title moved to the middle section on top of the doc header -->
       <div class="project-title-bar" (click)="onProjectHeaderClick($event)">
         <div class="project-title-center">
@@ -373,6 +375,7 @@
         </app-folder-drafts>
       }
       }
+      } <!-- end @if (!selectedDoc) -->
       <!-- Document editor -->
       @if (selectedDoc && !selectedGroup) {
       <app-document-editor 
@@ -392,6 +395,7 @@
         (docTextChange)="onDocumentTextChange()"
         (docSaved)="saveDoc()"
         (docHeaderClick)="onDocHeaderClick()"
+        (editorScroll)="onEditorTextareaScroll($event)"
         (draftRenamed)="onDocumentDraftRenamed($event)"
         (draftAdd)="onDocumentDraftAdd()"
         (draftSelect)="onDocumentDraftSelect($event)"

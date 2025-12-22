@@ -79,6 +79,7 @@
         #editorTextarea
         [(ngModel)]="selectedDoc.text"
         (input)="onTextChange()"
+        (scroll)="editorScroll.emit($any($event.target).scrollTop)"
         class="editor-textarea"
         (blur)="onBlur()"
         placeholder="Start writing...">
@@ -94,6 +95,7 @@
             #editorTextarea
             [(ngModel)]="selectedDoc.text"
             (input)="onTextChange()"
+            (scroll)="editorScroll.emit($any($event.target).scrollTop)"
             class="editor-textarea"
             (blur)="onBlur()"
             placeholder="Start writing...">

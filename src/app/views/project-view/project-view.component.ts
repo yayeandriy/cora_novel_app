@@ -338,14 +338,25 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Handle doc header click - toggle floating headers when scrolled
+  // Handle scroll events from the doc editor textarea to show/hide inline project+folder headers
+  onEditorTextareaScroll(scrollTop: number) {
+    const wasHidden = this.headersHiddenByScroll;
+    // Headers are considered hidden if scrolled more than 50px
+    this.headersHiddenByScroll = scrollTop > 50;
+    // If headers become visible due to scrolling up, hide the hover overlay
+    if (!this.headersHiddenByScroll) {
+      this.headersHoverVisible = false;
+    }
+  }
+
+  // Handle doc header click - toggle floating headers (project + folder) while a doc is open.
   onDocHeaderClick() {
-    console.log('[DEBUG] onDocHeaderClick - headersHiddenByScroll:', this.headersHiddenByScroll, 'headersHoverVisible:', this.headersHoverVisible);
+    // Only meaningful when a document is selected (doc row exists)
+    if (!this.selectedDoc) return;
+
+    // Only toggle overlay if headers are hidden by scroll; otherwise they're already visible inline
     if (this.headersHiddenByScroll) {
       this.headersHoverVisible = !this.headersHoverVisible;
-      console.log('[DEBUG] onDocHeaderClick - toggled headersHoverVisible to:', this.headersHoverVisible);
-    } else {
-      console.log('[DEBUG] onDocHeaderClick - headers not hidden by scroll, not toggling');
     }
   }
 

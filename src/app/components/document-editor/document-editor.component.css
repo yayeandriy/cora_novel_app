@@ -15,9 +15,8 @@
   border-bottom: 1px solid #e5e7eb;
   height: 3.5rem;
   flex-shrink: 0;
-  /* Stick the doc header at the top of the editor scroll column */
-  position: sticky;
-  top: 0;
+  /* Toolbar stays at top of flex column; textarea scrolls below */
+  position: relative;
   z-index: 10;
   background: white;
 }

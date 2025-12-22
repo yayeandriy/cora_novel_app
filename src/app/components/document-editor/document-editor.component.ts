@@ -51,6 +51,7 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   @Output() docTextChange = new EventEmitter<void>();
   @Output() docSaved = new EventEmitter<void>();
   @Output() docHeaderClick = new EventEmitter<void>();
+  @Output() editorScroll = new EventEmitter<number>();
   
   @ViewChild('docTitleInput') docTitleInput?: ElementRef<HTMLInputElement>;
   @ViewChild('editorTextarea') editorTextarea?: ElementRef<HTMLTextAreaElement>;
