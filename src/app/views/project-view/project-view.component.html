@@ -632,4 +632,20 @@
       <img src="assets/icons/sidebar.right.svg" alt="Right sidebar" />
     </button>
   </div>
+
+  <!-- Command Palette -->
+  @if (commandPaletteOpen) {
+    <app-command-palette
+      [isOpen]="commandPaletteOpen"
+      [docs]="getAllDocs()"
+      [groups]="docGroups"
+      [currentDocId]="selectedDoc?.id ?? null"
+      [currentDocText]="selectedDoc?.text ?? ''"
+      (close)="closeCommandPalette()"
+      (navigateToDoc)="onCommandPaletteNavigateToDoc($event)"
+      (navigateToDocAtPosition)="onCommandPaletteNavigateToDocAtPosition($event)"
+      (replaceInCurrentDoc)="onCommandPaletteReplaceInCurrentDoc($event)"
+      (focusEditorAtPosition)="onCommandPaletteFocusEditorAtPosition($event)">
+    </app-command-palette>
+  }
 </div>

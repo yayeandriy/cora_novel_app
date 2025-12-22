@@ -169,6 +169,25 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
     this.editorTextarea?.nativeElement.focus();
   }
 
+  focusEditorAtPosition(position: number) {
+    const textarea = this.editorTextarea?.nativeElement;
+    if (textarea) {
+      textarea.focus();
+      textarea.setSelectionRange(position, position);
+      // Scroll the position into view
+      const text = textarea.value || '';
+      const linesBefore = text.substring(0, position).split('\n');
+      const lineHeight = parseInt(getComputedStyle(textarea).lineHeight) || 20;
+      const scrollTop = (linesBefore.length - 1) * lineHeight;
+      textarea.scrollTop = Math.max(0, scrollTop - textarea.clientHeight / 2);
+    }
+  }
+
+  focusTitle() {
+    this.docTitleInput?.nativeElement.focus();
+    this.docTitleInput?.nativeElement.select();
+  }
+
   // Draft helpers
   get selectedDraft() {
     if (this.externalMode && this.externalDraftId != null) {
@@ -380,14 +399,6 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
 
   onDraftBlur(draftId: number) {
     this.draftBlurred.emit(draftId);
-  }
-
-  focusTitle() {
-    const el = this.docTitleInput?.nativeElement;
-    if (el) {
-      el.focus();
-      el.select();
-    }
   }
 
   onTitleChange(doc: Doc) {

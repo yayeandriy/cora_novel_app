@@ -13,6 +13,7 @@ import { MetadataChipsComponent } from '../../components/metadata-chips/metadata
 import { ProjectTimelineComponent } from '../../components/project-timeline/project-timeline.component';
 import { AppFooterComponent } from '../../components/app-footer/app-footer.component';
 import { FolderDraftsComponent } from '../../components/folder-drafts/folder-drafts.component';
+import { CommandPaletteComponent, CommandMode } from '../../components/command-palette/command-palette.component';
 import { NgClickOutsideDirective, NgClickOutsideExcludeDirective } from 'ng-click-outside2';
 import type { Timeline, FolderDraft } from '../../shared/models';
 
@@ -69,7 +70,8 @@ interface Event {
     MetadataChipsComponent,
     ProjectTimelineComponent,
     AppFooterComponent,
-    FolderDraftsComponent
+    FolderDraftsComponent,
+    CommandPaletteComponent
   ],
   templateUrl: './project-view.component.html',
   styleUrls: ['./project-view.component.css'],
@@ -83,6 +85,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   @ViewChild(DocumentEditorComponent) documentEditorComponent?: DocumentEditorComponent;
   @ViewChild(GroupViewComponent) groupViewComponent?: GroupViewComponent;
   @ViewChild(ProjectTimelineComponent) projectTimelineComponent?: ProjectTimelineComponent;
+  @ViewChild(CommandPaletteComponent) commandPaletteComponent?: CommandPaletteComponent;
+  
+  // Command palette state
+  commandPaletteOpen = false;
   
   projectId: number = 0;
   projectName: string = '';
@@ -1535,6 +1541,41 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
 
       this.focusTree();
+      return;
+    }
+
+    // Cmd+K to open command palette
+    if ((event.key === 'K' || event.key === 'k' || event.code === 'KeyK') && event.metaKey && !event.shiftKey) {
+      event.preventDefault();
+      this.openCommandPalette();
+      return;
+    }
+
+    // Cmd+F to search in current document
+    if ((event.key === 'F' || event.key === 'f' || event.code === 'KeyF') && event.metaKey && !event.shiftKey) {
+      event.preventDefault();
+      this.openCommandPalette('search-doc');
+      return;
+    }
+
+    // Cmd+Shift+F to search in project
+    if ((event.key === 'F' || event.key === 'f' || event.code === 'KeyF') && event.metaKey && event.shiftKey) {
+      event.preventDefault();
+      this.openCommandPalette('search-project');
+      return;
+    }
+
+    // Cmd+H to search and replace
+    if ((event.key === 'H' || event.key === 'h' || event.code === 'KeyH') && event.metaKey) {
+      event.preventDefault();
+      this.openCommandPalette('search-replace');
+      return;
+    }
+
+    // Cmd+P to go to document
+    if ((event.key === 'P' || event.key === 'p' || event.code === 'KeyP') && event.metaKey && !event.shiftKey) {
+      event.preventDefault();
+      this.openCommandPalette('commands');
       return;
     }
 
@@ -3938,6 +3979,77 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   goBack() {
     try { localStorage.setItem('cora-last-route', 'dashboard'); } catch {}
     this.router.navigate(['/']);
+  }
+
+  // ===== Command Palette =====
+  openCommandPalette(mode: CommandMode = 'commands') {
+    this.commandPaletteOpen = true;
+    setTimeout(() => {
+      this.commandPaletteComponent?.open(mode);
+    }, 0);
+  }
+
+  closeCommandPalette() {
+    this.commandPaletteOpen = false;
+  }
+
+  onCommandPaletteNavigateToDoc(docId: number) {
+    this.commandPaletteOpen = false;
+    const doc = this.findDocById(docId);
+    if (doc) {
+      // Expand parent group if needed
+      if (doc.doc_group_id) {
+        this.ensureGroupExpanded(doc.doc_group_id);
+      }
+      this.selectDoc(doc);
+      setTimeout(() => this.focusEditor(), 50);
+    }
+  }
+
+  onCommandPaletteNavigateToDocAtPosition(payload: { docId: number; position: number }) {
+    this.commandPaletteOpen = false;
+    const doc = this.findDocById(payload.docId);
+    if (doc) {
+      // Expand parent group if needed
+      if (doc.doc_group_id) {
+        this.ensureGroupExpanded(doc.doc_group_id);
+      }
+      this.selectDoc(doc);
+      setTimeout(() => {
+        this.documentEditorComponent?.focusEditorAtPosition(payload.position);
+      }, 50);
+    }
+  }
+
+  async onCommandPaletteReplaceInCurrentDoc(payload: { position: number; length: number; replacement: string }) {
+    if (!this.selectedDoc || !this.selectedDoc.text) return;
+    
+    const text = this.selectedDoc.text;
+    const newText = text.substring(0, payload.position) + payload.replacement + text.substring(payload.position + payload.length);
+    
+    this.selectedDoc.text = newText;
+    
+    // Cache and mark for auto-save
+    this.docStateCache.set(this.selectedDoc.id, {
+      text: newText,
+      notes: this.selectedDoc.notes
+    });
+    this.hasUnsavedChanges = true;
+    
+    // Trigger auto-save
+    if (this.autoSaveTimeout) {
+      clearTimeout(this.autoSaveTimeout);
+    }
+    this.autoSaveTimeout = setTimeout(() => {
+      this.saveDoc();
+    }, 2000);
+  }
+
+  onCommandPaletteFocusEditorAtPosition(position: number) {
+    this.commandPaletteOpen = false;
+    setTimeout(() => {
+      this.documentEditorComponent?.focusEditorAtPosition(position);
+    }, 50);
   }
 
   toggleProjectMenu() {
