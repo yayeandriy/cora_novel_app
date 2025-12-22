@@ -1,57 +1,55 @@
-<div class="dock-row">
-  <!-- Dock 1: project stats -->
-  <div class="dock dock-stats" *ngIf="allDocs.length">
-    <div class="stats-container">
-      <span class="stat-item">
-        <span class="stat-label">A:</span>
-        <span class="stat-value">{{ formatNumber(projectCharCount) }}</span>
-        <span class="stat-project" *ngIf="selectedDoc">({{ docCharCount }})</span>
-      </span>
-      <span class="stat-item">
-        <span class="stat-label">W:</span>
-        <span class="stat-value">{{ formatNumber(projectWordCount) }}</span>
-        <span class="stat-project" *ngIf="selectedDoc">({{ docWordCount }})</span>
-      </span>
-      <span class="stat-item">
-        <svg class="page-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <span class="stat-value">{{ projectPageCount }}</span>
-        <span class="stat-project" *ngIf="selectedDoc">({{ docPageCount }})</span>
-      </span>
-    </div>
+<!-- Dock 1: project stats (center) -->
+<div class="dock dock-stats dock-center" *ngIf="allDocs.length">
+  <div class="stats-container">
+    <span class="stat-item">
+      <span class="stat-label">A:</span>
+      <span class="stat-value">{{ formatNumber(projectCharCount) }}</span>
+      <span class="stat-project" *ngIf="selectedDoc">({{ docCharCount }})</span>
+    </span>
+    <span class="stat-item">
+      <span class="stat-label">W:</span>
+      <span class="stat-value">{{ formatNumber(projectWordCount) }}</span>
+      <span class="stat-project" *ngIf="selectedDoc">({{ docWordCount }})</span>
+    </span>
+    <span class="stat-item">
+      <svg class="page-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <span class="stat-value">{{ projectPageCount }}</span>
+      <span class="stat-project" *ngIf="selectedDoc">({{ docPageCount }})</span>
+    </span>
   </div>
+</div>
 
-  <!-- Dock 2: controls -->
-  <div class="dock dock-controls">
-    <div class="footer-left"></div>
+<!-- Dock 2: controls (right, appended to sidebar controls pill) -->
+<div class="dock dock-controls dock-right">
+  <div class="footer-left"></div>
 
-    <!-- Typography Settings -->
-    <div class="footer-typography">
-      <!-- Font Family -->
-      <div class="typography-group" title="Font">
-        <button class="typo-tab" [class.active]="fontFamily === 'mono'" (click)="setFontFamily('mono')">Mono</button>
-        <button class="typo-tab" [class.active]="fontFamily === 'serif'" (click)="setFontFamily('serif')">Serif</button>
-        <button class="typo-tab" [class.active]="fontFamily === 'sans'" (click)="setFontFamily('sans')">Sans</button>
-      </div>
-      <!-- Font Size -->
-      <div class="typography-group" title="Size">
-        <button class="typo-tab" [class.active]="fontSize === 'S'" (click)="setFontSize('S')">S</button>
-        <button class="typo-tab" [class.active]="fontSize === 'M'" (click)="setFontSize('M')">M</button>
-        <button class="typo-tab" [class.active]="fontSize === 'L'" (click)="setFontSize('L')">L</button>
-      </div>
-      <!-- Line Height / Leading -->
-      <div class="typography-group" title="Leading">
-        <button class="typo-tab leading-icon" [class.active]="lineHeight === 'S'" (click)="setLineHeight('S')">
-          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1H2zM2 7h12v1H2zM2 11h12v1H2z"/></svg>
-        </button>
-        <button class="typo-tab leading-icon" [class.active]="lineHeight === 'M'" (click)="setLineHeight('M')">
-          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v1H2zM2 7h12v1H2zM2 12h12v1H2z"/></svg>
-        </button>
-        <button class="typo-tab leading-icon" [class.active]="lineHeight === 'L'" (click)="setLineHeight('L')">
-          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 1h12v1H2zM2 7h12v1H2zM2 13h12v1H2z"/></svg>
-        </button>
-      </div>
+  <!-- Typography Settings -->
+  <div class="footer-typography">
+    <!-- Font Family -->
+    <div class="typography-group" title="Font">
+      <button class="typo-tab" [class.active]="fontFamily === 'mono'" (click)="setFontFamily('mono')">Mono</button>
+      <button class="typo-tab" [class.active]="fontFamily === 'serif'" (click)="setFontFamily('serif')">Serif</button>
+      <button class="typo-tab" [class.active]="fontFamily === 'sans'" (click)="setFontFamily('sans')">Sans</button>
+    </div>
+    <!-- Font Size -->
+    <div class="typography-group" title="Size">
+      <button class="typo-tab" [class.active]="fontSize === 'S'" (click)="setFontSize('S')">S</button>
+      <button class="typo-tab" [class.active]="fontSize === 'M'" (click)="setFontSize('M')">M</button>
+      <button class="typo-tab" [class.active]="fontSize === 'L'" (click)="setFontSize('L')">L</button>
+    </div>
+    <!-- Line Height / Leading -->
+    <div class="typography-group" title="Leading">
+      <button class="typo-tab leading-icon" [class.active]="lineHeight === 'S'" (click)="setLineHeight('S')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1H2zM2 7h12v1H2zM2 11h12v1H2z"/></svg>
+      </button>
+      <button class="typo-tab leading-icon" [class.active]="lineHeight === 'M'" (click)="setLineHeight('M')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v1H2zM2 7h12v1H2zM2 12h12v1H2z"/></svg>
+      </button>
+      <button class="typo-tab leading-icon" [class.active]="lineHeight === 'L'" (click)="setLineHeight('L')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 1h12v1H2zM2 7h12v1H2zM2 13h12v1H2z"/></svg>
+      </button>
     </div>
   </div>
 </div>
