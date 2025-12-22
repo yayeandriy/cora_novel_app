@@ -412,6 +412,21 @@
   width: 100%;
 }
 
+/* The "add folder" row is a standalone control, not a selectable tree row. */
+.add-folder-item > .tree-item-header {
+  cursor: default;
+}
+
+/* Remove the row-wide gray hover for the add-folder row. */
+.add-folder-item > .tree-item-header:hover {
+  background: transparent;
+}
+
+/* Align the + button to the left for the add-folder row only. */
+.add-folder-item .add-doc-button {
+  margin-left: 0;
+}
+
 /* Resize Handle */
 .resize-handle {
   position: absolute;
