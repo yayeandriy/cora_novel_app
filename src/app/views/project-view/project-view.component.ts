@@ -236,9 +236,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Track which doc card is highlighted (selected but no navigation)
   projectHeaderHighlightedDocId: number | null = null;
   // Cache for doc metadata (characters, events, places) in project header view
-  private projectHeaderDocCharactersCache: Map<number, number[]> = new Map();
-  private projectHeaderDocEventsCache: Map<number, number[]> = new Map();
-  private projectHeaderDocPlacesCache: Map<number, number[]> = new Map();
+  projectHeaderDocCharactersCache: Map<number, number[]> = new Map();
+  projectHeaderDocEventsCache: Map<number, number[]> = new Map();
+  projectHeaderDocPlacesCache: Map<number, number[]> = new Map();
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent) {
@@ -1335,6 +1335,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // Load doc group characters and events
     this.loadDocGroupCharacters(group.id);
     this.loadDocGroupEvents(group.id);
+    this.loadDocGroupPlaces(group.id);
+
+    // Load metadata for all docs in this group (for group-view doc cards)
+    this.loadProjectHeaderFolderDocsMetadata(group);
 
     // Load folder drafts if the drafts panel is expanded; else refresh count
     if (this.folderDraftsExpanded) {

@@ -405,6 +405,13 @@
       <app-group-view 
         [selectedGroup]="selectedGroup"
         [folderDrafts]="folderDrafts"
+        [selectedFolderDraftId]="selectedFolderDraftId"
+        [characters]="characters"
+        [events]="events"
+        [places]="places"
+        [docCharactersCache]="projectHeaderDocCharactersCache"
+        [docEventsCache]="projectHeaderDocEventsCache"
+        [docPlacesCache]="projectHeaderDocPlacesCache"
         (groupNameChange)="renameGroup($event)"
         (createDocRequested)="createDoc()"
         (focusTreeRequested)="focusTree()"
@@ -414,7 +421,26 @@
         (folderDraftNameChange)="onFolderDraftNameChange($event.draftId, $event.name)"
         (folderDraftDelete)="deleteFolderDraft($event)"
         (folderDraftMove)="onFolderDraftMove($event)"
-        (folderDraftSelect)="onFolderDraftSelect($event)">
+        (folderDraftSelect)="onFolderDraftSelect($event)"
+        (docCardClick)="selectDoc($event)"
+        (characterAdd)="addCharacterToDocCard($event.docId, $event.characterId)"
+        (characterRemove)="removeCharacterFromDocCard($event.docId, $event.characterId)"
+        (characterCreate)="createAndAddCharacterToDoc($event.docId, $event.name)"
+        (characterDelete)="onSidebarCharacterDelete($event)"
+        (characterEdit)="onInlineCharacterEdit($event)"
+        (characterReorder)="reorderDocCardCharacters($event.docId, $event.orderIds)"
+        (eventAdd)="addEventToDocCard($event.docId, $event.eventId)"
+        (eventRemove)="removeEventFromDocCard($event.docId, $event.eventId)"
+        (eventCreate)="createAndAddEventToDoc($event.docId, $event.name)"
+        (eventDelete)="onSidebarEventDelete($event)"
+        (eventEdit)="onInlineEventEdit($event)"
+        (eventReorder)="reorderDocCardEvents($event.docId, $event.orderIds)"
+        (placeAdd)="addPlaceToDocCard($event.docId, $event.placeId)"
+        (placeRemove)="removePlaceFromDocCard($event.docId, $event.placeId)"
+        (placeCreate)="createAndAddPlaceToDoc($event.docId, $event.name)"
+        (placeDelete)="onSidebarPlaceDelete($event)"
+        (placeEdit)="onInlinePlaceEdit($event)"
+        (placeReorder)="reorderDocCardPlaces($event.docId, $event.orderIds)">
       </app-group-view>
       }
       
