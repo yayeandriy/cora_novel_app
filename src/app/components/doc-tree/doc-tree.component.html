@@ -3,6 +3,28 @@
   </div>
 
   <div class="sidebar-content">
+    <!-- Project name header with inline edit -->
+    <div class="project-name-header">
+      @if (!editingProjectName) {
+        <h2 class="project-name" (click)="startEditProjectName($event)" title="Click to edit project name">
+          {{ projectName }}
+        </h2>
+      } @else {
+        <textarea
+          class="project-name-input"
+          [ngModel]="projectNameEdit"
+          (ngModelChange)="projectNameEditChange.emit($event)"
+          (blur)="projectNameSave.emit()"
+          (keydown)="onProjectNameKeydown($event)"
+          (input)="autoResizeTextarea($event)"
+          #projectNameInput
+          autocomplete="off"
+          spellcheck="false"
+          rows="1"
+        ></textarea>
+      }
+    </div>
+
     <div class="doc-tree" #docTree tabindex="0" (keydown)="handleTreeKeyDown($event)">
       <!-- Empty state -->
       @if (docGroups.length === 0) {

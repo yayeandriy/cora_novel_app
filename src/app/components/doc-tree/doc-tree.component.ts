@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule, CdkDragPreview } from '@angular/cdk/drag-drop';
@@ -77,11 +77,14 @@ export class DocTreeComponent {
   @Output() backClicked = new EventEmitter<void>();
   
   @ViewChild('docTree') docTree?: ElementRef<HTMLDivElement>;
+  @ViewChild('projectNameInput') projectNameInput?: ElementRef<HTMLTextAreaElement>;
   
   leftWidth = 250;
   isResizing = false;
   hoveredDocId: number | null = null;
   hoveredGroupId: number | null = null;
+
+  constructor(private cdr: ChangeDetectorRef) {}
 
   // NOTE: doc reordering uses Angular CDK drag-drop (like metadata chips)
 
@@ -192,5 +195,42 @@ export class DocTreeComponent {
 
   onToggleCollapse() {
     this.collapseToggle.emit();
+  }
+
+  startEditProjectName(event: MouseEvent) {
+    event.stopPropagation();
+    this.projectNameEditStart.emit(event);
+    // Manually trigger change detection after parent has processed the event
+    setTimeout(() => {
+      this.cdr.detectChanges();
+      // Focus the input after Angular renders it
+      setTimeout(() => {
+        if (this.projectNameInput) {
+          const textarea = this.projectNameInput.nativeElement;
+          textarea.focus();
+          textarea.select();
+          // Auto-resize to fit content
+          this.resizeTextarea(textarea);
+        }
+      }, 10);
+    }, 10);
+  }
+
+  autoResizeTextarea(event: Event) {
+    const textarea = event.target as HTMLTextAreaElement;
+    this.resizeTextarea(textarea);
+  }
+
+  private resizeTextarea(textarea: HTMLTextAreaElement) {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  }
+
+  onProjectNameKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.projectNameSave.emit();
+    }
+    this.projectNameKeydown.emit(event);
   }
 }

@@ -95,6 +95,56 @@
   width: 100%;
 }
 
+/* Project name header in left sidebar (below back button, above tree) */
+.project-name-header {
+  width: 100%;
+  margin-bottom: 1.5rem;
+  padding: 0 0.5rem;
+}
+
+.project-name-header .project-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  transition: all 150ms;
+  margin: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+}
+
+.project-name-header .project-name:hover {
+  background: #f9fafb;
+  color: #2563eb;
+}
+
+.project-name-header .project-name-input {
+  width: 100%;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  outline: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  transition: all 150ms;
+  resize: none;
+  overflow: hidden;
+  min-height: 2.5rem;
+  line-height: 1.4;
+  font-family: inherit;
+}
+
+.project-name-header .project-name-input:focus {
+  background: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
 
 .doc-tree {
   font-size: 0.875rem;

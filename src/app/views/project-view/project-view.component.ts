@@ -258,14 +258,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     if (event) event.stopPropagation();
     this.editingProjectName = true;
     this.projectNameEdit = this.projectName;
-    // Focus handled by template using #projectNameInput
-    setTimeout(() => {
-      const el = document.querySelector<HTMLInputElement>('input.project-name-input');
-      if (el) {
-        el.focus();
-        el.select();
-      }
-    }, 0);
+    this.changeDetector.detectChanges();
   }
 
 
