@@ -2494,7 +2494,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const draftName = `Draft ${new Date().toLocaleTimeString()}`;
+    const draftNumber = this.drafts.length + 1;
+    const draftName = `#${draftNumber}`;
     const draftContent = ''; // Start with empty content, not the doc's current text
     
     try {
@@ -4352,6 +4353,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   async deleteDraft(draftId: number): Promise<void> {
     try {
+      console.log('[DEBUG] deleteDraft - draftId:', draftId, 'selectedDraftId before:', this.selectedDraftId, 'drafts count:', this.drafts.length);
       await this.projectService.deleteDraft(draftId);
       
       // Remove from local cache
@@ -4365,8 +4367,25 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.draftAutoSaveTimeouts.delete(draftId);
       }
       
+      // If we're deleting the selected draft, select another one before removing it
+      if (this.selectedDraftId === draftId && this.drafts.length > 1) {
+        const currentIndex = this.drafts.findIndex(d => d.id === draftId);
+        // Select the next draft, or previous if this was the last one
+        const newIndex = currentIndex < this.drafts.length - 1 ? currentIndex + 1 : currentIndex - 1;
+        console.log('[DEBUG] deleteDraft - currentIndex:', currentIndex, 'newIndex:', newIndex);
+        if (newIndex >= 0 && newIndex < this.drafts.length) {
+          this.selectedDraftId = this.drafts[newIndex].id;
+          console.log('[DEBUG] deleteDraft - new selectedDraftId:', this.selectedDraftId);
+          if (this.selectedDoc) {
+            try { localStorage.setItem(this.getDraftSelectionKey(this.selectedDoc.id), String(this.selectedDraftId)); } catch {}
+          }
+        }
+      }
+      
       // Remove from drafts array
       this.drafts = this.drafts.filter(d => d.id !== draftId);
+      console.log('[DEBUG] deleteDraft - after filter, drafts count:', this.drafts.length, 'selectedDraftId:', this.selectedDraftId);
+      
       // Update tree marker for the current doc
       if (this.selectedDoc) {
         if (this.drafts.length > 0) {
@@ -4375,13 +4394,15 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
           this.docsWithDrafts.delete(this.selectedDoc.id);
         }
       }
-      // Clear selection if we deleted the selected draft
-      if (this.selectedDraftId === draftId) {
+      // Clear selection only if no drafts remain
+      if (this.drafts.length === 0) {
+        console.log('[DEBUG] deleteDraft - no drafts remain, clearing selection');
         this.selectedDraftId = null;
         if (this.selectedDoc) {
           try { localStorage.removeItem(this.getDraftSelectionKey(this.selectedDoc.id)); } catch {}
         }
       }
+      console.log('[DEBUG] deleteDraft - final selectedDraftId:', this.selectedDraftId, 'drafts:', this.drafts.map(d => d.id));
     } catch (error) {
       console.error('Failed to delete draft:', error);
     }

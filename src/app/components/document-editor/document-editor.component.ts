@@ -374,6 +374,10 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   }
 
   toggleDraftControls() {
+    // If we're about to open drafts and no draft is selected, auto-select the first one
+    if (this.isSplitCollapsed && this.drafts.length > 0 && this.selectedDraftId == null) {
+      this.draftSelect.emit(this.drafts[0].id);
+    }
     // Directly toggle the split; toolbar visibility follows split state
     this.isSplitCollapsed = !this.isSplitCollapsed;
     try { localStorage.setItem(this.getCollapseKey(), String(this.isSplitCollapsed)); } catch {}

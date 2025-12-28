@@ -124,6 +124,7 @@
   font-size: 0.75rem;
   color: #374151;
   cursor: pointer;
+  white-space: nowrap;
 }
 .draft-tab:hover { background: #f9fafb; border-color: #e5e7eb; }
 .draft-tab.active { background: #eef2ff; border-color: #6366f1; color: #111827; }
@@ -176,8 +177,7 @@
   background: white;
   border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: hidden;
 }
 
 .drafts-header-row .draft-tabs {
@@ -188,6 +188,28 @@
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+  /* Hide scrollbar but keep functionality */
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.drafts-header-row .draft-tabs::-webkit-scrollbar {
+  height: 1px;
+}
+
+.drafts-header-row .draft-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.drafts-header-row .draft-tabs::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+
+.drafts-header-row .draft-tabs::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
 .drafts-header-row .toolbar-button {
