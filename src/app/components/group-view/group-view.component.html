@@ -13,39 +13,34 @@
         placeholder="Folder name" />
     </div>
     <div class="doc-tools">
-      <!-- Doc Cards toggle -->
-      <button 
-        class="toolbar-button toggle-labeled" 
-        (click)="toggleDocCards()" 
-        [class.active]="activeTab === 'docs'"
-        aria-label="Doc Cards" 
-        title="Document Cards">
-        @if (selectedGroup.docs && selectedGroup.docs.length > 0) {
-          <span class="count-circle">{{ selectedGroup.docs.length }}</span>
-        } @else {
-          <svg class="icon-docs" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6H6zm0 2h7v5h5v11H6V4zm9 .5L18.5 8H15V4.5z"/>
+      <!-- Storyline + Notes button group -->
+      <div class="button-group">
+        <!-- Storyline toggle -->
+        <button 
+          class="toolbar-button toggle-labeled" 
+          (click)="toggleDocCards()" 
+          [class.active]="activeTab === 'docs'"
+          aria-label="Storyline" 
+          title="Document Cards">
+          <svg class="icon-cards" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/>
           </svg>
-        }
-        <span class="tool-label">Docs</span>
-      </button>
+          <span class="tool-label">Storyline</span>
+        </button>
 
-      <!-- Notes toggle -->
-      <button 
-        class="toolbar-button toggle-labeled" 
-        (click)="toggleNotes()" 
-        [class.active]="activeTab === 'notes'"
-        aria-label="Notes" 
-        title="Folder Notes">
-        @if (folderDrafts.length > 0) {
-          <span class="count-circle">{{ folderDrafts.length }}</span>
-        } @else {
+        <!-- Notes toggle -->
+        <button 
+          class="toolbar-button toggle-labeled" 
+          (click)="toggleNotes()" 
+          [class.active]="activeTab === 'notes'"
+          aria-label="Notes" 
+          title="Folder Notes">
           <svg class="icon-notes" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M4 4h16v16H4V4zm2 2v12h12V6H6zm2 2h8v2H8V8zm0 4h8v2H8v-2z"/>
+            <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
           </svg>
-        }
-        <span class="tool-label">Notes</span>
-      </button>
+          <span class="tool-label">Notes</span>
+        </button>
+      </div>
     </div>
   </div>
   
