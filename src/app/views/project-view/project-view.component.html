@@ -240,116 +240,108 @@
         (clickOutside)="onInlineHeadersClickedOutside($event)"
         [clickOutsideEnabled]="!!selectedDoc"
         [clickOutsideEvents]="'click,touchstart'"
-        [clickOutsideExclude]="'.floating-headers-overlay,.editor-toolbar'">
-      <!-- Project title moved to the middle section on top of the doc header -->
-      <div class="project-title-bar" (click)="onProjectHeaderClick($event)">
-        <div class="project-title-center">
-          @if (!editingProjectName) {
-            <div class="project-name">
-              <span class="cursor-text" title="Click to rename" (click)="startEditProjectName($event)">{{ projectName }}</span>
-            </div>
-          } @else {
-            <input
-              #projectNameInput
-              class="project-name-input"
-              [(ngModel)]="projectNameEdit"
-              (blur)="saveProjectName()"
-              (keydown)="onProjectNameKeydown($event)"
-              placeholder="Project name" />
-          }
-        </div>
-      </div>
-
-      <!-- Project content (folders list) - visible when project header is expanded -->
-      @if (projectHeaderExpanded) {
-        <div class="project-content">
-          <!-- Only show folders list when there are multiple parts -->
-          @if (docGroups.length > 1) {
-            <div class="folders-scroll-container">
-              @for (group of docGroups; track group.id; let i = $index) {
-                <button 
-                  class="folder-chip" 
-                  [class.selected]="projectHeaderSelectedGroupId === group.id"
-                  (click)="onProjectFolderChipClick(group, $event)">
-                  <span class="folder-chip-index">{{ i + 1 }}.</span>
-                  <span class="folder-chip-name">{{ group.name }}</span>
-                </button>
-              }
-            </div>
-          }
-          @if (docGroups.length === 0) {
-            <div class="folders-scroll-container">
-              <span class="no-folders-hint">No folders yet</span>
-            </div>
-          }
-          <!-- Docs cards for selected folder -->
-          @if (projectHeaderSelectedGroupId) {
-            <div class="folder-docs-row">
-              <div class="docs-cards-container" (wheel)="onDocsContainerWheel($event)">
-                @for (doc of getProjectHeaderSelectedGroupDocs(); track doc.id; let j = $index) {
-                  <div class="doc-card" [class.selected]="projectHeaderHighlightedDocId === doc.id" (click)="onProjectDocCardClick(doc, $event)">
-                    <div class="doc-card-header">
-                      <span class="doc-card-index">{{ j + 1 }}.</span>
-                      <span class="doc-card-name">{{ doc.name }}</span>
-                    </div>
-                    <div class="doc-card-metadata">
-                      <!-- Characters row -->
-                      <app-metadata-chips
-                        [items]="getProjectHeaderDocCharacters(doc.id)"
-                        [availableItems]="getAvailableCharactersForDoc(doc.id)"
-                        [allItems]="characters"
-                        type="character"
-                        placeholder="New character..."
-                        (remove)="removeCharacterFromDocCard(doc.id, $event)"
-                        (add)="addCharacterToDocCard(doc.id, $event)"
-                        (create)="createAndAddCharacterToDoc(doc.id, $event)"
-                        (deleteItem)="onSidebarCharacterDelete($event)"
-                        (editItem)="onInlineCharacterEdit($event)"
-                        (reorder)="reorderDocCardCharacters(doc.id, $event)">
-                      </app-metadata-chips>
-
-                      <!-- Events row -->
-                      <app-metadata-chips
-                        [items]="getProjectHeaderDocEvents(doc.id)"
-                        [availableItems]="getAvailableEventsForDoc(doc.id)"
-                        [allItems]="events"
-                        type="event"
-                        placeholder="New event..."
-                        (remove)="removeEventFromDocCard(doc.id, $event)"
-                        (add)="addEventToDocCard(doc.id, $event)"
-                        (create)="createAndAddEventToDoc(doc.id, $event)"
-                        (deleteItem)="onSidebarEventDelete($event)"
-                        (editItem)="onInlineEventEdit($event)"
-                        (reorder)="reorderDocCardEvents(doc.id, $event)">
-                      </app-metadata-chips>
-
-                      <!-- Places row -->
-                      <app-metadata-chips
-                        [items]="getProjectHeaderDocPlaces(doc.id)"
-                        [availableItems]="getAvailablePlacesForDoc(doc.id)"
-                        [allItems]="places"
-                        type="place"
-                        placeholder="New place..."
-                        (remove)="removePlaceFromDocCard(doc.id, $event)"
-                        (add)="addPlaceToDocCard(doc.id, $event)"
-                        (create)="createAndAddPlaceToDoc(doc.id, $event)"
-                        (deleteItem)="onSidebarPlaceDelete($event)"
-                        (editItem)="onInlinePlaceEdit($event)"
-                        (reorder)="reorderDocCardPlaces(doc.id, $event)">
-                      </app-metadata-chips>
-                    </div>
-                  </div>
-                }
-                @if (getProjectHeaderSelectedGroupDocs().length === 0) {
-                  <span class="no-docs-hint">No documents in this folder</span>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      }
+        [clickOutsideExclude]="'.floating-headers-overlay,.editor-toolbar,.floating-folder-drafts-dock,.floating-doc-cards-dock'">
+      <!-- Project title bar REMOVED - now accessed via toolbar button -->
 
       </div> <!-- end .inline-headers-wrapper -->
+
+      <!-- Doc cards (project overview) - float above content when toggled via toolbar button -->
+      @if (projectHeaderExpanded) {
+        <div class="floating-doc-cards-dock" (click)="$event.stopPropagation()">
+          <!-- Close button -->
+          <div class="close-hint-btn" (click)="projectHeaderExpanded = false" title="Press ESC to close">
+            <span class="key-hint">ESC</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="close-icon">
+              <path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="project-content">
+            <!-- Only show folders list when there are multiple parts -->
+            @if (docGroups.length > 1) {
+              <div class="folders-scroll-container">
+                @for (group of docGroups; track group.id; let i = $index) {
+                  <button 
+                    class="folder-chip" 
+                    [class.selected]="projectHeaderSelectedGroupId === group.id"
+                    (click)="onProjectFolderChipClick(group, $event)">
+                    <span class="folder-chip-index">{{ i + 1 }}.</span>
+                    <span class="folder-chip-name">{{ group.name }}</span>
+                  </button>
+                }
+              </div>
+            }
+            @if (docGroups.length === 0) {
+              <div class="folders-scroll-container">
+                <span class="no-folders-hint">No folders yet</span>
+              </div>
+            }
+            <!-- Docs cards for selected folder -->
+            @if (projectHeaderSelectedGroupId) {
+              <div class="folder-docs-row">
+                <div class="docs-cards-container" (wheel)="onDocsContainerWheel($event)">
+                  @for (doc of getProjectHeaderSelectedGroupDocs(); track doc.id; let j = $index) {
+                    <div class="doc-card" [class.selected]="projectHeaderHighlightedDocId === doc.id" (click)="onProjectDocCardClick(doc, $event)">
+                      <div class="doc-card-header">
+                        <span class="doc-card-index">{{ j + 1 }}.</span>
+                        <span class="doc-card-name">{{ doc.name }}</span>
+                      </div>
+                      <div class="doc-card-metadata">
+                        <!-- Characters row -->
+                        <app-metadata-chips
+                          [items]="getProjectHeaderDocCharacters(doc.id)"
+                          [availableItems]="getAvailableCharactersForDoc(doc.id)"
+                          [allItems]="characters"
+                          type="character"
+                          placeholder="New character..."
+                          (remove)="removeCharacterFromDocCard(doc.id, $event)"
+                          (add)="addCharacterToDocCard(doc.id, $event)"
+                          (create)="createAndAddCharacterToDoc(doc.id, $event)"
+                          (deleteItem)="onSidebarCharacterDelete($event)"
+                          (editItem)="onInlineCharacterEdit($event)"
+                          (reorder)="reorderDocCardCharacters(doc.id, $event)">
+                        </app-metadata-chips>
+
+                        <!-- Events row -->
+                        <app-metadata-chips
+                          [items]="getProjectHeaderDocEvents(doc.id)"
+                          [availableItems]="getAvailableEventsForDoc(doc.id)"
+                          [allItems]="events"
+                          type="event"
+                          placeholder="New event..."
+                          (remove)="removeEventFromDocCard(doc.id, $event)"
+                          (add)="addEventToDocCard(doc.id, $event)"
+                          (create)="createAndAddEventToDoc(doc.id, $event)"
+                          (deleteItem)="onSidebarEventDelete($event)"
+                          (editItem)="onInlineEventEdit($event)"
+                          (reorder)="reorderDocCardEvents(doc.id, $event)">
+                        </app-metadata-chips>
+
+                        <!-- Places row -->
+                        <app-metadata-chips
+                          [items]="getProjectHeaderDocPlaces(doc.id)"
+                          [availableItems]="getAvailablePlacesForDoc(doc.id)"
+                          [allItems]="places"
+                          type="place"
+                          placeholder="New place..."
+                          (remove)="removePlaceFromDocCard(doc.id, $event)"
+                          (add)="addPlaceToDocCard(doc.id, $event)"
+                          (create)="createAndAddPlaceToDoc(doc.id, $event)"
+                          (deleteItem)="onSidebarPlaceDelete($event)"
+                          (editItem)="onInlinePlaceEdit($event)"
+                          (reorder)="reorderDocCardPlaces(doc.id, $event)">
+                        </app-metadata-chips>
+                      </div>
+                    </div>
+                  }
+                  @if (getProjectHeaderSelectedGroupDocs().length === 0) {
+                    <span class="no-docs-hint">No documents in this folder</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
 
       <!-- Folder drafts - float above content when toggled via toolbar button -->
       @if (folderHeaderExpanded && (selectedGroup || currentGroup)) {
@@ -391,6 +383,7 @@
         [docIndexLabel]="getDocIndexLabel()"
         [folderDraftsCount]="folderDraftsCount"
         [folderNotesExpanded]="folderHeaderExpanded"
+        [docCardsExpanded]="projectHeaderExpanded"
         (docNameChange)="renameDoc($event)"
         (docTextChange)="onDocumentTextChange()"
         (docSaved)="saveDoc()"
@@ -402,7 +395,8 @@
         (draftChanged)="onDocumentDraftChanged($event)"
         (draftBlurred)="onDocumentDraftBlurred($event)"
         (draftDeleted)="deleteDraft($event)"
-        (folderNotesToggle)="onFolderHeaderClick()">
+        (folderNotesToggle)="onFolderHeaderClick()"
+        (docCardsToggle)="toggleDocCardsView()">
       </app-document-editor>
       }
 

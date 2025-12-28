@@ -264,6 +264,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Toggle project header expansion (show/hide project notes editor)
   async onProjectHeaderClick(event: MouseEvent) {
     if (this.isInteractiveHeaderClick(event)) return;
+    await this.toggleDocCardsView();
+  }
+
+  // Toggle doc cards view - called from toolbar button or header click
+  async toggleDocCardsView() {
     this.projectHeaderExpanded = !this.projectHeaderExpanded;
     // Clear folder and doc selection when collapsing project header
     if (!this.projectHeaderExpanded) {
@@ -1529,6 +1534,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // If headers overlay is visible, hide it
       if (this.headersHoverVisible) {
         this.headersHoverVisible = false;
+        return;
+      }
+
+      // If doc cards dock is visible, close it
+      if (this.projectHeaderExpanded) {
+        this.projectHeaderExpanded = false;
         return;
       }
 
