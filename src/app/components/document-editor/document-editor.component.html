@@ -15,73 +15,83 @@
       @if (showSaveStatus) { <span class="tab-dot" title="Saved">✓</span> }
     </div>
     <div class="toolbar-actions">
-      <div class="draft-controls">
-        @if (!isSplitCollapsed) {
-          <div class="draft-tabs">
-            @for (d of drafts; track d.id) {
-              <div class="draft-tab-wrapper">
-                @if (editingDraftId === d.id) {
-                  <div class="draft-edit-row">
-                    <input
-                      #draftNameInput
-                      class="draft-name-input"
-                      [(ngModel)]="draftNameEdit"
-                      (blur)="saveDraftName()"
-                      (keydown.enter)="saveDraftName()"
-                      (keydown.escape)="cancelDraftNameEdit()"
-                      placeholder="Draft name" />
-                    <button
-                      class="draft-delete-btn"
-                      (mousedown)="$event.preventDefault()"
-                      (click)="onClickDeleteDraft(d.id)"
-                      title="Delete draft">
-                      🗑
-                    </button>
-                  </div>
-                } @else {
-                  <button 
-                    class="draft-tab" 
-                    [class.active]="d.id === selectedDraftId"
-                    (click)="selectOrToggle(d.id, $event)"
-                    (dblclick)="startEditDraftName(d.id, d.name)"
-                    title="Open draft (double-click to rename)">
-                    {{ d.name }}
-                    @if (draftSyncStatus[d.id] === 'syncing') { <span class="tab-dot">⟳</span> }
-                    @if (draftSyncStatus[d.id] === 'synced') { <span class="tab-dot">✓</span> }
-                  </button>
-                }
-              </div>
-            }
-          </div>
-          <button class="toolbar-button" (click)="addDraft()" aria-label="Add draft" title="Add draft">
-            <svg class="icon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/>
-            </svg>
-          </button>
-        }
-        <button class="toolbar-button toggle-uniform" (click)="toggleDraftControls()" [class.active]="!isSplitCollapsed" aria-label="Document drafts" title="Document drafts">
-          @if (drafts.length > 0) {
-            <span class="drafts-count">{{ drafts.length }}</span>
-          } @else {
-            <svg class="icon-drafts" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M7 7h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm0-2a2 2 0 0 0-2 2v1h12a2 2 0 0 1 2 2V7a2 2 0 0 0-2-2H7z"/>
-            </svg>
-          }
+      <div class="doc-tools">
+        <!-- Storyline button -->
+        <button class="toolbar-button toggle-labeled" (click)="docCardsToggle.emit()" [class.active]="docCardsExpanded" aria-label="Storyline" title="Storyline - Project overview">
+          <svg class="icon-cards" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/>
+          </svg>
+          <span class="tool-label">Storyline</span>
         </button>
-        <button class="toolbar-button toggle-uniform" (click)="folderNotesToggle.emit()" [class.active]="folderNotesExpanded" aria-label="Folder notes" title="Folder notes">
+        
+        <!-- Notes button -->
+        <button class="toolbar-button toggle-labeled" (click)="folderNotesToggle.emit()" [class.active]="folderNotesExpanded" aria-label="Notes" title="Notes - Folder notes">
           @if (folderDraftsCount > 0) {
-            <span class="drafts-count">{{ folderDraftsCount }}</span>
+            <span class="count-circle">{{ folderDraftsCount }}</span>
           } @else {
             <svg class="icon-folder" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
               <path d="M3 6a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"/>
             </svg>
           }
+          <span class="tool-label">Notes</span>
         </button>
-        <button class="toolbar-button toggle-uniform" (click)="docCardsToggle.emit()" [class.active]="docCardsExpanded" aria-label="Project overview" title="Project overview">
-          <svg class="icon-cards" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/>
-          </svg>
-        </button>
+        
+        <!-- Drafts button with expandable tabs -->
+        <div class="draft-controls">
+          @if (!isSplitCollapsed) {
+            <div class="draft-tabs">
+              @for (d of drafts; track d.id) {
+                <div class="draft-tab-wrapper">
+                  @if (editingDraftId === d.id) {
+                    <div class="draft-edit-row">
+                      <input
+                        #draftNameInput
+                        class="draft-name-input"
+                        [(ngModel)]="draftNameEdit"
+                        (blur)="saveDraftName()"
+                        (keydown.enter)="saveDraftName()"
+                        (keydown.escape)="cancelDraftNameEdit()"
+                        placeholder="Draft name" />
+                      <button
+                        class="draft-delete-btn"
+                        (mousedown)="$event.preventDefault()"
+                        (click)="onClickDeleteDraft(d.id)"
+                        title="Delete draft">
+                        🗑
+                      </button>
+                    </div>
+                  } @else {
+                    <button 
+                      class="draft-tab" 
+                      [class.active]="d.id === selectedDraftId"
+                      (click)="selectOrToggle(d.id, $event)"
+                      (dblclick)="startEditDraftName(d.id, d.name)"
+                      title="Open draft (double-click to rename)">
+                      {{ d.name }}
+                      @if (draftSyncStatus[d.id] === 'syncing') { <span class="tab-dot">⟳</span> }
+                      @if (draftSyncStatus[d.id] === 'synced') { <span class="tab-dot">✓</span> }
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+            <button class="toolbar-button" (click)="addDraft()" aria-label="Add draft" title="Add draft">
+              <svg class="icon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/>
+              </svg>
+            </button>
+          }
+          <button class="toolbar-button toggle-labeled" (click)="toggleDraftControls()" [class.active]="!isSplitCollapsed" aria-label="Drafts" title="Drafts - Document drafts">
+            @if (drafts.length > 0) {
+              <span class="count-circle">{{ drafts.length }}</span>
+            } @else {
+              <svg class="icon-drafts" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M7 7h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm0-2a2 2 0 0 0-2 2v1h12a2 2 0 0 1 2 2V7a2 2 0 0 0-2-2H7z"/>
+              </svg>
+            }
+            <span class="tool-label">Drafts</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

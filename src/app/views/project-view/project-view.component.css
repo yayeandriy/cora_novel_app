@@ -516,6 +516,41 @@ app-doc-tree {
   height: 1rem;
 }
 
+/* Folder drafts dock - same close button style as doc cards */
+.floating-folder-drafts-dock .close-hint-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  cursor: pointer;
+  z-index: 10;
+  transition: color 150ms ease;
+}
+
+.floating-folder-drafts-dock .close-hint-btn:hover {
+  color: #6b7280;
+}
+
+.floating-folder-drafts-dock .close-hint-btn .key-hint {
+  font-size: 0.625rem;
+  padding: 0.125rem 0.375rem;
+  background: #e5e7eb;
+  border-radius: 0.25rem;
+  color: #6b7280;
+}
+
+.floating-folder-drafts-dock .close-hint-btn .close-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
 @keyframes slideDown {
   from {
     opacity: 0;
