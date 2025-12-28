@@ -258,7 +258,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     if (event) event.stopPropagation();
     this.editingProjectName = true;
     this.projectNameEdit = this.projectName;
-    this.changeDetector.detectChanges();
   }
 
 

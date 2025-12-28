@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy, ChangeDetectorRef, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule, CdkDragPreview } from '@angular/cdk/drag-drop';
@@ -36,7 +36,7 @@ export interface Doc {
   styleUrls: ['./doc-tree.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DocTreeComponent {
+export class DocTreeComponent implements OnChanges {
   @Input() docGroups: DocGroup[] = [];
   @Input() selectedDoc: Doc | null = null;
   @Input() selectedGroup: DocGroup | null = null;
@@ -85,6 +85,21 @@ export class DocTreeComponent {
   hoveredGroupId: number | null = null;
 
   constructor(private cdr: ChangeDetectorRef) {}
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // When editingProjectName changes to true, focus the textarea
+    if (changes['editingProjectName'] && changes['editingProjectName'].currentValue === true) {
+      // Use setTimeout to wait for Angular to render the textarea
+      setTimeout(() => {
+        if (this.projectNameInput) {
+          const textarea = this.projectNameInput.nativeElement;
+          textarea.focus();
+          textarea.select();
+          this.resizeTextarea(textarea);
+        }
+      }, 0);
+    }
+  }
 
   // NOTE: doc reordering uses Angular CDK drag-drop (like metadata chips)
 
@@ -200,20 +215,7 @@ export class DocTreeComponent {
   startEditProjectName(event: MouseEvent) {
     event.stopPropagation();
     this.projectNameEditStart.emit(event);
-    // Manually trigger change detection after parent has processed the event
-    setTimeout(() => {
-      this.cdr.detectChanges();
-      // Focus the input after Angular renders it
-      setTimeout(() => {
-        if (this.projectNameInput) {
-          const textarea = this.projectNameInput.nativeElement;
-          textarea.focus();
-          textarea.select();
-          // Auto-resize to fit content
-          this.resizeTextarea(textarea);
-        }
-      }, 10);
-    }, 10);
+    // Focus handling is done in ngOnChanges when editingProjectName becomes true
   }
 
   autoResizeTextarea(event: Event) {

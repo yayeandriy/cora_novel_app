@@ -103,6 +103,9 @@
 }
 
 .project-name-header .project-name {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
   font-size: 1.125rem;
   font-weight: 600;
   color: #111827;
@@ -114,14 +117,20 @@
   word-wrap: break-word;
   overflow-wrap: break-word;
   line-height: 1.4;
+  border: 1px solid transparent;
+  font-family: inherit;
+  min-height: 2.5rem;
 }
 
 .project-name-header .project-name:hover {
   background: #f9fafb;
   color: #2563eb;
+  border-color: transparent;
 }
 
 .project-name-header .project-name-input {
+  display: block;
+  box-sizing: border-box;
   width: 100%;
   font-size: 1.125rem;
   font-weight: 600;
@@ -137,6 +146,7 @@
   min-height: 2.5rem;
   line-height: 1.4;
   font-family: inherit;
+  margin: 0;
 }
 
 .project-name-header .project-name-input:focus {
