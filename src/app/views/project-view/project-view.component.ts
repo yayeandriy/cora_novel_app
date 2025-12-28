@@ -1532,6 +1532,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         return;
       }
 
+      // If folder notes dock is visible, close it
+      if (this.folderHeaderExpanded) {
+        this.folderHeaderExpanded = false;
+        return;
+      }
+
       this.focusTree();
       return;
     }
