@@ -36,62 +36,17 @@
           <span class="tool-label">Notes</span>
         </button>
         
-        <!-- Drafts button with expandable tabs -->
-        <div class="draft-controls">
-          @if (!isSplitCollapsed) {
-            <div class="draft-tabs">
-              @for (d of drafts; track d.id) {
-                <div class="draft-tab-wrapper">
-                  @if (editingDraftId === d.id) {
-                    <div class="draft-edit-row">
-                      <input
-                        #draftNameInput
-                        class="draft-name-input"
-                        [(ngModel)]="draftNameEdit"
-                        (blur)="saveDraftName()"
-                        (keydown.enter)="saveDraftName()"
-                        (keydown.escape)="cancelDraftNameEdit()"
-                        placeholder="Draft name" />
-                      <button
-                        class="draft-delete-btn"
-                        (mousedown)="$event.preventDefault()"
-                        (click)="onClickDeleteDraft(d.id)"
-                        title="Delete draft">
-                        🗑
-                      </button>
-                    </div>
-                  } @else {
-                    <button 
-                      class="draft-tab" 
-                      [class.active]="d.id === selectedDraftId"
-                      (click)="selectOrToggle(d.id, $event)"
-                      (dblclick)="startEditDraftName(d.id, d.name)"
-                      title="Open draft (double-click to rename)">
-                      {{ d.name }}
-                      @if (draftSyncStatus[d.id] === 'syncing') { <span class="tab-dot">⟳</span> }
-                      @if (draftSyncStatus[d.id] === 'synced') { <span class="tab-dot">✓</span> }
-                    </button>
-                  }
-                </div>
-              }
-            </div>
-            <button class="toolbar-button" (click)="addDraft()" aria-label="Add draft" title="Add draft">
-              <svg class="icon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/>
-              </svg>
-            </button>
+        <!-- Drafts button -->
+        <button class="toolbar-button toggle-labeled" (click)="toggleDraftControls()" [class.active]="!isSplitCollapsed" aria-label="Drafts" title="Drafts - Document drafts">
+          @if (drafts.length > 0) {
+            <span class="count-circle">{{ drafts.length }}</span>
+          } @else {
+            <svg class="icon-drafts" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 7h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm0-2a2 2 0 0 0-2 2v1h12a2 2 0 0 1 2 2V7a2 2 0 0 0-2-2H7z"/>
+            </svg>
           }
-          <button class="toolbar-button toggle-labeled" (click)="toggleDraftControls()" [class.active]="!isSplitCollapsed" aria-label="Drafts" title="Drafts - Document drafts">
-            @if (drafts.length > 0) {
-              <span class="count-circle">{{ drafts.length }}</span>
-            } @else {
-              <svg class="icon-drafts" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M7 7h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm0-2a2 2 0 0 0-2 2v1h12a2 2 0 0 1 2 2V7a2 2 0 0 0-2-2H7z"/>
-              </svg>
-            }
-            <span class="tool-label">Drafts</span>
-          </button>
-        </div>
+          <span class="tool-label">Drafts</span>
+        </button>
       </div>
     </div>
   </div>
@@ -135,7 +90,51 @@
         <span class="divider-grip"></span>
       </div>
       @if (!isSplitCollapsed) {
-        <div class="pane pane-right " [style.flex]="'0 0 ' + draftPaneWidth + 'px'" [style.width.px]="draftPaneWidth">
+        <div class="pane pane-right" [style.flex]="'0 0 ' + draftPaneWidth + 'px'" [style.width.px]="draftPaneWidth">
+          <!-- Drafts header row -->
+          <div class="drafts-header-row">
+            <div class="draft-tabs">
+              @for (d of drafts; track d.id) {
+                <div class="draft-tab-wrapper">
+                  @if (editingDraftId === d.id) {
+                    <div class="draft-edit-row">
+                      <input
+                        #draftNameInput
+                        class="draft-name-input"
+                        [(ngModel)]="draftNameEdit"
+                        (blur)="saveDraftName()"
+                        (keydown.enter)="saveDraftName()"
+                        (keydown.escape)="cancelDraftNameEdit()"
+                        placeholder="Draft name" />
+                      <button
+                        class="draft-delete-btn"
+                        (mousedown)="$event.preventDefault()"
+                        (click)="onClickDeleteDraft(d.id)"
+                        title="Delete draft">
+                        🗑
+                      </button>
+                    </div>
+                  } @else {
+                    <button 
+                      class="draft-tab" 
+                      [class.active]="d.id === selectedDraftId"
+                      (click)="selectOrToggle(d.id, $event)"
+                      (dblclick)="startEditDraftName(d.id, d.name)"
+                      title="Open draft (double-click to rename)">
+                      {{ d.name }}
+                      @if (draftSyncStatus[d.id] === 'syncing') { <span class="tab-dot">⟳</span> }
+                      @if (draftSyncStatus[d.id] === 'synced') { <span class="tab-dot">✓</span> }
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+            <button class="toolbar-button" (click)="addDraft()" aria-label="Add draft" title="Add draft">
+              <svg class="icon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/>
+              </svg>
+            </button>
+          </div>
           <textarea 
             #draftTextarea
             [(ngModel)]="selectedDraft!.content"

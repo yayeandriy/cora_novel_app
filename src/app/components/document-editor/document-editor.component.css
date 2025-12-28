@@ -167,6 +167,33 @@
 .editor-split .editor-textarea { width: var(--editor-col, 100%); margin-left: auto; margin-right: auto; }
 .pane-right { flex: 0 0 auto; border-left: 1px solid #e5e7eb; display: flex; flex-direction: column; overflow: hidden; }
 
+/* Drafts header row above draft editor */
+.drafts-header-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.drafts-header-row .draft-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.drafts-header-row .toolbar-button {
+  flex-shrink: 0;
+}
+
 .split-divider {
   flex: 0 0 6px;
   width: 6px;
