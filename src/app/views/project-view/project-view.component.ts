@@ -270,6 +270,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Toggle doc cards view - called from toolbar button or header click
   async toggleDocCardsView() {
     this.projectHeaderExpanded = !this.projectHeaderExpanded;
+    // Close notes panel when opening storyline (mutual exclusion)
+    if (this.projectHeaderExpanded) {
+      this.folderHeaderExpanded = false;
+    }
     // Clear folder and doc selection when collapsing project header
     if (!this.projectHeaderExpanded) {
       this.projectHeaderSelectedGroupId = null;
@@ -290,6 +294,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         }
       }
     }
+    this.changeDetector.markForCheck();
   }
 
   // Handle folder chip click in project header - toggle expansion without navigation
@@ -365,7 +370,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     if (!this.selectedDoc) return;
     this.inlineHeadersDismissed = true;
     this.projectHeaderExpanded = false;
-    // Note: folderHeaderExpanded is NOT reset here - folder notes dock is independent
+    this.folderHeaderExpanded = false;
     this.headersHoverVisible = false;
     this.changeDetector.markForCheck();
   }
@@ -669,15 +674,26 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   onFolderHeaderClick(event?: MouseEvent) {
     if (event && this.isInteractiveHeaderClick(event)) return;
     this.folderHeaderExpanded = !this.folderHeaderExpanded;
-    console.log('[DEBUG] onFolderHeaderClick - expanded:', this.folderHeaderExpanded, 'selectedGroup:', this.selectedGroup?.id, 'currentGroup:', this.currentGroup?.id);
-    
+    // Close storyline panel when opening notes (mutual exclusion)
+    if (this.folderHeaderExpanded) {
+      this.projectHeaderExpanded = false;
+    }
     // Load drafts when expanding the header
     if (this.folderHeaderExpanded) {
       const group = this.selectedGroup || this.currentGroup;
-      console.log('[DEBUG] onFolderHeaderClick - will load drafts for group:', group?.id, group?.name);
       if (group) {
         this.loadFolderDrafts(group.id);
       }
+    }
+  }
+
+  // Switch to notes tab (called from tab button inside panel)
+  switchToNotesTab() {
+    this.folderHeaderExpanded = true;
+    this.projectHeaderExpanded = false;
+    const group = this.selectedGroup || this.currentGroup;
+    if (group) {
+      this.loadFolderDrafts(group.id);
     }
   }
 
@@ -1255,7 +1271,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     await this.loadDocGroupCharacters(this.currentGroup.id);
     await this.loadDocGroupEvents(this.currentGroup.id);
     await this.loadDocGroupPlaces(this.currentGroup.id);
-    // Load folder drafts if the folder header is expanded (visible in main editor area)
+    // Load folder drafts if the folder header is expanded
     if (this.folderHeaderExpanded) {
       // Clear previous folder draft selection when switching folders
       this.selectedFolderDraftId = null;

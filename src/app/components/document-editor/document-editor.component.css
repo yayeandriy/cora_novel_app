@@ -40,10 +40,7 @@
   background: #f3f4f6;
 }
 .doc-tools {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-right: 0;
+  display: none; /* Moved to project-view as floating-doc-tools */
 }
 .draft-controls {
   display: flex;
