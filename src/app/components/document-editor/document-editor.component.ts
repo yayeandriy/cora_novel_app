@@ -257,6 +257,17 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
     this.editingDraftId = null;
   }
 
+  onDraftTabsWheel(event: WheelEvent) {
+    const container = event.currentTarget as HTMLElement;
+    if (!container) return;
+    
+    // Use deltaY for horizontal scroll (works with and without Shift)
+    if (event.deltaY !== 0) {
+      event.preventDefault();
+      container.scrollLeft += event.deltaY;
+    }
+  }
+
   onClickDeleteDraft(draftId: number) {
     // Emit delete without triggering input blur-save
     this.draftDeleted.emit(draftId);

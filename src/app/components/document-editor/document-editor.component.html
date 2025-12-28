@@ -93,7 +93,7 @@
         <div class="pane pane-right" [style.flex]="'0 0 ' + draftPaneWidth + 'px'" [style.width.px]="draftPaneWidth">
           <!-- Drafts header row -->
           <div class="drafts-header-row">
-            <div class="draft-tabs">
+            <div class="draft-tabs" (wheel)="onDraftTabsWheel($event)">
               @for (d of drafts; track d.id) {
                 <div class="draft-tab-wrapper">
                   @if (editingDraftId === d.id) {

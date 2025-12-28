@@ -152,7 +152,7 @@ app-root {
 
 /* Light, narrow scrollbars (WebKit + Firefox) */
 :root {
-  --scrollbar-size: 8px;
+  --scrollbar-size: 2px;
   --scrollbar-thumb: rgba(0, 0, 0, 0.12);
   --scrollbar-thumb-hover: rgba(0, 0, 0, 0.22);
   --scrollbar-track: transparent;

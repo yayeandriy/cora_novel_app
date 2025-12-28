@@ -188,25 +188,12 @@
   /* Smooth scrolling */
   scroll-behavior: smooth;
   /* Hide scrollbar but keep functionality */
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
+  scrollbar-width: none;
 }
 
 .drafts-header-row .draft-tabs::-webkit-scrollbar {
-  height: 1px;
-}
-
-.drafts-header-row .draft-tabs::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.drafts-header-row .draft-tabs::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 2px;
-}
-
-.drafts-header-row .draft-tabs::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  height: 0;
+  display: none;
 }
 
 .drafts-header-row .toolbar-button {
