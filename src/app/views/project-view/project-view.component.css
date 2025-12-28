@@ -975,7 +975,7 @@ app-doc-tree {
 .folder-expanded-content {
   width: 100%;
   height: 400px;
-  background: white;
+  background: #F9FAFC;
   border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
   display: flex;
