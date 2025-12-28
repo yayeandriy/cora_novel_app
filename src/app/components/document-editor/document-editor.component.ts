@@ -212,21 +212,15 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
     setTimeout(() => this.draftTextarea?.nativeElement.focus(), 0);
   }
 
-  // Click to select, click again (not double-click) to collapse (deselect)
+  // Click to select (no toggle behavior - clicking selected draft does nothing)
   selectOrToggle(id: number, event: MouseEvent) {
     // If different draft, select immediately
     if (this.selectedDraftId !== id) {
       if (this.clickTimer) { clearTimeout(this.clickTimer); this.clickTimer = null; }
       this.draftSelect.emit(id);
       setTimeout(() => this.draftTextarea?.nativeElement.focus(), 0);
-      return;
     }
-    // Same draft: schedule collapse unless a dblclick occurs
-    if (this.clickTimer) { clearTimeout(this.clickTimer); }
-    this.clickTimer = setTimeout(() => {
-      this.draftSelect.emit(null);
-      this.clickTimer = null;
-    }, 220); // allow dblclick to cancel within this window
+    // If same draft, do nothing (clicking selected draft doesn't collapse)
   }
 
   // Draft name editing

@@ -49,7 +49,7 @@ pub fn list_drafts(pool: &DbPool, doc_id: i64) -> anyhow::Result<Vec<Draft>> {
         "SELECT id, doc_id, name, content, created_at, updated_at 
          FROM drafts 
          WHERE doc_id = ?1 
-         ORDER BY updated_at DESC",
+         ORDER BY created_at DESC",
     )?;
 
     let drafts = stmt
