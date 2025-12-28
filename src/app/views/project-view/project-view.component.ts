@@ -360,7 +360,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     if (!this.selectedDoc) return;
     this.inlineHeadersDismissed = true;
     this.projectHeaderExpanded = false;
-    this.folderHeaderExpanded = false;
+    // Note: folderHeaderExpanded is NOT reset here - folder notes dock is independent
     this.headersHoverVisible = false;
     this.changeDetector.markForCheck();
   }
@@ -661,8 +661,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   // Toggle folder header expansion (show/hide folder notes editor)
-  onFolderHeaderClick(event: MouseEvent) {
-    if (this.isInteractiveHeaderClick(event)) return;
+  onFolderHeaderClick(event?: MouseEvent) {
+    if (event && this.isInteractiveHeaderClick(event)) return;
     this.folderHeaderExpanded = !this.folderHeaderExpanded;
     console.log('[DEBUG] onFolderHeaderClick - expanded:', this.folderHeaderExpanded, 'selectedGroup:', this.selectedGroup?.id, 'currentGroup:', this.currentGroup?.id);
     

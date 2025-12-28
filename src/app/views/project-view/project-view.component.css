@@ -453,6 +453,29 @@ app-doc-tree {
   border-bottom: 1px solid #e5e7eb;
 }
 
+.floating-folder-drafts-dock {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  z-index: 100;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Middle section project title bar */
 .project-title-bar {
   flex-shrink: 0;

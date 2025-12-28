@@ -349,40 +349,24 @@
         </div>
       }
 
-      <!-- Folder name row (under project name) -->
-      @if (selectedGroup || currentGroup) {
-      <div class="folder-title-bar" (click)="selectedDoc ? onFolderHeaderClick($event) : null">
-        <div class="folder-title-center">
-          @if (getFolderIndexLabel()) { <span class="header-index">{{ getFolderIndexLabel() }}.</span> }
-          @if (!editingFolderName) {
-            <div class="project-name">
-              <span class="cursor-text" title="Click to rename folder" (click)="startEditFolderName($event)">{{ (selectedGroup || currentGroup)?.name }}</span>
-            </div>
-          } @else {
-            <input
-              #folderNameInput
-              class="project-name-input folder-name-input"
-              [(ngModel)]="folderNameEdit"
-              (blur)="saveFolderName()"
-              (keydown)="onFolderNameKeydown($event)"
-              placeholder="Folder name" />
-          }
-        </div>
-      </div>
-      @if (folderHeaderExpanded && (selectedGroup || currentGroup) && selectedDoc) {
-        <app-folder-drafts
-          [drafts]="folderDrafts"
-          [selectedDraftId]="selectedFolderDraftId"
-          (draftCreate)="createFolderDraft()"
-          (draftChange)="onFolderDraftChange($event.draftId, $event.content, $event.cursorPosition)"
-          (draftNameChange)="onFolderDraftNameChange($event.draftId, $event.name)"
-          (draftDelete)="deleteFolderDraft($event)"
-          (draftMove)="onFolderDraftMove($event)"
-          (draftSelect)="onFolderDraftSelect($event)">
-        </app-folder-drafts>
-      }
-      }
       </div> <!-- end .inline-headers-wrapper -->
+
+      <!-- Folder drafts - float above content when toggled via toolbar button -->
+      @if (folderHeaderExpanded && (selectedGroup || currentGroup)) {
+        <div class="floating-folder-drafts-dock" (click)="$event.stopPropagation()">
+          <app-folder-drafts
+            [drafts]="folderDrafts"
+            [selectedDraftId]="selectedFolderDraftId"
+            (draftCreate)="createFolderDraft()"
+            (draftChange)="onFolderDraftChange($event.draftId, $event.content, $event.cursorPosition)"
+            (draftNameChange)="onFolderDraftNameChange($event.draftId, $event.name)"
+            (draftDelete)="deleteFolderDraft($event)"
+            (draftMove)="onFolderDraftMove($event)"
+            (draftSelect)="onFolderDraftSelect($event)">
+          </app-folder-drafts>
+        </div>
+      }
+
       <!-- Document editor -->
       @if (selectedDoc && !selectedGroup) {
       <app-document-editor 
@@ -398,6 +382,8 @@
   [externalDraftName]="selectedProjectDraftId ? (getSelectedProjectDraftName() ?? 'Draft') : null"
     [externalDraftContent]="selectedProjectDraftId ? getProjectDraftLocalContent(selectedProjectDraftId) : ''"
         [docIndexLabel]="getDocIndexLabel()"
+        [folderDraftsCount]="folderDraftsCount"
+        [folderNotesExpanded]="folderHeaderExpanded"
         (docNameChange)="renameDoc($event)"
         (docTextChange)="onDocumentTextChange()"
         (docSaved)="saveDoc()"
@@ -408,7 +394,8 @@
         (draftSelect)="onDocumentDraftSelect($event)"
         (draftChanged)="onDocumentDraftChanged($event)"
         (draftBlurred)="onDocumentDraftBlurred($event)"
-        (draftDeleted)="deleteDraft($event)">
+        (draftDeleted)="deleteDraft($event)"
+        (folderNotesToggle)="onFolderHeaderClick()">
       </app-document-editor>
       }
 

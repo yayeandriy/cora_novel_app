@@ -68,6 +68,15 @@
             </svg>
           }
         </button>
+        <button class="toolbar-button toggle-uniform" (click)="folderNotesToggle.emit()" [class.active]="folderNotesExpanded" aria-label="Folder notes" title="Folder notes">
+          @if (folderDraftsCount > 0) {
+            <span class="drafts-count">{{ folderDraftsCount }}</span>
+          } @else {
+            <svg class="icon-folder" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3 6a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"/>
+            </svg>
+          }
+        </button>
       </div>
     </div>
   </div>

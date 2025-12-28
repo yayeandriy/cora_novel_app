@@ -39,6 +39,9 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   @Input() externalDraftId: number | null = null;
   @Input() externalDraftName: string | null = null;
   @Input() externalDraftContent: string = '';
+  // Folder notes integration
+  @Input() folderDraftsCount: number = 0;
+  @Input() folderNotesExpanded: boolean = false;
   
   @Output() draftAdd = new EventEmitter<void>();
   @Output() draftSelect = new EventEmitter<number | null>();
@@ -52,6 +55,7 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   @Output() docSaved = new EventEmitter<void>();
   @Output() docHeaderClick = new EventEmitter<void>();
   @Output() editorScroll = new EventEmitter<number>();
+  @Output() folderNotesToggle = new EventEmitter<void>();
   
   @ViewChild('docTitleInput') docTitleInput?: ElementRef<HTMLInputElement>;
   @ViewChild('editorTextarea') editorTextarea?: ElementRef<HTMLTextAreaElement>;
