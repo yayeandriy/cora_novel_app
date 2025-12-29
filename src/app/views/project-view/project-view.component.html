@@ -389,6 +389,7 @@
         [allProjectDocs]="getAllDocs()"
         [showSaveStatus]="showSaveStatus"
         [hasUnsavedChanges]="hasUnsavedChanges"
+        [editorWidthPercent]="editorWidthPercent"
         [drafts]="drafts"
         [draftSyncStatus]="draftSyncStatus"
         [selectedDraftId]="selectedDraftId"
@@ -601,6 +602,7 @@
     [allDocs]="getAllDocs()"
     [leftCollapsed]="leftCollapsed"
     [rightCollapsed]="rightCollapsed"
+    [editorWidthPercent]="editorWidthPercent"
     (backToProjects)="goBack()"
     (createGroup)="createGroup()"
     (deleteItem)="deleteSelectedItem()"
@@ -610,6 +612,7 @@
     (toggleLeft)="toggleLeftSidebar()"
     (toggleRight)="toggleRightSidebar()"
     (toggleAll)="toggleBothSidebars()"
+    (editorWidthChange)="setEditorWidth($event)"
   ></app-footer>
 
   <!-- Floating command button -->

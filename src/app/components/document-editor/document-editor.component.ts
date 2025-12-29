@@ -30,6 +30,7 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   @Input() showSaveStatus: boolean = false;
   @Input() hasUnsavedChanges: boolean = false;
   @Input() allProjectDocs: Doc[] = [];
+  @Input() editorWidthPercent: number = 80;
   // Drafts integration
   @Input() drafts: Draft[] = [];
   @Input() draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};

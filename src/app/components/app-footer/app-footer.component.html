@@ -49,6 +49,18 @@
         <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 1h12v1H2zM2 7h12v1H2zM2 13h12v1H2z"/></svg>
       </button>
     </div>
+    <!-- Editor Width -->
+    <div class="typography-group" title="Editor Width">
+      <label class="width-label">{{ editorWidthPercent }}%</label>
+      <input 
+        type="range" 
+        class="width-slider"
+        min="40" 
+        max="100" 
+        [value]="editorWidthPercent"
+        (input)="editorWidthChange.emit(+$any($event.target).value)"
+        title="Editor width">
+    </div>
   </div>
 
   <button

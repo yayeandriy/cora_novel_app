@@ -102,6 +102,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   rightCollapsed = false;
   leftWidth = 250;
   rightWidth = 300;
+  editorWidthPercent = 80;
   timelineHeaderVisible = false;
   projectMenuVisible = false;
   
@@ -3990,6 +3991,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       rightWidth: this.rightWidth,
       leftCollapsed: this.leftCollapsed,
       rightCollapsed: this.rightCollapsed,
+      editorWidthPercent: this.editorWidthPercent,
       timelineHeaderVisible: this.timelineHeaderVisible
     }));
   }
@@ -4002,8 +4004,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.rightWidth = (state.rightWidth ?? 300);
       this.leftCollapsed = (state.leftCollapsed ?? false);
       this.rightCollapsed = (state.rightCollapsed ?? false);
+      this.editorWidthPercent = (state.editorWidthPercent ?? 80);
       this.timelineHeaderVisible = !!(state.timelineHeaderVisible); // hidden by default
     }
+  }
+
+  setEditorWidth(percent: number) {
+    this.editorWidthPercent = Math.max(40, Math.min(100, percent));
+    this.saveLayoutState();
   }
 
   goBack() {

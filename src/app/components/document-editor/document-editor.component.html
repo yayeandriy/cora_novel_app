@@ -1,5 +1,5 @@
 @if (selectedDoc) {
-<div class="editor-container">
+<div class="editor-container" [style.--editor-width-percent.%]="editorWidthPercent">
   <div class="editor-toolbar" (click)="onToolbarClick($event)">
     <div class="title-group">
       @if (docIndexLabel) { <span class="header-index clickable" (click)="onHeaderIndexClick($event)" title="Click to show project/folder headers">{{ docIndexLabel }}.</span> }

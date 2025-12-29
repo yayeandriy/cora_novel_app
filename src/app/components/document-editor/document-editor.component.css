@@ -342,6 +342,7 @@
   position: relative;
   margin: 0 auto;
   /* width is set via inline style */
+  max-width: var(--editor-width-percent, 80%);
   display: flex;
   flex-direction: column;
   flex: 1;

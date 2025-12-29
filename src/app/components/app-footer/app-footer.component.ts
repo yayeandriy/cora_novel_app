@@ -72,6 +72,7 @@ export class AppFooterComponent implements OnInit {
   @Input() allDocs: Doc[] = [];  
   @Input() leftCollapsed: boolean = false;
   @Input() rightCollapsed: boolean = false;
+  @Input() editorWidthPercent: number = 80;
 
   // Action outputs (migrated from doc tree & editor docker)
   @Output() backToProjects = new EventEmitter<void>();
@@ -83,6 +84,7 @@ export class AppFooterComponent implements OnInit {
   @Output() toggleLeft = new EventEmitter<void>();
   @Output() toggleRight = new EventEmitter<void>();
   @Output() toggleAll = new EventEmitter<void>();
+  @Output() editorWidthChange = new EventEmitter<number>();
 
   // Typography settings
   fontFamily: FontFamily = 'mono';
