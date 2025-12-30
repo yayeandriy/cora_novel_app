@@ -3,20 +3,23 @@
   <div class="stats-container">
     <span class="stat-item">
       <span class="stat-label">A:</span>
-      <span class="stat-value">{{ formatNumber(projectCharCount) }}</span>
-      <span class="stat-project" *ngIf="selectedDoc">({{ docCharCount }})</span>
+      <span class="stat-value" *ngIf="selectedDoc; else projectChars">{{ docCharCount }}</span>
+      <ng-template #projectChars><span class="stat-value">{{ formatNumber(projectCharCount) }}</span></ng-template>
+      <span class="stat-project" *ngIf="selectedDoc">({{ formatNumber(projectCharCount) }})</span>
     </span>
     <span class="stat-item">
       <span class="stat-label">W:</span>
-      <span class="stat-value">{{ formatNumber(projectWordCount) }}</span>
-      <span class="stat-project" *ngIf="selectedDoc">({{ docWordCount }})</span>
+      <span class="stat-value" *ngIf="selectedDoc; else projectWords">{{ docWordCount }}</span>
+      <ng-template #projectWords><span class="stat-value">{{ formatNumber(projectWordCount) }}</span></ng-template>
+      <span class="stat-project" *ngIf="selectedDoc">({{ formatNumber(projectWordCount) }})</span>
     </span>
     <span class="stat-item">
       <svg class="page-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
-      <span class="stat-value">{{ projectPageCount }}</span>
-      <span class="stat-project" *ngIf="selectedDoc">({{ docPageCount }})</span>
+      <span class="stat-value" *ngIf="selectedDoc; else projectPages">{{ docPageCount }}</span>
+      <ng-template #projectPages><span class="stat-value">{{ projectPageCount }}</span></ng-template>
+      <span class="stat-project" *ngIf="selectedDoc">({{ projectPageCount }})</span>
     </span>
   </div>
 </div>
