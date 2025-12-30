@@ -92,7 +92,6 @@
                   [class.selected]="selectedIndex === i"
                   (click)="selectCommand(cmd)"
                   (mouseenter)="selectedIndex = i">
-                  <span class="item-icon">{{ cmd.icon }}</span>
                   <span class="item-label">{{ cmd.label }}</span>
                   @if (cmd.shortcut) {
                     <span class="item-shortcut">{{ cmd.shortcut }}</span>
