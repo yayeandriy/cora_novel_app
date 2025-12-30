@@ -220,6 +220,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Import flow state
   showImportDialog = false;
   showImportOptionsDialog = false;
+  showExportOptionsDialog = false;
   pendingImportFiles: string[] = [];
   pendingImportFolders: string[] = [];
   importTargetGroupId: number | null = null;
@@ -983,6 +984,25 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Show export options dialog
+  openExportOptionsDialog() {
+    this.showExportOptionsDialog = true;
+  }
+
+  cancelExportOptions() {
+    this.showExportOptionsDialog = false;
+  }
+
+  async exportToFolder() {
+    this.showExportOptionsDialog = false;
+    await this.onExportProjectRequested();
+  }
+
+  async exportToPdf() {
+    this.showExportOptionsDialog = false;
+    await this.onExportProjectToPdfRequested();
+  }
+
   // Import Files: ask for destination folder
   async onImportFilesRequested() {
     try {
@@ -1610,6 +1630,18 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // ESC always focuses the tree
     if (event.key === 'Escape') {
       event.preventDefault();
+
+      // If import dialog is visible, close it
+      if (this.showImportOptionsDialog) {
+        this.showImportOptionsDialog = false;
+        return;
+      }
+
+      // If export dialog is visible, close it
+      if (this.showExportOptionsDialog) {
+        this.showExportOptionsDialog = false;
+        return;
+      }
 
       // If headers overlay is visible, hide it
       if (this.headersHoverVisible) {

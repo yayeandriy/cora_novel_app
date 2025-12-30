@@ -547,7 +547,7 @@
   <!-- Import options dialog -->
   @if (showImportOptionsDialog) {
     <div class="modal-overlay" (click)="cancelImportOptions()">
-      <div class="import-options-modal" (click)="$event.stopPropagation()">
+      <div class="import-options-modal" (click)="$event.stopPropagation()" (keydown.escape)="cancelImportOptions()" tabindex="-1">
         <div class="import-header">Import story</div>
         <div class="import-options">
           <button class="import-option-btn" (click)="importFromFolder()">
@@ -573,6 +573,39 @@
           </button>
         </div>
         <button class="import-cancel-btn" (click)="cancelImportOptions()">Cancel</button>
+      </div>
+    </div>
+  }
+
+  <!-- Export options dialog -->
+  @if (showExportOptionsDialog) {
+    <div class="modal-overlay" (click)="cancelExportOptions()">
+      <div class="import-options-modal" (click)="$event.stopPropagation()" (keydown.escape)="cancelExportOptions()" tabindex="-1">
+        <div class="import-header">Export story</div>
+        <div class="import-options">
+          <button class="import-option-btn" (click)="exportToFolder()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            <div class="import-option-text">
+              <span class="import-option-title">To folder</span>
+              <span class="import-option-desc">With all metadata</span>
+            </div>
+          </button>
+          <button class="import-option-btn" (click)="exportToPdf()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <div class="import-option-text">
+              <span class="import-option-title">To PDF</span>
+              <span class="import-option-desc">Formatted for reading</span>
+            </div>
+          </button>
+        </div>
+        <button class="import-cancel-btn" (click)="cancelExportOptions()">Cancel</button>
       </div>
     </div>
   }
@@ -658,19 +691,12 @@
     @if (projectMenuVisible) {
       <div class="project-menu" (click)="$event.stopPropagation()">
         <button class="menu-item" (click)="openImportOptionsDialog(); projectMenuVisible = false">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v6m0 0l-3-3m3 3l3-3" />
-          </svg>
+          <img class="menu-icon" src="assets/icons/square.and.arrow.down.svg" alt="" />
           <span>Import</span>
         </button>
-        <button class="menu-item" (click)="onExportProjectRequested(); projectMenuVisible = false">
+        <button class="menu-item" (click)="openExportOptionsDialog(); projectMenuVisible = false">
           <img class="menu-icon" src="assets/icons/square.and.arrow.up.svg" alt="" />
-          <span>Export project</span>
-        </button>
-        <button class="menu-item" (click)="onExportProjectToPdfRequested(); projectMenuVisible = false">
-          <img class="menu-icon" src="assets/icons/append.page.svg" alt="" />
-          <span>Export to PDF</span>
+          <span>Export</span>
         </button>
         <div class="menu-separator"></div>
         <button class="menu-item" (click)="openCommandPalette('search-doc'); projectMenuVisible = false">
