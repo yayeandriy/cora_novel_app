@@ -99,7 +99,7 @@
 .project-name-header {
   width: 100%;
   margin-bottom: 1.5rem;
-  padding: 0 0.5rem;
+  padding: 0;
 }
 
 .project-name-header .project-name {
@@ -339,7 +339,7 @@
 }
 
 .doc {
-  color: #8c8c91;
+  color: #4b5563;
 }
 
 .tree-item.selected > .tree-item-header .folder-icon,
