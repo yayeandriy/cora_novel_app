@@ -59,10 +59,10 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
   caseSensitive = false;
 
   commands: CommandItem[] = [
-    { id: 'search-doc', label: 'Search in Current Document', shortcut: '⌘F', icon: '🔍', mode: 'search-doc' },
-    { id: 'search-project', label: 'Search in All Documents', shortcut: '⌘⇧F', icon: '📁', mode: 'search-project' },
+    { id: 'search-doc', label: 'Search in Current Chapter', shortcut: '⌘F', icon: '🔍', mode: 'search-doc' },
+    { id: 'search-project', label: 'Search in All Chapters', shortcut: '⌘⇧F', icon: '📁', mode: 'search-project' },
     { id: 'search-replace', label: 'Search and Replace', shortcut: '⌘H', icon: '🔄', mode: 'search-replace' },
-    { id: 'goto-doc', label: 'Go to Document...', shortcut: '⌘P', icon: '📄' },
+    { id: 'goto-doc', label: 'Go to Chapter...', shortcut: '⌘P', icon: '📄' },
   ];
 
   filteredCommands: CommandItem[] = [];
@@ -465,11 +465,11 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
   getPlaceholder(): string {
     switch (this.mode) {
       case 'commands':
-        return 'Type a command or search for documents...';
+        return 'Type a command or search for chapters...';
       case 'search-doc':
-        return 'Search in current document...';
+        return 'Search in current chapter...';
       case 'search-project':
-        return 'Search in all documents...';
+        return 'Search in all chapters...';
       case 'search-replace':
         return 'Search text...';
       default:
@@ -482,9 +482,9 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
       case 'commands':
         return 'Command Palette';
       case 'search-doc':
-        return 'Search in Document';
+        return 'Search in Chapter';
       case 'search-project':
-        return 'Search in Project';
+        return 'Search in Story';
       case 'search-replace':
         return 'Search and Replace';
       default:

@@ -94,7 +94,7 @@
           }
           @if (filteredDocs.length > 0) {
             <div class="results-section">
-              <div class="section-label">Documents</div>
+              <div class="section-label">Chapters</div>
               @for (doc of filteredDocs; track doc.id; let i = $index) {
                 <div 
                   class="command-palette-item"
@@ -133,10 +133,10 @@
             </div>
           }
           @if (searchQuery && currentDocMatches.length === 0) {
-            <div class="no-results">No matches found in current document</div>
+            <div class="no-results">No matches found in current chapter</div>
           }
           @if (!searchQuery) {
-            <div class="no-results hint">Type to search in the current document</div>
+            <div class="no-results hint">Type to search in the current chapter</div>
           }
         }
 
@@ -167,10 +167,10 @@
             }
           }
           @if (searchQuery && searchResults.length === 0) {
-            <div class="no-results">No matches found in project</div>
+            <div class="no-results">No matches found in story</div>
           }
           @if (!searchQuery) {
-            <div class="no-results hint">Type to search across all documents</div>
+            <div class="no-results hint">Type to search across all chapters</div>
           }
         }
       </div>
