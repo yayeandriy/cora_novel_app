@@ -219,6 +219,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   // Import flow state
   showImportDialog = false;
+  showImportOptionsDialog = false;
   pendingImportFiles: string[] = [];
   pendingImportFolders: string[] = [];
   importTargetGroupId: number | null = null;
@@ -936,6 +937,49 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       setTimeout(() => this.focusTree(), 0);
     } catch (err) {
       console.error('Failed to import folders:', err);
+    }
+  }
+
+  // Show import options dialog
+  openImportOptionsDialog() {
+    this.showImportOptionsDialog = true;
+  }
+
+  cancelImportOptions() {
+    this.showImportOptionsDialog = false;
+  }
+
+  async importFromFolder() {
+    this.showImportOptionsDialog = false;
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select a project folder to import'
+      });
+      if (!selected || Array.isArray(selected)) return;
+      await this.projectService.importProject(selected as string);
+      await this.loadProject(true);
+    } catch (err) {
+      console.error('Failed to import from folder:', err);
+      alert('Failed to import from folder: ' + err);
+    }
+  }
+
+  async importFromExport() {
+    this.showImportOptionsDialog = false;
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select a previously exported project folder (contains metadata.json)'
+      });
+      if (!selected || Array.isArray(selected)) return;
+      await this.projectService.importProject(selected as string);
+      await this.loadProject(true);
+    } catch (err) {
+      console.error('Failed to import from export:', err);
+      alert('Failed to import from export: ' + err);
     }
   }
 
