@@ -454,9 +454,12 @@ export class ProjectDashboardComponent implements AfterViewChecked {
     this.closeAllMenus();
     try {
       const selected = await open({
-        directory: true,
         multiple: false,
-        title: 'Select a previously exported project folder (contains metadata.json)'
+        title: 'Select exported project (ZIP file or folder with metadata.json)',
+        filters: [
+          { name: 'All Supported', extensions: ['zip'] },
+          { name: 'ZIP Archive', extensions: ['zip'] }
+        ]
       });
       if (!selected || Array.isArray(selected)) return;
       const imported = await this.svc.importProject(selected as string);
