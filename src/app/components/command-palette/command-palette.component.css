@@ -159,7 +159,28 @@
 
 .replace-actions {
   display: flex;
-  gap: 4px;
+  gap: 8px;
+  align-items: center;
+}
+
+.replace-all-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #cccccc;
+  cursor: pointer;
+  user-select: none;
+}
+
+.replace-all-toggle input[type="checkbox"] {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+}
+
+.replace-all-toggle:hover {
+  color: #ffffff;
 }
 
 .replace-btn {
@@ -333,6 +354,13 @@
   padding: 8px 12px;
   border-top: 1px solid #3c3c3c;
   background: #252526;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.hint-separator {
+  color: #4c4c4c;
+  font-size: 11px;
 }
 
 .hint-item {

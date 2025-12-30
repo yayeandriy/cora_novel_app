@@ -1548,6 +1548,21 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   handleKeyDown(event: KeyboardEvent) {
     const target = event.target as HTMLElement;
     
+    // Don't handle events when command palette is open (except Cmd shortcuts to switch modes)
+    if (this.commandPaletteOpen) {
+      // Allow Cmd+K, Cmd+F, Cmd+Shift+F, Cmd+H, Cmd+P to switch modes
+      const isModeSwitchShortcut = event.metaKey && (
+        (event.key === 'K' || event.key === 'k' || event.code === 'KeyK') ||
+        (event.key === 'F' || event.key === 'f' || event.code === 'KeyF') ||
+        (event.key === 'H' || event.key === 'h' || event.code === 'KeyH') ||
+        (event.key === 'P' || event.key === 'p' || event.code === 'KeyP')
+      );
+      
+      if (!isModeSwitchShortcut) {
+        return;
+      }
+    }
+    
     // ESC always focuses the tree
     if (event.key === 'Escape') {
       event.preventDefault();
@@ -4022,9 +4037,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // ===== Command Palette =====
   openCommandPalette(mode: CommandMode = 'commands') {
     this.commandPaletteOpen = true;
-    setTimeout(() => {
-      this.commandPaletteComponent?.open(mode);
-    }, 0);
+    // Call open immediately to ensure mode is set synchronously
+    this.changeDetector.detectChanges();
+    if (this.commandPaletteComponent) {
+      this.commandPaletteComponent.open(mode);
+    }
   }
 
   closeCommandPalette() {

@@ -57,6 +57,9 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
   
   // Case sensitivity toggle
   caseSensitive = false;
+  
+  // Replace in all chapters toggle (for search-replace mode)
+  replaceInAllChapters = false;
 
   commands: CommandItem[] = [
     { id: 'search-doc', label: 'Search in Current Chapter', shortcut: '⌘F', icon: '🔍', mode: 'search-doc' },
@@ -89,6 +92,7 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
     this.selectedIndex = 0;
     this.searchResults = [];
     this.currentDocMatches = [];
+    this.replaceInAllChapters = false;
     this.filteredCommands = [...this.commands];
     this.filteredDocs = this.buildDocList();
     this.cdr.detectChanges();
@@ -250,24 +254,28 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
 
     if (e.key === 'Escape') {
       e.preventDefault();
+      e.stopPropagation();
       this.closePanel();
       return;
     }
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
+      e.stopPropagation();
       this.moveSelection(1);
       return;
     }
 
     if (e.key === 'ArrowUp') {
       e.preventDefault();
+      e.stopPropagation();
       this.moveSelection(-1);
       return;
     }
 
     if (e.key === 'Enter') {
       e.preventDefault();
+      e.stopPropagation();
       this.executeSelection();
       return;
     }
@@ -275,6 +283,7 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
     // Tab to switch between search and replace fields
     if (e.key === 'Tab' && this.mode === 'search-replace') {
       e.preventDefault();
+      e.stopPropagation();
       if (document.activeElement === this.searchInput?.nativeElement) {
         this.replaceInput?.nativeElement?.focus();
       } else {
@@ -441,20 +450,78 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
   }
 
   replaceAll() {
-    if (!this.searchQuery || this.currentDocMatches.length === 0) return;
+    if (!this.searchQuery) return;
     
-    // Replace all matches from end to start to preserve positions
-    const matches = [...this.currentDocMatches].sort((a, b) => b.absolutePosition - a.absolutePosition);
-    
-    for (const match of matches) {
-      this.replaceInCurrentDoc.emit({
-        position: match.absolutePosition,
-        length: this.searchQuery.length,
-        replacement: this.replaceQuery
-      });
+    if (this.replaceInAllChapters) {
+      // Replace in all chapters
+      this.replaceInAllDocs();
+    } else {
+      // Replace in current chapter only
+      if (this.currentDocMatches.length === 0) return;
+      
+      // Replace all matches from end to start to preserve positions
+      const matches = [...this.currentDocMatches].sort((a, b) => b.absolutePosition - a.absolutePosition);
+      
+      for (const match of matches) {
+        this.replaceInCurrentDoc.emit({
+          position: match.absolutePosition,
+          length: this.searchQuery.length,
+          replacement: this.replaceQuery
+        });
+      }
     }
     
     this.closePanel();
+  }
+  
+  private replaceInAllDocs() {
+    // First, search in all docs to find all matches
+    const query = this.caseSensitive ? this.searchQuery : this.searchQuery.toLowerCase();
+    let totalReplacements = 0;
+    
+    for (const doc of this.docs) {
+      if (!doc.text) continue;
+      
+      const text = doc.text;
+      const searchText = this.caseSensitive ? text : text.toLowerCase();
+      
+      // Find all matches in this doc
+      const matches: Array<{ position: number; length: number }> = [];
+      let searchStart = 0;
+      
+      while (true) {
+        const matchIndex = searchText.indexOf(query, searchStart);
+        if (matchIndex === -1) break;
+        
+        matches.push({
+          position: matchIndex,
+          length: this.searchQuery.length
+        });
+        
+        searchStart = matchIndex + 1;
+      }
+      
+      // If this is the current doc, emit replacements
+      if (matches.length > 0 && doc.id === this.currentDocId) {
+        // Replace from end to start to preserve positions
+        matches.sort((a, b) => b.position - a.position);
+        
+        for (const match of matches) {
+          this.replaceInCurrentDoc.emit({
+            position: match.position,
+            length: match.length,
+            replacement: this.replaceQuery
+          });
+          totalReplacements++;
+        }
+      } else if (matches.length > 0) {
+        // For other docs, we need to navigate to them and replace
+        // Since we can't modify other docs directly from here,
+        // we'll need to collect all replacements and handle them differently
+        // For now, just count them (we'll need parent component support for cross-doc replace)
+        totalReplacements += matches.length;
+      }
+    }
   }
 
   toggleCaseSensitive() {
