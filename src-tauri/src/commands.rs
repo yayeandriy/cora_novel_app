@@ -675,10 +675,73 @@ fn find_next_grid_position(pool: &crate::db::DbPool) -> Result<i64, String> {
 pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> Result<serde_json::Value, String> {
     let pool = &state.pool;
 
-    let base = Path::new(&folder_path);
-    if !base.exists() || !base.is_dir() {
-        return Err("Selected path is not a directory".to_string());
-    }
+    let base_path = Path::new(&folder_path);
+    
+    // Check if it's a ZIP file and extract if needed
+    let temp_dir_holder;
+    let base = if folder_path.to_lowercase().ends_with(".zip") {
+        // Extract ZIP to temporary directory
+        if !base_path.exists() || !base_path.is_file() {
+            return Err("Selected ZIP file does not exist".to_string());
+        }
+        
+        temp_dir_holder = std::env::temp_dir().join(format!("cora_import_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()));
+        fs::create_dir_all(&temp_dir_holder).map_err(|e| format!("Failed to create temp directory: {}", e))?;
+        
+        // Extract ZIP
+        let file = fs::File::open(base_path).map_err(|e| format!("Failed to open ZIP file: {}", e))?;
+        let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("Failed to read ZIP archive: {}", e))?;
+        
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i).map_err(|e| format!("Failed to read ZIP entry: {}", e))?;
+            let outpath = temp_dir_holder.join(file.name());
+            
+            if file.is_dir() {
+                fs::create_dir_all(&outpath).map_err(|e| format!("Failed to create directory: {}", e))?;
+            } else {
+                if let Some(parent) = outpath.parent() {
+                    fs::create_dir_all(parent).map_err(|e| format!("Failed to create parent directory: {}", e))?;
+                }
+                let mut outfile = fs::File::create(&outpath).map_err(|e| format!("Failed to create file: {}", e))?;
+                std::io::copy(&mut file, &mut outfile).map_err(|e| format!("Failed to extract file: {}", e))?;
+            }
+        }
+        
+        // ZIP extracts to temp_dir/ProjectName/, so we need to find that folder
+        // Look for a subdirectory containing metadata.json (the actual project folder)
+        let entries = fs::read_dir(&temp_dir_holder).map_err(|e| format!("Failed to read temp directory: {}", e))?;
+        let mut project_folder = None;
+        for entry in entries {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let path = entry.path();
+            if path.is_dir() {
+                // Check if this directory contains metadata.json
+                let metadata_check = path.join("metadata.json");
+                if metadata_check.exists() {
+                    project_folder = Some(path);
+                    break;
+                }
+            }
+        }
+        
+        if let Some(folder) = project_folder {
+            folder
+        } else {
+            // Fallback: check if metadata.json is directly in temp_dir (flat ZIP structure)
+            let direct_metadata = temp_dir_holder.join("metadata.json");
+            if direct_metadata.exists() {
+                temp_dir_holder
+            } else {
+                return Err("Could not find project folder with metadata.json in ZIP".to_string());
+            }
+        }
+    } else {
+        // Regular directory
+        if !base_path.exists() || !base_path.is_dir() {
+            return Err("Selected path is not a directory".to_string());
+        }
+        base_path.to_path_buf()
+    };
     
     // Find next available grid position
     let grid_order = find_next_grid_position(pool)?;
@@ -715,13 +778,13 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
             Ok(v) => v,
             Err(_) => {
                 // Fallback to legacy import on parse error
-                return legacy_import_folder(pool, base, &folder_path, grid_order);
+                return legacy_import_folder(pool, &base, &folder_path, grid_order);
             }
         };
         if let Some(meta) = &parsed.meta {
             if meta.app.as_deref() != Some("cora") {
                 // Fallback to legacy import if not our format
-                return legacy_import_folder(pool, base, &folder_path, grid_order);
+                return legacy_import_folder(pool, &base, &folder_path, grid_order);
             }
         }
 
@@ -867,7 +930,7 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
     }
 
         // Fallback: legacy folder import (no metadata.json)
-        return legacy_import_folder(pool, base, &folder_path, grid_order);
+        return legacy_import_folder(pool, &base, &folder_path, grid_order);
 }
 
 // Helper to perform legacy folder import
@@ -923,14 +986,17 @@ fn legacy_import_folder(pool: &crate::db::DbPool, base: &Path, folder_path: &str
 
 #[tauri::command]
 pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_path: String) -> Result<(), String> {
-    // use std::path::{PathBuf};
+    use std::io::Write;
+    use zip::write::FileOptions;
+    
     let pool = &state.pool;
 
-    let dest = Path::new(&dest_path);
-    if !dest.exists() {
-        fs::create_dir_all(dest).map_err(|e| format!("Failed to create destination: {}", e))?;
-    }
-    if !dest.is_dir() { return Err("Destination is not a directory".into()); }
+    // Ensure dest_path ends with .zip
+    let zip_path = if dest_path.ends_with(".zip") {
+        dest_path
+    } else {
+        format!("{}.zip", dest_path)
+    };
 
     // Load project
     let project = crate::services::projects::get(pool, project_id).map_err(|e| e.to_string())?
@@ -964,19 +1030,29 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
         out.chars().map(|c| if bad.contains(&c) { '_' } else { c }).collect()
     }
 
-    // Export recursively
+    // Create zip file
+    let file = std::fs::File::create(&zip_path)
+        .map_err(|e| format!("Failed to create zip file: {}", e))?;
+    let mut zip = zip::ZipWriter::new(file);
+    let options = FileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .unix_permissions(0o755);
+
+    // Export recursively into zip
     fn export_group_recursive(
         pool: &crate::db::DbPool,
-        base_dir: &Path,
+        zip: &mut zip::ZipWriter<std::fs::File>,
+        options: FileOptions,
+        base_path: &str,
         group: &crate::models::DocGroup,
         group_index: usize,
         children: &HashMap<Option<i64>, Vec<&crate::models::DocGroup>>,
         docs_by_group: &HashMap<i64, Vec<&crate::models::Doc>>,
+        sanitize: fn(&str) -> String,
     ) -> Result<(), String> {
         // Directory name: "{index} {name}"
         let dir_name = format!("{} {}", group_index, sanitize(&group.name));
-        let group_dir = base_dir.join(dir_name);
-        fs::create_dir_all(&group_dir).map_err(|e| format!("Failed to create group dir: {}", e))?;
+        let group_path = format!("{}/{}", base_path, dir_name);
 
         // Docs in this group
         if let Some(dd) = docs_by_group.get(&group.id) {
@@ -984,46 +1060,44 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
                 let doc_index = format!("{}.{}", group_index, i + 1);
                 let doc_name = sanitize(d.name.as_deref().unwrap_or("Untitled"));
                 let file_name = format!("{} {}.txt", doc_index, doc_name);
-                let file_path = group_dir.join(file_name);
+                let file_path = format!("{}/{}", group_path, file_name);
                 let content = d.text.clone().unwrap_or_default();
-                fs::write(&file_path, content).map_err(|e| format!("Write doc failed: {}", e))?;
+                
+                zip.start_file(&file_path, options)
+                    .map_err(|e| format!("Failed to start file in zip: {}", e))?;
+                zip.write_all(content.as_bytes())
+                    .map_err(|e| format!("Failed to write file to zip: {}", e))?;
 
-                // Drafts as separate files: doc_index + doc_file + draft_index
+                // Drafts as separate files
                 let drafts = crate::services::drafts::list_drafts(pool, d.id).map_err(|e| e.to_string())?;
                 for (k, draft) in drafts.iter().enumerate() {
                     let draft_file = format!("{} {} draft-{}.txt", doc_index, doc_name, k + 1);
-                    let draft_path = group_dir.join(draft_file);
-                    fs::write(&draft_path, &draft.content).map_err(|e| format!("Write draft failed: {}", e))?;
+                    let draft_path = format!("{}/{}", group_path, draft_file);
+                    
+                    zip.start_file(&draft_path, options)
+                        .map_err(|e| format!("Failed to start draft file in zip: {}", e))?;
+                    zip.write_all(draft.content.as_bytes())
+                        .map_err(|e| format!("Failed to write draft to zip: {}", e))?;
                 }
             }
         }
 
-        // Recurse into child groups under this group
+        // Recurse into child groups
         if let Some(childs) = children.get(&Some(group.id)) {
             for (idx, child) in childs.iter().enumerate() {
-                export_group_recursive(pool, &group_dir, child, idx + 1, children, docs_by_group)?;
+                export_group_recursive(pool, zip, options, &group_path, child, idx + 1, children, docs_by_group, sanitize)?;
             }
         }
         Ok(())
     }
 
-    // Determine export root directory name inside destination
+    // Base folder name in zip
     let base_name = sanitize(&project.name);
-    let mut candidate = base_name.clone();
-    let mut counter: usize = 2;
-    let export_root = loop {
-        let try_path = dest.join(&candidate);
-        if !try_path.exists() { break try_path; }
-        candidate = format!("{} export {}", base_name, counter);
-        counter += 1;
-        if counter > 9999 { return Err("Failed to pick unique export folder name".into()); }
-    };
-    fs::create_dir_all(&export_root).map_err(|e| format!("Failed to create export folder: {}", e))?;
 
-    // Export root-level groups into export_root
+    // Export root-level groups into zip
     if let Some(root_groups) = children.get(&None) {
         for (gi, g) in root_groups.iter().enumerate() {
-            export_group_recursive(pool, &export_root, g, gi + 1, &children, &docs_by_group)?;
+            export_group_recursive(pool, &mut zip, options, &base_name, g, gi + 1, &children, &docs_by_group, sanitize)?;
         }
     }
 
@@ -1086,8 +1160,14 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
     });
 
     let meta_json = serde_json::to_string_pretty(&meta).map_err(|e| e.to_string())?;
-    let meta_path = export_root.join("metadata.json");
-    fs::write(&meta_path, meta_json).map_err(|e| format!("Write metadata failed: {}", e))?;
+    let meta_path = format!("{}/metadata.json", base_name);
+    
+    zip.start_file(&meta_path, options)
+        .map_err(|e| format!("Failed to start metadata file in zip: {}", e))?;
+    zip.write_all(meta_json.as_bytes())
+        .map_err(|e| format!("Failed to write metadata to zip: {}", e))?;
+
+    zip.finish().map_err(|e| format!("Failed to finalize zip: {}", e))?;
 
     Ok(())
 }

@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ProjectService } from '../../services/project.service';
 import { TimelineService } from '../../services/timeline.service';
-import { confirm, open, ask } from '@tauri-apps/plugin-dialog';
+import { confirm, open, save, ask } from '@tauri-apps/plugin-dialog';
 import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
 import { DocumentEditorComponent } from '../../components/document-editor/document-editor.component';
 import { GroupViewComponent } from '../../components/group-view/group-view.component';
@@ -217,9 +217,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     return `cora-places-order-${projectId}`;
   }
 
-  // Import flow state
+  // Export flow state
   showImportDialog = false;
-  showImportOptionsDialog = false;
   showExportOptionsDialog = false;
   pendingImportFiles: string[] = [];
   pendingImportFolders: string[] = [];
@@ -941,49 +940,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Show import options dialog
-  openImportOptionsDialog() {
-    this.showImportOptionsDialog = true;
-  }
-
-  cancelImportOptions() {
-    this.showImportOptionsDialog = false;
-  }
-
-  async importFromFolder() {
-    this.showImportOptionsDialog = false;
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: 'Select a project folder to import'
-      });
-      if (!selected || Array.isArray(selected)) return;
-      await this.projectService.importProject(selected as string);
-      await this.loadProject(true);
-    } catch (err) {
-      console.error('Failed to import from folder:', err);
-      alert('Failed to import from folder: ' + err);
-    }
-  }
-
-  async importFromExport() {
-    this.showImportOptionsDialog = false;
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: 'Select a previously exported project folder (contains metadata.json)'
-      });
-      if (!selected || Array.isArray(selected)) return;
-      await this.projectService.importProject(selected as string);
-      await this.loadProject(true);
-    } catch (err) {
-      console.error('Failed to import from export:', err);
-      alert('Failed to import from export: ' + err);
-    }
-  }
-
   // Show export options dialog
   openExportOptionsDialog() {
     this.showExportOptionsDialog = true;
@@ -995,7 +951,19 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   async exportToFolder() {
     this.showExportOptionsDialog = false;
-    await this.onExportProjectRequested();
+    try {
+      const selected = await save({
+        title: 'Save export as...',
+        filters: [{ name: 'ZIP Archive', extensions: ['zip'] }],
+        defaultPath: `${this.projectName}.zip`
+      });
+      if (!selected) return;
+      await this.projectService.exportProject(this.projectId, selected as string);
+      alert('Project exported successfully');
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Export failed: ' + err);
+    }
   }
 
   async exportToPdf() {
@@ -1630,12 +1598,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // ESC always focuses the tree
     if (event.key === 'Escape') {
       event.preventDefault();
-
-      // If import dialog is visible, close it
-      if (this.showImportOptionsDialog) {
-        this.showImportOptionsDialog = false;
-        return;
-      }
 
       // If export dialog is visible, close it
       if (this.showExportOptionsDialog) {

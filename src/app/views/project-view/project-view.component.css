@@ -141,6 +141,7 @@
   height: 1.125rem;
   flex-shrink: 0;
   color: #6b7280;
+  object-fit: contain;
 }
 
 .menu-item span {
