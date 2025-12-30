@@ -648,6 +648,22 @@
           </svg>
           <span>Export to PDF</span>
         </button>
+        <div class="menu-separator"></div>
+        <button class="menu-item" (click)="openCommandPalette('search-doc'); projectMenuVisible = false">
+          <img class="menu-icon" src="assets/icons/magnifyingglass.circle.svg" alt="" />
+          <span>Search in chapter</span>
+          <span class="menu-shortcut">⌘F</span>
+        </button>
+        <button class="menu-item" (click)="openCommandPalette('search-project'); projectMenuVisible = false">
+          <img class="menu-icon" src="assets/icons/rectangle.and.text.magnifyingglass.svg" alt="" />
+          <span>Search all chapters</span>
+          <span class="menu-shortcut">⌘⇧F</span>
+        </button>
+        <button class="menu-item" (click)="openCommandPalette('search-replace'); projectMenuVisible = false">
+          <img class="menu-icon" src="assets/icons/arrow.2.squarepath.svg" alt="" />
+          <span>Search & replace</span>
+          <span class="menu-shortcut">⌘H</span>
+        </button>
       </div>
     }
   }

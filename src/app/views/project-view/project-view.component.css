@@ -147,6 +147,22 @@
   flex: 1;
 }
 
+.menu-separator {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.08);
+  margin: 0.25rem 0;
+}
+
+.menu-shortcut {
+  flex: 0 0 auto !important;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-family: -apple-system, BlinkMacSystemFont, monospace;
+  background: rgba(0, 0, 0, 0.04);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
 /* Floating sidebar controls at bottom-right */
 .floating-sidebar-controls {
   position: fixed;
