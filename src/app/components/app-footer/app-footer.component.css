@@ -1,35 +1,26 @@
-.app-footer {
+:host {
   position: fixed;
-  left: 50%;
   bottom: 1rem;
+  left: 50%;
   transform: translateX(-50%);
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
-  padding: 0 1rem;
-  gap: 0.5rem;
-  z-index: 60;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  gap: 1rem;
   font-size: 0.75rem;
+  z-index: 60;
+  pointer-events: none;
 }
 /* Two separate docks with independent positioning */
 .dock-center {
-  position: fixed;
-  left: 50%;
-  bottom: 1rem;
-  transform: translateX(-50%);
-  z-index: 60;
+  position: relative;
+  pointer-events: auto;
 }
 
 .dock-right {
-  position: fixed;
-  bottom: 1rem;
-  /*
-    Append to the left of the bottom-right sidebar controls pill.
-    That pill is fixed at right: 1rem and is ~7.25rem wide (3x 2rem buttons + gaps + padding).
-  */
-  right: calc(1rem + 7.25rem + 0.75rem);
-  z-index: 60;
+  position: relative;
+  pointer-events: auto;
 }
 
 .dock {
