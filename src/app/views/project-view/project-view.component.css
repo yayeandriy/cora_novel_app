@@ -1297,30 +1297,7 @@ app-right-sidebar {
   opacity: 0.6;
   cursor: not-allowed;
 }
-.w-full{} 
- 
-.flex{} 
- 
-.w-full{} 
- 
-.grow{} 
- 
-.mb-2{} 
- 
-.text-sm{} 
- 
-.text-gray-600{} 
- 
-.mt-3{} 
- 
-.text-xs{} 
- 
-.text-gray-500{} 
- 
-.folder-drafts-editors-row{} 
- 
-.folder-content-container{} 
- 
+
 .sidebar-container {
   transition: width 0.3s ease-in-out;
   overflow: hidden;
@@ -1354,30 +1331,7 @@ app-right-sidebar {
 
 .collapsed-right {
   left: 0; /* Stick to the left edge of the collapsed container */
-}
-.left-sidebar{} 
- 
-.right-sidebar{} 
- 
-.project-content{} 
- 
-.folders-scroll-container{} 
- 
-.folder-chip{} 
- 
-.folder-chip-index{} 
- 
-.folder-chip-name{} 
- 
-.no-folders-hint{} 
- 
-.folder-docs-row{} 
- 
-.docs-scroll-container{} 
- 
-.doc-chip{} 
- 
-.doc-chip-index{} 
+} 
  
 .doc-chip-name{} 
  

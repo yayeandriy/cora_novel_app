@@ -12,7 +12,7 @@ pub fn create(pool: &DbPool, payload: ProjectCreate) -> anyhow::Result<Project> 
     .context("inserting project")?;
 
     let id = conn.last_insert_rowid();
-    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end, grid_order FROM projects WHERE id = ?1")?;
+    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end, grid_order, created_at, updated_at FROM projects WHERE id = ?1")?;
     let project = stmt
         .query_row(rusqlite::params![id], |row| {
             Ok(Project {
@@ -24,6 +24,8 @@ pub fn create(pool: &DbPool, payload: ProjectCreate) -> anyhow::Result<Project> 
                 timeline_start: row.get(5)?,
                 timeline_end: row.get(6)?,
                 grid_order: row.get(7)?,
+                created_at: row.get(8)?,
+                updated_at: row.get(9)?,
             })
         })
         .context("querying created project")?;
@@ -33,7 +35,7 @@ pub fn create(pool: &DbPool, payload: ProjectCreate) -> anyhow::Result<Project> 
 
 pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<Project>> {
     let conn = get_conn(pool)?;
-    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end, grid_order FROM projects WHERE id = ?1")?;
+    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end, grid_order, created_at, updated_at FROM projects WHERE id = ?1")?;
     let res = stmt.query_row(rusqlite::params![id], |row| {
         Ok(Project {
             id: row.get(0)?,
@@ -44,6 +46,8 @@ pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<Project>> {
             timeline_start: row.get(5)?,
             timeline_end: row.get(6)?,
             grid_order: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
         })
     }).optional()?;
 
@@ -52,7 +56,7 @@ pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<Project>> {
 
 pub fn list(pool: &DbPool) -> anyhow::Result<Vec<Project>> {
     let conn = get_conn(pool)?;
-    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end, grid_order FROM projects ORDER BY grid_order, id")?;
+    let mut stmt = conn.prepare("SELECT id, name, desc, path, notes, timeline_start, timeline_end, grid_order, created_at, updated_at FROM projects ORDER BY grid_order, id")?;
     let rows = stmt.query_map([], |row| {
         Ok(Project {
             id: row.get(0)?,
@@ -63,6 +67,8 @@ pub fn list(pool: &DbPool) -> anyhow::Result<Vec<Project>> {
             timeline_start: row.get(5)?,
             timeline_end: row.get(6)?,
             grid_order: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
         })
     })?;
 
@@ -91,7 +97,7 @@ pub fn update(pool: &DbPool, id: i64, name: Option<String>, desc: Option<String>
     let new_notes = notes.or(existing.notes);
 
     tx.execute(
-        "UPDATE projects SET name = ?1, desc = ?2, path = ?3, notes = ?4 WHERE id = ?5",
+        "UPDATE projects SET name = ?1, desc = ?2, path = ?3, notes = ?4, updated_at = datetime('now') WHERE id = ?5",
         rusqlite::params![new_name, new_desc, new_path, new_notes, id],
     )?;
 

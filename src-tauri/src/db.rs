@@ -151,6 +151,16 @@ pub fn init_pool() -> anyhow::Result<DbPool> {
         conn.execute_batch(include_str!("../migrations/015_add_archives.sql")).context("running migrations 015")?;
     }
 
+    // Conditionally run 016: add created_at and updated_at timestamps to projects
+    let mut stmt = conn.prepare("PRAGMA table_info(projects)")?;
+    let cols = stmt.query_map([], |row| Ok::<String, rusqlite::Error>(row.get(1)?))?;
+    let mut has_created_at = false;
+    let mut has_updated_at = false;
+    for c in cols { let name = c?; if name == "created_at" { has_created_at = true; } if name == "updated_at" { has_updated_at = true; } }
+    if !(has_created_at && has_updated_at) {
+        conn.execute_batch(include_str!("../migrations/016_add_project_timestamps.sql")).context("running migrations 016")?;
+    }
+
     Ok(pool)
 }
 

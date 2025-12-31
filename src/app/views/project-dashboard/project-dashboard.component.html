@@ -53,50 +53,93 @@
               <span class="archived-badge">Archived</span>
             }
           </div>
+          @if (cell.project.created_at || cell.project.updated_at) {
+            <div class="card-dates">
+              @if (cell.project.created_at) {
+                <span class="date-item" title="Created: {{ cell.project.created_at }}">
+                  <span class="date-label">started</span> {{ formatDate(cell.project.created_at) }}
+                </span>
+              }
+              @if (cell.project.updated_at && cell.project.updated_at !== cell.project.created_at) {
+                <span class="date-item" title="Last updated: {{ cell.project.updated_at }}">
+                  <span class="date-label">updated</span> {{ formatDate(cell.project.updated_at) }}
+                </span>
+              }
+            </div>
+          }
           <div class="card-pages">
-            @if (isArchived(cell.project) && showArchivedProjects()) {
-              <!-- Archived project in show archived mode -->
-              <div class="card-info">
-                <span>{{ getStats(cell.project.id).pageCount + ' ' + (getStats(cell.project.id).pageCount === 1 ? 'page' : 'pages') }}</span>
-                <button class="archive-action-btn"
-                        (click)="unarchiveProject(cell.project, $event)"
-                        title="Unarchive project">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="17 1 21 5 17 9"/>
-                    <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                    <polyline points="7 23 3 19 7 15"/>
-                    <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-                  </svg>
-                </button>
-              </div>
-              <div class="card-actions">
-                <button class="delete-project-btn"
-                        (click)="deleteProject(cell.project.id, $event)">
-                  Delete
-                </button>
-              </div>
-            } @else if (getStats(cell.project.id).pageCount === 0) {
-              <!-- Empty project - show only delete -->
-              <div class="card-actions">
-                <button class="delete-project-btn"
-                        (click)="deleteProject(cell.project.id, $event)">
-                  Delete
-                </button>
-              </div>
-            } @else {
-              <!-- Regular project with pages -->
-              <div class="card-info">
-                <span>{{ getStats(cell.project.id).pageCount + ' ' + (getStats(cell.project.id).pageCount === 1 ? 'page' : 'pages') }}</span>
-                <button class="archive-action-btn"
-                        (click)="archiveProject(cell.project, $event)"
-                        title="Archive project">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="21 8 21 21 3 21 3 8"/>
-                    <rect x="1" y="3" width="22" height="5"/>
-                    <line x1="10" y1="12" x2="14" y2="12"/>
-                  </svg>
-                </button>
-              </div>
+            @if (getStats(cell.project.id).pageCount > 0 || getStats(cell.project.id).wordCount > 0) {
+              @if (isArchived(cell.project) && showArchivedProjects()) {
+                <!-- Archived project in show archived mode -->
+                <div class="card-info">
+                  <div class="book-stats">
+                    <div class="stats-row">
+                      <div class="stat-item">
+                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).pageCount) }}</span>
+                        <span class="stat-label">{{ getStats(cell.project.id).pageCount === 1 ? 'PAGE' : 'PAGES' }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).wordCount) }}</span>
+                        <span class="stat-label">WORDS</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).charCount) }}</span>
+                        <span class="stat-label">CHARS</span>
+                      </div>
+                    </div>
+                    <div class="stats-row">
+                      <div class="stat-item">
+                        <span class="stat-value">{{ getStats(cell.project.id).folderCount === 1 ? 'One' : formatNumber(getStats(cell.project.id).folderCount) }}</span>
+                        <span class="stat-label">{{ getStats(cell.project.id).folderCount === 1 ? 'PART' : 'PARTS' }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).docCount) }}</span>
+                        <span class="stat-label">{{ getStats(cell.project.id).docCount === 1 ? 'CHAPTER' : 'CHAPTERS' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button class="archive-action-btn"
+                          (click)="unarchiveProject(cell.project, $event)"
+                          title="Unarchive project">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="17 1 21 5 17 9"/>
+                      <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                      <polyline points="7 23 3 19 7 15"/>
+                      <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                    </svg>
+                  </button>
+                </div>
+              } @else {
+                <!-- Project info - use context menu for actions -->
+                <div class="card-info">
+                  <div class="book-stats">
+                    <div class="stats-row">
+                      <div class="stat-item">
+                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).pageCount) }}</span>
+                        <span class="stat-label">{{ getStats(cell.project.id).pageCount === 1 ? 'PAGE' : 'PAGES' }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).wordCount) }}</span>
+                        <span class="stat-label">WORDS</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).charCount) }}</span>
+                        <span class="stat-label">CHARS</span>
+                      </div>
+                    </div>
+                    <div class="stats-row">
+                      <div class="stat-item">
+                        <span class="stat-value">{{ getStats(cell.project.id).folderCount === 1 ? 'One' : formatNumber(getStats(cell.project.id).folderCount) }}</span>
+                        <span class="stat-label">{{ getStats(cell.project.id).folderCount === 1 ? 'PART' : 'PARTS' }}</span>
+                      </div>
+                      <div class="stat-item">
+                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).docCount) }}</span>
+                        <span class="stat-label">{{ getStats(cell.project.id).docCount === 1 ? 'CHAPTER' : 'CHAPTERS' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
             }
           </div>
           </div>
@@ -196,4 +239,24 @@
   }
 </section>
 </main>
+
+<!-- Context Menu -->
+@if (showContextMenu() && contextMenuProjectId() !== null) {
+  <div class="context-menu-backdrop" (click)="onContextMenuClickOutside($event)">
+    <div class="context-menu" 
+         [style.left.px]="contextMenuX()"
+         [style.top.px]="contextMenuY()"
+         (click)="$event.stopPropagation()">
+      <button class="context-menu-item" (click)="contextMenuDeleteArchive()">
+        @if (archives().has(contextMenuProjectId()!)) {
+          <span>Delete</span>
+        } @else if (getStats(contextMenuProjectId()!).pageCount > 0) {
+          <span>Archive</span>
+        } @else {
+          <span>Delete</span>
+        }
+      </button>
+    </div>
+  </div>
+}
 }

@@ -236,10 +236,7 @@
   width: 100%;
   overflow-y: auto;
 }
-.h-4{} 
- 
-.w-4{} 
- 
+
 /* Title group and doc-tools layout */
 .title-group {
   flex: 1;

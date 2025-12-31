@@ -15,6 +15,8 @@ export interface Project {
   timeline_start?: string | null;
   timeline_end?: string | null;
   grid_order?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface Character {

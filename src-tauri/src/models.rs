@@ -10,6 +10,8 @@ pub struct Project {
     pub timeline_start: Option<String>,
     pub timeline_end: Option<String>,
     pub grid_order: Option<i64>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

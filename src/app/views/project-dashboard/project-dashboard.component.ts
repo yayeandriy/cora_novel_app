@@ -47,6 +47,12 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
   confirmingArchive = signal<number | null>(null);
   confirmingDelete = signal<number | null>(null);
   
+  // Context menu state
+  showContextMenu = signal(false);
+  contextMenuX = signal(0);
+  contextMenuY = signal(0);
+  contextMenuProjectId = signal<number | null>(null);
+  
   // For inline editing
   nameControl = new FormControl('');
   private shouldFocusInput = false;
@@ -350,10 +356,42 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
     }, 150);
   }
   
+  /**
+   * Format large numbers with K/M suffixes for display
+   * Numbers >= 2,000 are displayed as "2K", "1.5M", etc.
+   */
   formatNumber(n: number): string {
-    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-    return n.toString();
+    if (n >= 1_000_000) {
+      const millions = n / 1_000_000;
+      return millions >= 10 ? `${Math.round(millions)}M` : `${millions.toFixed(1).replace(/\.0$/, '')}M`;
+    }
+    if (n >= 2_000) {
+      const thousands = n / 1000;
+      return thousands >= 10 ? `${Math.round(thousands)}K` : `${thousands.toFixed(1).replace(/\.0$/, '')}K`;
+    }
+    return n.toLocaleString();
+  }
+
+  formatDate(dateStr: string | null | undefined): string {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      // Show relative time for recent updates
+      if (diffDays === 0) return 'Today';
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return `${diffDays} days ago`;
+      if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+      if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+      
+      // Show full date for older items
+      return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch {
+      return '';
+    }
   }
 
   async selectFolder() {
@@ -450,21 +488,20 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
     event.preventDefault();
     event.stopPropagation();
     
-    // Simple context menu via confirm dialogs
-    const action = prompt('Enter action: edit, delete, or cancel');
-    if (action === 'edit') {
-      this.editingId.set(p.id);
-      this.showCreate.set(true);
-      this.form.setValue({ 
-        name: p.name, 
-        desc: p.desc ?? null, 
-        path: p.path ?? null 
-      });
-    } else if (action === 'delete') {
-      if (confirm('Are you sure you want to delete this project?')) {
-        this.svc.deleteProject(p.id).then(() => this.reload());
-      }
-    }
+    console.log('Context menu triggered for project:', p.id, 'at position:', event.clientX, event.clientY);
+    
+    // Show visual context menu
+    this.contextMenuX.set(event.clientX);
+    this.contextMenuY.set(event.clientY);
+    this.contextMenuProjectId.set(p.id);
+    this.showContextMenu.set(true);
+    
+    console.log('Context menu state:', {
+      show: this.showContextMenu(),
+      projectId: this.contextMenuProjectId(),
+      x: this.contextMenuX(),
+      y: this.contextMenuY()
+    });
   }
 
   openProject(p: Project) {
@@ -583,6 +620,63 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
     this.showArchivedProjects.update(v => !v);
   }
 
+  onCardRightClick(event: MouseEvent, projectId: number) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Position the context menu at the click location
+    this.contextMenuX.set(event.clientX);
+    this.contextMenuY.set(event.clientY);
+    this.contextMenuProjectId.set(projectId);
+    this.showContextMenu.set(true);
+  }
+  
+  closeContextMenu() {
+    this.showContextMenu.set(false);
+    this.contextMenuProjectId.set(null);
+  }
+  
+  onContextMenuClickOutside(event: Event) {
+    if (this.showContextMenu()) {
+      this.closeContextMenu();
+    }
+  }
+  
+  async contextMenuDeleteArchive() {
+    const projectId = this.contextMenuProjectId();
+    if (!projectId) return;
+    
+    this.closeContextMenu();
+    
+    // Find the project
+    const project = this.projects().find(p => p.id === projectId);
+    if (!project) return;
+    
+    const projectWithArchive: ProjectWithArchive = {
+      ...project,
+      isArchived: this.archives().has(projectId),
+      archiveId: this.archives().get(projectId)?.id
+    };
+    
+    // Check if project is archived or has pages
+    const stats = this.getStats(projectId);
+    const isArchived = projectWithArchive.isArchived;
+    
+    if (isArchived || stats.pageCount > 0) {
+      // Archive the project (or delete if already archived)
+      if (isArchived) {
+        // Already archived, so delete
+        await this.deleteProject(projectId, new Event('click'));
+      } else {
+        // Archive it
+        await this.archiveProject(projectWithArchive, new Event('click'));
+      }
+    } else {
+      // Empty project, just delete
+      await this.deleteProject(projectId, new Event('click'));
+    }
+  }
+  
   async archiveProject(project: ProjectWithArchive, event: Event) {
     event.stopPropagation();
     this.confirmingArchive.set(project.id);

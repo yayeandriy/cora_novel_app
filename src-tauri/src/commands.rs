@@ -1179,7 +1179,7 @@ pub async fn export_project_to_pdf(state: State<'_, AppState>, project_id: i64, 
     
     // Get project
     let project: Project = conn.query_row(
-        "SELECT id, name, desc, path, notes, timeline_start, timeline_end, grid_order FROM projects WHERE id = ?",
+        "SELECT id, name, desc, path, notes, timeline_start, timeline_end, grid_order, created_at, updated_at FROM projects WHERE id = ?",
         [project_id],
         |row| Ok(Project {
             id: row.get(0)?,
@@ -1190,6 +1190,8 @@ pub async fn export_project_to_pdf(state: State<'_, AppState>, project_id: i64, 
             timeline_start: row.get(5)?,
             timeline_end: row.get(6)?,
             grid_order: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
         })
     ).map_err(|e| e.to_string())?;
     

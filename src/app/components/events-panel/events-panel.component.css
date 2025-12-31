@@ -42,13 +42,7 @@
 .h-3.5{} 
  
 .w-3.5{} 
- 
-.h-3.5{} 
- 
-.w-3.5{} 
- 
-.hint{} 
- 
+
 /* Inline list add button styled to match list items spacing */
 .list-add-button{display:flex;align-items:center;gap:.5rem;width:100%;padding:.625rem .75rem;margin-bottom:.5rem;background:#f9fafb;border:1px dashed #d1d5db;border-radius:.375rem;color:#374151;cursor:pointer;transition:background-color 150ms,border-color 150ms}
 .list-add-button:hover{background:#f3f4f6;border-color:#9ca3af}

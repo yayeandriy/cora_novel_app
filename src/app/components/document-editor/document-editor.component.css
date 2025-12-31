@@ -21,9 +21,6 @@
   background: white;
 }
 .title-group { display: flex; align-items: center; gap: 0rem; min-width: 0; }
-.toolbar-actions {  }
-.draft-controls {  }
-.draft-tabs {  }
 .header-index { 
   color: #6b7280; 
   font-size: 0.8125rem; 
@@ -389,8 +386,4 @@
   height: 0.875rem;
   color: #374151;
   flex-shrink: 0;
-} 
-.icon-cards{} 
- 
-.icon-folder{} 
- 
+}
