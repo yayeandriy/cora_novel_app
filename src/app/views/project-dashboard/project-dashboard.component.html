@@ -108,14 +108,15 @@
           <div class="book-cover">
           <div class="card-title">
             <div class="inline-edit-wrapper">
-              <input #newProjectInput
-                     type="text"
+              <textarea #newProjectInput
                      [formControl]="nameControl"
                      class="inline-title-input"
                      placeholder="Title of the story"
-                     (keydown.enter)="createQuick()"
+                     (input)="adjustTextareaHeight()"
+                     (keydown.enter)="$event.preventDefault(); createQuick()"
                      (keydown.escape)="cancelEdit()"
-                     (blur)="onInputBlur()" />
+                     (blur)="onInputBlur()"
+                     rows="1"></textarea>
             </div>
           </div>
           <div class="card-pages">

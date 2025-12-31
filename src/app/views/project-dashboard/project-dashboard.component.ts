@@ -29,7 +29,7 @@ interface ProjectWithArchive extends Project {
   styleUrls: ["./project-dashboard.component.css"],
 })
 export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
-  @ViewChild('newProjectInput') newProjectInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('newProjectInput') newProjectInput?: ElementRef<HTMLTextAreaElement>;
   @ViewChild('importMenuContainer') importMenuContainer?: ElementRef<HTMLDivElement>;
   @ViewChild('emptyCellImportContainer') emptyCellImportContainer?: ElementRef<HTMLDivElement>;
   
@@ -52,6 +52,10 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
   private shouldFocusInput = false;
   private routerSubscription: any;
   private isFirstNavigation = true;
+  
+  // Random title generation
+  private adjectives: string[] = [];
+  private nouns: string[] = [];
   
   // Computed values
   hasProjects = computed(() => this.projects().length > 0);
@@ -132,6 +136,9 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
   }
 
   async ngOnInit() {
+    // Load word lists for random title generation
+    await this.loadWordLists();
+    
     // Always load projects first
     await this.reload();
 
@@ -160,6 +167,49 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
 
     // Mark current location (useful if the app is closed on the dashboard)
     try { localStorage.setItem('cora-last-route', 'dashboard'); } catch {}
+  }
+
+  private async loadWordLists() {
+    try {
+      const [adjectivesResponse, nounsResponse] = await Promise.all([
+        fetch('assets/words/adjectives.txt'),
+        fetch('assets/words/nouns.txt')
+      ]);
+      
+      const adjectivesText = await adjectivesResponse.text();
+      const nounsText = await nounsResponse.text();
+      
+      this.adjectives = adjectivesText.split('\n').filter(line => line.trim().length > 0);
+      this.nouns = nounsText.split('\n').filter(line => line.trim().length > 0);
+    } catch (error) {
+      console.error('Failed to load word lists:', error);
+    }
+  }
+  
+  private generateRandomTitle(): string {
+    if (this.adjectives.length > 0 && this.nouns.length > 0) {
+      const randomAdjective = this.adjectives[Math.floor(Math.random() * this.adjectives.length)];
+      const randomNoun = this.nouns[Math.floor(Math.random() * this.nouns.length)];
+      // Remove any trailing numbers from words (e.g., "Hollow2" -> "Hollow")
+      const cleanAdjective = randomAdjective.replace(/\d+$/, '');
+      const cleanNoun = randomNoun.replace(/\d+$/, '');
+      const title = `${cleanAdjective} ${cleanNoun}`;
+      return this.toSentenceCase(title);
+    }
+    return '';
+  }
+  
+  private toSentenceCase(text: string): string {
+    if (!text) return text;
+    return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+  }
+  
+  adjustTextareaHeight() {
+    const textarea = this.newProjectInput?.nativeElement as HTMLTextAreaElement;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    }
   }
 
   async onStartupCreateProject(name: string) {
@@ -269,7 +319,9 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
   startCreateAt(cellIndex: number) {
     this.editingCellIndex.set(cellIndex);
     this.showCreate.set(true);
-    this.nameControl.reset();
+    // Generate random title
+    const randomTitle = this.generateRandomTitle();
+    this.nameControl.setValue(randomTitle);
     this.shouldFocusInput = true;
   }
   
