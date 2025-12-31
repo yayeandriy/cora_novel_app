@@ -84,6 +84,10 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   private readonly COLUMN_PX_KEY_GLOBAL = 'cora-editor-column-px';
   private loadedProjectId: number | null = null;
   // Draft controls follow split visibility (no separate collapse state)
+  
+  // Editor placeholders
+  private placeholders: string[] = [];
+  editorPlaceholder: string = 'Story begins...';
 
   private getWidthKey(): string {
     const pid = this.selectedDoc?.project_id;
@@ -105,7 +109,16 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
 
   constructor(private cdr: ChangeDetectorRef) {}
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    // Load editor placeholders from asset file
+    try {
+      const response = await fetch('assets/words/editor_placeholders.txt');
+      const text = await response.text();
+      this.placeholders = text.split('\n').filter(line => line.trim().length > 0);
+    } catch (error) {
+      console.error('Failed to load editor placeholders:', error);
+    }
+    
     // Load generic fallback immediately; project-scoped keys will override on first selectedDoc change
     try {
       const savedWidth = localStorage.getItem(this.WIDTH_KEY_GLOBAL);
@@ -167,10 +180,55 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
     if (changes['selectedDoc'] || changes['selectedDraftId'] || changes['externalMode'] || changes['externalDraftId']) {
       setTimeout(() => { this.autoSizePrimary(); this.autoSizeDraft(); }, 0);
     }
+    // Update placeholder based on doc position
+    if (changes['selectedDoc'] || changes['allProjectDocs']) {
+      this.updatePlaceholder();
+    }
   }
 
   ngOnDestroy(): void {
     this.detachResizeListeners();
+  }
+
+  private updatePlaceholder(): void {
+    if (!this.selectedDoc || this.placeholders.length === 0) return;
+    
+    // Check if this is the first doc in the project
+    const isFirstDoc = this.isFirstDocInProject();
+    
+    if (isFirstDoc) {
+      // First doc always gets "Story begins..." (or first placeholder if different)
+      this.editorPlaceholder = this.placeholders[0] || 'Story begins...';
+    } else {
+      // Other docs get a consistent placeholder based on their ID (not random on every render)
+      const otherPlaceholders = this.placeholders.slice(1);
+      if (otherPlaceholders.length > 0) {
+        // Use doc ID as seed to get consistent placeholder for same doc
+        const index = this.selectedDoc.id % otherPlaceholders.length;
+        this.editorPlaceholder = otherPlaceholders[index];
+      } else {
+        // Fallback if only one placeholder exists
+        this.editorPlaceholder = this.placeholders[0] || 'Continue writing';
+      }
+    }
+  }
+
+  private isFirstDocInProject(): boolean {
+    if (!this.selectedDoc || this.allProjectDocs.length === 0) return false;
+    
+    // Sort all docs by sort_order and group, then check if current doc is first
+    const sortedDocs = [...this.allProjectDocs].sort((a, b) => {
+      // Sort by doc_group_id first (null groups last), then by sort_order
+      const groupA = a.doc_group_id ?? Number.MAX_SAFE_INTEGER;
+      const groupB = b.doc_group_id ?? Number.MAX_SAFE_INTEGER;
+      if (groupA !== groupB) return groupA - groupB;
+      
+      const orderA = a.sort_order ?? 0;
+      const orderB = b.sort_order ?? 0;
+      return orderA - orderB;
+    });
+    
+    return sortedDocs.length > 0 && sortedDocs[0].id === this.selectedDoc.id;
   }
 
   focusEditor() {
