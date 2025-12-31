@@ -61,7 +61,7 @@
         (scroll)="editorScroll.emit($any($event.target).scrollTop)"
         class="editor-textarea"
         (blur)="onBlur()"
-        placeholder="Start writing...">
+        placeholder="Story begins...">
       </textarea>
       <div class="resize-handle right" (mousedown)="initResize($event, 'right')"></div>
     </div>
@@ -77,7 +77,7 @@
             (scroll)="editorScroll.emit($any($event.target).scrollTop)"
             class="editor-textarea"
             (blur)="onBlur()"
-            placeholder="Start writing...">
+            placeholder="Story begins...">
           </textarea>
           <div class="resize-handle right" (mousedown)="initResize($event, 'right')"></div>
         </div>

@@ -27,14 +27,19 @@
   max-width: 480px;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
+}
+
+.startup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .startup-label {
   font-size: 1.25rem;
   font-weight: 500;
   color: #333;
-  margin-bottom: 0.5rem;
 }
 
 .startup-input {
@@ -63,7 +68,7 @@
 }
 
 .startup-button {
-  padding: 0.875rem 2rem;
+  padding: 0.5rem 1rem;
   font-size: 1rem;
   font-weight: 500;
   color: white;
@@ -73,15 +78,16 @@
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  white-space: nowrap;
 }
 
-.startup-button:hover:not(:disabled) {
+.startup-button:hover {
   background: #2563eb;
   box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
   transform: translateY(-1px);
 }
 
-.startup-button:active:not(:disabled) {
+.startup-button:active {
   transform: translateY(0);
   box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
 }

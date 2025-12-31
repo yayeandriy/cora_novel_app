@@ -2,7 +2,17 @@
   <div class="startup-content">
     <div class="startup-left">
       <div class="startup-form">
-        <label class="startup-label" for="projectTitle">Title</label>
+        <div class="startup-header">
+          <label class="startup-label" for="projectTitle">Title</label>
+          @if (projectTitle.trim()) {
+            <button 
+              class="startup-button"
+              (click)="onSubmit()"
+            >
+              Start
+            </button>
+          }
+        </div>
         <textarea
           #titleInput
           id="projectTitle"
@@ -10,16 +20,9 @@
           [(ngModel)]="projectTitle"
           (input)="adjustTextareaHeight()"
           (keydown)="onKeydown($event)"
-          placeholder="Enter project name"
+          placeholder="Name your story"
           rows="1"
         ></textarea>
-        <button 
-          class="startup-button"
-          (click)="onSubmit()"
-          [disabled]="!projectTitle.trim()"
-        >
-          Start
-        </button>
       </div>
     </div>
     

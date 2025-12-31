@@ -14,23 +14,35 @@ export class StartupViewComponent implements OnInit, AfterViewInit {
   @Output() createProject = new EventEmitter<string>();
   
   projectTitle = '';
-  private titles: string[] = [];
+  private adjectives: string[] = [];
+  private nouns: string[] = [];
 
   async ngOnInit() {
-    // Load titles from the asset file
+    // Load adjectives and nouns from asset files
     try {
-      const response = await fetch('assets/novel_titles_10000.txt');
-      const text = await response.text();
-      this.titles = text.split('\n').filter(line => line.trim().length > 0);
+      const [adjectivesResponse, nounsResponse] = await Promise.all([
+        fetch('assets/words/adjectives.txt'),
+        fetch('assets/words/nouns.txt')
+      ]);
       
-      // Set a random title in sentence case
-      if (this.titles.length > 0) {
-        const randomIndex = Math.floor(Math.random() * this.titles.length);
-        const title = this.titles[randomIndex];
+      const adjectivesText = await adjectivesResponse.text();
+      const nounsText = await nounsResponse.text();
+      
+      this.adjectives = adjectivesText.split('\n').filter(line => line.trim().length > 0);
+      this.nouns = nounsText.split('\n').filter(line => line.trim().length > 0);
+      
+      // Generate a random title from adjective + noun
+      if (this.adjectives.length > 0 && this.nouns.length > 0) {
+        const randomAdjective = this.adjectives[Math.floor(Math.random() * this.adjectives.length)];
+        const randomNoun = this.nouns[Math.floor(Math.random() * this.nouns.length)];
+        // Remove any trailing numbers from words (e.g., "Hollow2" -> "Hollow")
+        const cleanAdjective = randomAdjective.replace(/\d+$/, '');
+        const cleanNoun = randomNoun.replace(/\d+$/, '');
+        const title = `${cleanAdjective} ${cleanNoun}`;
         this.projectTitle = this.toSentenceCase(title);
       }
     } catch (error) {
-      console.error('Failed to load novel titles:', error);
+      console.error('Failed to load words:', error);
     }
   }
 
