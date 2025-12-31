@@ -72,6 +72,11 @@
   box-shadow: inset -2px 0 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Black spine for books with content */
+.book-spine.has-content {
+  background: linear-gradient(to right, #1f2937, #374151);
+}
+
 /* Book cover (main surface) */
 .book-cover {
   position: absolute;

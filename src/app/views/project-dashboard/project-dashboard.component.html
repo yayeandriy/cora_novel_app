@@ -20,7 +20,7 @@
              [class.confirming]="confirmingArchive() === cell.project.id"
              (click)="openProject(cell.project)"
              (contextmenu)="onProjectContextMenu(cell.project, $event)">
-          <div class="book-spine"></div>
+          <div class="book-spine" [class.has-content]="getStats(cell.project.id).wordCount > 0"></div>
           <div class="book-cover">
           
           @if (confirmingArchive() === cell.project.id) {
