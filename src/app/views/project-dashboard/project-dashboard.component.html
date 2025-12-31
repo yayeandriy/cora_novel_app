@@ -10,16 +10,18 @@
 } @else {
 <main class="dashboard-main" (click)="closeAllMenus()">
 <section class="dashboard-section">
-  <!-- Fixed 4x3 grid that fills the screen -->
-  <div class="dashboard-grid">
+  <!-- Flexible card layout with book-like proportions -->
+  <div class="dashboard-cards">
     @for (cell of getGridCells(); track cell.index) {
       @if (cell.project) {
-        <!-- Project Card -->
-        <div class="card card-project"
+        <!-- Project Card (Book Cover) -->
+        <div class="book-card"
              [class.archived]="isArchived(cell.project)"
              [class.confirming]="confirmingArchive() === cell.project.id"
              (click)="openProject(cell.project)"
              (contextmenu)="onProjectContextMenu(cell.project, $event)">
+          <div class="book-spine"></div>
+          <div class="book-cover">
           
           @if (confirmingArchive() === cell.project.id) {
             <!-- Inline Archive Confirmation -->
@@ -70,7 +72,7 @@
               <div class="card-actions">
                 <button class="delete-project-btn"
                         (click)="deleteProject(cell.project.id, $event)">
-                  Delete project
+                  Delete
                 </button>
               </div>
             } @else if (getStats(cell.project.id).pageCount === 0) {
@@ -78,7 +80,7 @@
               <div class="card-actions">
                 <button class="delete-project-btn"
                         (click)="deleteProject(cell.project.id, $event)">
-                  Delete project
+                  Delete
                 </button>
               </div>
             } @else {
@@ -97,10 +99,13 @@
               </div>
             }
           </div>
+          </div>
         </div>
       } @else if (showCreate() && cell.index === editingCellIndex()) {
         <!-- New Project Card (inline edit) -->
-        <div class="card card-project card-editing">
+        <div class="book-card book-card-editing">
+          <div class="book-spine"></div>
+          <div class="book-cover">
           <div class="card-title">
             <div class="inline-edit-wrapper">
               <input #newProjectInput
@@ -116,10 +121,11 @@
           <div class="card-pages">
             <span>No pages</span>
           </div>
+          </div>
         </div>
       } @else {
         <!-- Empty Card -->
-        <div class="card card-empty">
+        <div class="book-card book-card-empty">
           @if (importingCellIndex() === cell.index) {
             <!-- Inline Import Options -->
             <div class="import-overlay" (click)="$event.stopPropagation()">

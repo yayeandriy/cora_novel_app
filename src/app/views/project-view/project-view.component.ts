@@ -2993,8 +2993,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
       this.projectDraftsCount = this.projectDrafts.length;
     } catch (e) {
-      console.error('Failed to delete project draft:', e);
-      alert('Failed to delete project draft: ' + e);
+      console.error('Failed to delete draft:', e);
+      alert('Failed to delete draft: ' + e);
     }
   }
 

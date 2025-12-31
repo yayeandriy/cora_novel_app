@@ -33,55 +33,100 @@
   height: 100%;
 }
 
-/* Fixed 4x3 grid */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(3, 1fr);
+/* Flexible card layout with wrapping */
+.dashboard-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  padding: 48px;
   width: 100%;
   height: 100%;
+  overflow-y: auto;
+  align-content: flex-start;
 }
 
-/* Card base styles */
-.card {
-  background-color: white;
-  border-right: 1px solid #e5e7eb;
-  border-bottom: 1px solid #e5e7eb;
+/* Book card base styles - novel proportions (2:3 aspect ratio) */
+.book-card {
+  width: 220px;
+  height: 330px;
+  position: relative;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transform-style: preserve-3d;
 }
 
-.card:hover {
-  background-color: #f9fafb;
+.book-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
 }
 
-/* Project card with content */
-.card-project {
+/* Book spine (left edge) */
+.book-spine {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 12px;
+  height: 100%;
+  background: linear-gradient(to right, #d1d5db, #e5e7eb);
+  border-radius: 2px 0 0 2px;
+  box-shadow: inset -2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Book cover (main surface) */
+.book-cover {
+  position: absolute;
+  left: 12px;
+  top: 0;
+  width: calc(100% - 12px);
+  height: 100%;
+  background-color: white;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 
+    4px 0 8px rgba(0, 0, 0, 0.1),
+    0 4px 12px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 24px;
-  position: relative;
+  padding: 24px 20px;
+  overflow: hidden;
 }
 
-.card-project.archived {
+/* Book texture overlay */
+.book-cover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.8) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.8) 1px, transparent 1px);
+  background-size: 2px 2px;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.book-card.archived {
   opacity: 0.65;
+}
+
+.book-card.archived .book-cover {
   background-color: #fafafa;
 }
 
-.card-project.archived:hover {
-  background-color: #f5f5f5;
+.book-card.archived:hover {
   opacity: 0.75;
 }
 
-.card-project.confirming {
+.book-card.confirming {
   cursor: default;
 }
 
 .confirm-overlay {
   position: absolute;
   top: 0;
-  left: 0;
+  left: 12px;
   right: 0;
   bottom: 0;
   background-color: rgba(255, 255, 255, 0.98);
@@ -90,6 +135,7 @@
   justify-content: center;
   z-index: 10;
   backdrop-filter: blur(2px);
+  border-radius: 0 4px 4px 0;
 }
 
 .confirm-message {
@@ -143,7 +189,7 @@
 .import-overlay {
   position: absolute;
   top: 0;
-  left: 0;
+  left: 12px;
   right: 0;
   bottom: 0;
   background-color: rgba(255, 255, 255, 0.98);
@@ -152,6 +198,7 @@
   justify-content: center;
   z-index: 10;
   backdrop-filter: blur(2px);
+  border-radius: 0 4px 4px 0;
 }
 
 .import-message {
@@ -243,11 +290,13 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  position: relative;
+  z-index: 1;
 }
 
 .card-title h3 {
-  font-size: 1.25rem;
-  font-weight: 400;
+  font-size: 1.125rem;
+  font-weight: 500;
   color: #111827;
   line-height: 1.4;
   margin: 0;
@@ -275,9 +324,10 @@
   border-radius: 4px;
   transition: all 0.15s ease;
   opacity: 0;
+  z-index: 1;
 }
 
-.card-project:hover .archive-action-btn {
+.book-card:hover .archive-action-btn {
   opacity: 1;
 }
 
@@ -309,9 +359,10 @@
   border-radius: 4px;
   transition: all 0.15s ease;
   opacity: 0;
+  z-index: 1;
 }
 
-.card-project:hover .delete-project-btn-inline {
+.book-card:hover .delete-project-btn-inline {
   opacity: 1;
 }
 
@@ -326,6 +377,8 @@
 
 .card-pages {
   margin-top: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .card-info {
@@ -361,9 +414,8 @@
   text-decoration: underline;
 }
 
-/* Empty card */
-.card-empty {
-  /* No content, just empty space */
+/* Empty book card */
+.book-card-empty .book-cover {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -375,9 +427,10 @@
   gap: 12px;
   opacity: 0;
   transition: opacity 0.2s ease;
+  z-index: 2;
 }
 
-.card-empty:hover .empty-cell-actions {
+.book-card-empty:hover .empty-cell-actions {
   opacity: 1;
 }
 
@@ -423,23 +476,9 @@
   z-index: 200;
 }
 
-/* Remove border on last column */
-.card:nth-child(4n) {
-  border-right: none;
-}
-
-/* Remove border on last row */
-.card:nth-child(n+9) {
-  border-bottom: none;
-}
-
 /* Inline edit input styling */
-.card-editing {
+.book-card-editing .book-cover {
   cursor: default;
-}
-
-.card-editing:hover {
-  background-color: white;
 }
 
 .inline-edit-wrapper {
@@ -595,3 +634,11 @@
   color: #6b7280;
   line-height: 1.4;
 }
+.h-8{} 
+ 
+.w-8{} 
+ 
+.border-b-2{} 
+ 
+.border-gray-900{} 
+ 
