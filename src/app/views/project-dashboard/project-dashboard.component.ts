@@ -5,6 +5,7 @@ import { ProjectService } from "../../services/project.service";
 import type { Project, Doc, Archive } from "../../shared/models";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Router } from "@angular/router";
+import { StartupViewComponent } from "../../components/startup-view/startup-view.component";
 
 interface ProjectStats {
   docCount: number;
@@ -22,7 +23,7 @@ interface ProjectWithArchive extends Project {
 @Component({
   selector: "app-project-dashboard",
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, StartupViewComponent],
   templateUrl: "./project-dashboard.component.html",
   styleUrls: ["./project-dashboard.component.css"],
 })
@@ -135,6 +136,16 @@ export class ProjectDashboardComponent implements AfterViewChecked {
 
     // Mark current location (useful if the app is closed on the dashboard)
     try { localStorage.setItem('cora-last-route', 'dashboard'); } catch {}
+  }
+
+  async onStartupCreateProject(name: string) {
+    try {
+      const created = await this.svc.createProject({ name });
+      await this.reload();
+      this.router.navigate(['/project', created.id]);
+    } catch (error) {
+      console.error('Failed to create project:', error);
+    }
   }
 
   async reload() {

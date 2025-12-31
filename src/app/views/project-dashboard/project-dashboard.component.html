@@ -1,11 +1,15 @@
-<main class="dashboard-main" (click)="closeAllMenus()">
-<section class="dashboard-section">
-  <!-- Loading state -->
-  @if (isLoading()) {
+<!-- Startup View (replaces everything when no projects exist) -->
+@if (isLoading()) {
+<main class="dashboard-main">
   <div class="loading-container">
     <div class="animate-spin h-8 w-8 border-b-2 border-gray-900"></div>
   </div>
-  } @else {
+</main>
+} @else if (!hasProjects()) {
+<app-startup-view (createProject)="onStartupCreateProject($event)"></app-startup-view>
+} @else {
+<main class="dashboard-main" (click)="closeAllMenus()">
+<section class="dashboard-section">
   <!-- Fixed 4x3 grid that fills the screen -->
   <div class="dashboard-grid">
     @for (cell of getGridCells(); track cell.index) {
@@ -163,7 +167,6 @@
       }
     }
   </div>
-  }
   
   <!-- Bottom Dock - Only show if there are archived projects -->
   @if (shouldShowDock()) {
@@ -186,3 +189,4 @@
   }
 </section>
 </main>
+}

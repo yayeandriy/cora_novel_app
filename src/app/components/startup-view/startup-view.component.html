@@ -1,0 +1,34 @@
+<div class="startup-container">
+  <div class="startup-content">
+    <div class="startup-left">
+      <div class="startup-form">
+        <label class="startup-label" for="projectTitle">Title</label>
+        <input
+          #titleInput
+          id="projectTitle"
+          type="text"
+          class="startup-input"
+          [(ngModel)]="projectTitle"
+          (keydown)="onKeydown($event)"
+          placeholder="Enter project name"
+          autocomplete="off"
+        />
+        <button 
+          class="startup-button"
+          (click)="onSubmit()"
+          [disabled]="!projectTitle.trim()"
+        >
+          Start
+        </button>
+      </div>
+    </div>
+    
+    <div class="startup-right">
+      <img 
+        src="assets/artworks/cora_art.svg" 
+        alt="Cora Artwork" 
+        class="startup-artwork"
+      />
+    </div>
+  </div>
+</div>
