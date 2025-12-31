@@ -1,11 +1,12 @@
-import { Component, signal, computed, ViewChild, ElementRef, AfterViewChecked } from "@angular/core";
+import { Component, signal, computed, ViewChild, ElementRef, AfterViewChecked, OnDestroy } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { ReactiveFormsModule, FormGroup, FormControl } from "@angular/forms";
 import { ProjectService } from "../../services/project.service";
 import type { Project, Doc, Archive } from "../../shared/models";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Router } from "@angular/router";
+import { Router, NavigationEnd } from "@angular/router";
 import { StartupViewComponent } from "../../components/startup-view/startup-view.component";
+import { filter } from "rxjs";
 
 interface ProjectStats {
   docCount: number;
@@ -27,7 +28,7 @@ interface ProjectWithArchive extends Project {
   templateUrl: "./project-dashboard.component.html",
   styleUrls: ["./project-dashboard.component.css"],
 })
-export class ProjectDashboardComponent implements AfterViewChecked {
+export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
   @ViewChild('newProjectInput') newProjectInput?: ElementRef<HTMLInputElement>;
   @ViewChild('importMenuContainer') importMenuContainer?: ElementRef<HTMLDivElement>;
   @ViewChild('emptyCellImportContainer') emptyCellImportContainer?: ElementRef<HTMLDivElement>;
@@ -49,6 +50,8 @@ export class ProjectDashboardComponent implements AfterViewChecked {
   // For inline editing
   nameControl = new FormControl('');
   private shouldFocusInput = false;
+  private routerSubscription: any;
+  private isFirstNavigation = true;
   
   // Computed values
   hasProjects = computed(() => this.projects().length > 0);
@@ -69,13 +72,8 @@ export class ProjectDashboardComponent implements AfterViewChecked {
       ? withArchive 
       : withArchive.filter(p => !p.isArchived);
     
-    // Sort by grid_order, then by id as fallback
-    return filtered.sort((a, b) => {
-      const aOrder = a.grid_order ?? 999;
-      const bOrder = b.grid_order ?? 999;
-      if (aOrder !== bOrder) return aOrder - bOrder;
-      return a.id - b.id;
-    });
+    // Sort by id (chronological order - older projects first)
+    return filtered.sort((a, b) => a.id - b.id);
   });
   
   // Check if there are any archived projects
@@ -102,6 +100,28 @@ export class ProjectDashboardComponent implements AfterViewChecked {
       desc: new FormControl(null) as FormControl<string | null>,
       path: new FormControl(null) as FormControl<string | null>,
     });
+
+    // Subscribe to router events to reload when navigating back to dashboard
+    this.routerSubscription = this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe((event: any) => {
+        // Skip the first navigation (initial page load)
+        if (this.isFirstNavigation) {
+          this.isFirstNavigation = false;
+          return;
+        }
+        
+        if (event.url === '/' || event.url === '') {
+          // Navigated back to dashboard - reload projects
+          this.reload();
+        }
+      });
+  }
+  
+  ngOnDestroy() {
+    if (this.routerSubscription) {
+      this.routerSubscription.unsubscribe();
+    }
   }
   
   ngAfterViewChecked() {
@@ -112,8 +132,10 @@ export class ProjectDashboardComponent implements AfterViewChecked {
   }
 
   async ngOnInit() {
-    // Restore the last opened project on cold start.
-    // Use sessionStorage to avoid redirect loops when the user navigates back to the dashboard.
+    // Always load projects first
+    await this.reload();
+
+    // Then check if we should restore the last opened project (only on cold start)
     try {
       const alreadyRestored = sessionStorage.getItem('cora-restored-last-project');
       if (!alreadyRestored) {
@@ -124,15 +146,17 @@ export class ProjectDashboardComponent implements AfterViewChecked {
         const lastProjectId = lastProjectIdStr ? Number(lastProjectIdStr) : NaN;
 
         if (lastRoute === 'project' && Number.isFinite(lastProjectId) && lastProjectId > 0) {
-          this.router.navigate(['/project', lastProjectId]);
-          return;
+          // Check if the project still exists before navigating
+          const projectExists = this.projects().some(p => p.id === lastProjectId);
+          if (projectExists) {
+            this.router.navigate(['/project', lastProjectId]);
+            return;
+          }
         }
       }
     } catch {
       // ignore
     }
-
-    await this.reload();
 
     // Mark current location (useful if the app is closed on the dashboard)
     try { localStorage.setItem('cora-last-route', 'dashboard'); } catch {}
@@ -152,6 +176,7 @@ export class ProjectDashboardComponent implements AfterViewChecked {
     this.isLoading.set(true);
     try {
       const projectList = await this.svc.listProjects();
+      console.log('[Dashboard] Loaded projects:', projectList.length, projectList);
       this.projects.set(projectList);
       
       // Fetch stats and archives for each project in parallel
@@ -159,8 +184,11 @@ export class ProjectDashboardComponent implements AfterViewChecked {
         this.loadAllProjectStats(projectList),
         this.loadAllArchives(projectList)
       ]);
+    } catch (error) {
+      console.error('[Dashboard] Failed to load projects:', error);
     } finally {
       this.isLoading.set(false);
+      console.log('[Dashboard] isLoading:', this.isLoading(), 'hasProjects:', this.hasProjects(), 'projects count:', this.projects().length);
     }
   }
   
@@ -227,29 +255,11 @@ export class ProjectDashboardComponent implements AfterViewChecked {
     const projects = this.sortedProjects();
     const cells: { index: number; project: ProjectWithArchive | null }[] = [];
     
-    // Separate projects with and without grid_order
-    const projectsWithOrder = projects.filter(p => p.grid_order !== null && p.grid_order !== undefined);
-    const projectsWithoutOrder = projects.filter(p => p.grid_order === null || p.grid_order === undefined);
-    
-    // Track which cells are occupied
-    const occupiedCells = new Set<number>();
-    const cellToProject = new Map<number, ProjectWithArchive>();
-    
-    // Place all projects in their grid_order positions
-    for (const p of projectsWithOrder) {
-      if (p.grid_order! < totalCells) {
-        cellToProject.set(p.grid_order!, p);
-      }
-    }
-    
-    // Projects without grid_order are not shown in the grid
-    // They should be assigned a grid_order when created
-    
-    // Build the cells array - cells without projects remain empty
+    // Fill cells with projects in order, leave remaining cells empty
     for (let i = 0; i < totalCells; i++) {
       cells.push({
         index: i,
-        project: cellToProject.get(i) || null
+        project: projects[i] || null
       });
     }
     

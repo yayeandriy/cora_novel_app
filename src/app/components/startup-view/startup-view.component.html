@@ -3,16 +3,16 @@
     <div class="startup-left">
       <div class="startup-form">
         <label class="startup-label" for="projectTitle">Title</label>
-        <input
+        <textarea
           #titleInput
           id="projectTitle"
-          type="text"
           class="startup-input"
           [(ngModel)]="projectTitle"
+          (input)="adjustTextareaHeight()"
           (keydown)="onKeydown($event)"
           placeholder="Enter project name"
-          autocomplete="off"
-        />
+          rows="1"
+        ></textarea>
         <button 
           class="startup-button"
           (click)="onSubmit()"
