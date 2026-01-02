@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "identifier": "com.pluton.cora",
+  "bundle": {
+    "category": "Productivity",
+    "macOS": {
+      "bundleVersion": "100",
+      "minimumSystemVersion": "11.0",
+      "entitlements": "./Entitlements.plist",
+      "files": {
+        "embedded.provisionprofile": "./Cora.mobileprovision"
+      },
+      "exceptionDomain": null,
+      "signingIdentity": "Apple Distribution: Andrii Ieroshevych (2JL868AT85)"
+    }
+  }
+}

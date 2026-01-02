@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Encryption Export Compliance -->
+  <key>ITSAppUsesNonExemptEncryption</key>
+  <false/>
+  
+  <!-- App Store Required Information -->
+  <key>NSHumanReadableCopyright</key>
+  <string>Copyright © 2026 Pluton. All rights reserved.</string>
+  
+  <!-- Document Types (for file associations) -->
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>Text Document</string>
+      <key>CFBundleTypeExtensions</key>
+      <array>
+        <string>txt</string>
+      </array>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+    </dict>
+  </array>
+  
+  <!-- High Resolution Support -->
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  
+  <!-- Requires macOS 11.0 or later -->
+  <key>LSMinimumSystemVersion</key>
+  <string>11.0</string>
+</dict>
+</plist>

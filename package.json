@@ -14,6 +14,8 @@
     "build:mac:universal": "tauri build --target universal-apple-darwin",
     "build:current": "./build-current.sh",
     "build:release": "./build-release.sh",
+    "build:appstore": "./build-appstore.sh",
+    "create:pkg": "./create-appstore-pkg.sh",
     "test:unit": "jest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
