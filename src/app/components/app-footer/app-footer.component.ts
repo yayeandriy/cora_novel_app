@@ -14,6 +14,12 @@ interface DocGroup {
   name: string;
 }
 
+export interface SelectionStats {
+  charCount: number;
+  wordCount: number;
+  pageCount: number;
+}
+
 export type FontFamily = 'mono' | 'serif' | 'sans';
 export type FontSize = 'S' | 'M' | 'L';
 export type LineHeight = 'S' | 'M' | 'L';
@@ -68,6 +74,7 @@ export class AppFooterComponent implements OnInit {
   @Input() selectedDoc: Doc | null = null;
   @Input() selectedGroup: DocGroup | null = null;
   @Input() allDocs: Doc[] = [];  
+  @Input() selectionStats: SelectionStats | null = null;
   @Input() leftCollapsed: boolean = false;
   @Input() rightCollapsed: boolean = false;
   @Input() editorWidthPercent: number = 80;
@@ -185,6 +192,17 @@ export class AppFooterComponent implements OnInit {
     return this.selectedDoc.text.split(/\s+/).filter(w => w.trim().length > 0).length;
   }
   get docPageCount(): number { return Math.ceil(this.docCharCount / 1800); }
+
+  get effectiveDocCharCount(): number {
+    return this.selectionStats?.charCount ?? this.docCharCount;
+  }
+  get effectiveDocWordCount(): number {
+    return this.selectionStats?.wordCount ?? this.docWordCount;
+  }
+  get effectiveDocPageCount(): number {
+    return this.selectionStats?.pageCount ?? this.docPageCount;
+  }
+
   get projectCharCount(): number {
     return this.allDocs.reduce((t, d) => t + (d.text?.length || 0), 0);
   }

@@ -4,6 +4,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import type { Draft } from '../../shared/models';
 
+export interface SelectionStats {
+  charCount: number;
+  wordCount: number;
+  pageCount: number;
+}
+
 export interface Doc {
   id: number;
   name?: string | null;
@@ -60,6 +66,8 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   @Output() editorScroll = new EventEmitter<number>();
   @Output() folderNotesToggle = new EventEmitter<void>();
   @Output() docCardsToggle = new EventEmitter<void>();
+
+  @Output() selectionStatsChange = new EventEmitter<SelectionStats | null>();
   
   @ViewChild('docTitleInput') docTitleInput?: ElementRef<HTMLInputElement>;
   @ViewChild('editorTextarea') editorTextarea?: ElementRef<HTMLTextAreaElement>;
@@ -90,6 +98,8 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   private readonly COLUMN_PX_KEY_GLOBAL = 'cora-editor-column-px';
   private loadedProjectId: number | null = null;
   // Draft controls follow split visibility (no separate collapse state)
+
+  private lastEmittedSelection: SelectionStats | null = null;
   
   // Editor placeholders
   private placeholders: string[] = [];
@@ -145,6 +155,11 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['selectedDoc']) {
+      // Clear selection stats when switching documents.
+      this.lastEmittedSelection = null;
+      this.selectionStatsChange.emit(null);
+    }
     if (changes['selectedDoc'] && this.selectedDoc?.project_id) {
       const pid = this.selectedDoc.project_id;
       if (this.loadedProjectId !== pid) {
@@ -596,10 +611,57 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   onTextChange() {
     this.docTextChange.emit();
     this.autoSizePrimary();
+    // If the user is editing inside a selection, keep stats in sync.
+    this.onEditorSelectionChange(/*force*/ true);
   }
 
   onBlur() {
+    // Clear selection stats when leaving the editor.
+    this.lastEmittedSelection = null;
+    this.selectionStatsChange.emit(null);
     this.docSaved.emit();
+  }
+
+  onEditorSelectionChange(force: boolean = false) {
+    const el = this.editorTextarea?.nativeElement;
+    const docId = this.selectedDoc?.id;
+    if (!el || docId == null) {
+      if (force || this.lastEmittedSelection !== null) {
+        this.lastEmittedSelection = null;
+        this.selectionStatsChange.emit(null);
+      }
+      return;
+    }
+
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    if (start === end) {
+      if (force || this.lastEmittedSelection !== null) {
+        this.lastEmittedSelection = null;
+        this.selectionStatsChange.emit(null);
+      }
+      return;
+    }
+
+    const fullText = el.value ?? '';
+    const selectedText = fullText.substring(Math.min(start, end), Math.max(start, end));
+
+    const charCount = selectedText.length;
+    const wordCount = selectedText.split(/\s+/).filter(w => w.trim().length > 0).length;
+    const pageCount = Math.ceil(charCount / 1800);
+
+    const next: SelectionStats = { charCount, wordCount, pageCount };
+    const prev = this.lastEmittedSelection;
+    const changed =
+      force ||
+      prev == null ||
+      prev.charCount !== next.charCount ||
+      prev.wordCount !== next.wordCount ||
+      prev.pageCount !== next.pageCount;
+    if (!changed) return;
+
+    this.lastEmittedSelection = next;
+    this.selectionStatsChange.emit(next);
   }
 
   private autoSizePrimary() {

@@ -412,6 +412,7 @@
         (draftChanged)="onDocumentDraftChanged($event)"
         (draftBlurred)="onDocumentDraftBlurred($event)"
         (draftDeleted)="deleteDraft($event)"
+        (selectionStatsChange)="onEditorSelectionStatsChange($event)"
         (folderNotesToggle)="onFolderHeaderClick()"
         (docCardsToggle)="toggleDocCardsView()">
       </app-document-editor>
@@ -633,6 +634,7 @@
     [selectedDoc]="selectedDoc"
     [selectedGroup]="selectedGroup"
     [allDocs]="getAllDocs()"
+    [selectionStats]="editorSelectionStats"
     [leftCollapsed]="leftCollapsed"
     [rightCollapsed]="rightCollapsed"
     [editorWidthPercent]="editorWidthPercent"

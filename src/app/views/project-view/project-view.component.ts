@@ -55,6 +55,12 @@ interface Event {
   end_date?: string | null;
 }
 
+interface SelectionStats {
+  charCount: number;
+  wordCount: number;
+  pageCount: number;
+}
+
 @Component({
   selector: 'app-project-view',
   standalone: true,
@@ -189,6 +195,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   draftSyncStatus: Record<number, 'syncing' | 'synced' | 'pending'> = {};
   private focusedDraftId: number | null = null;
   selectedDraftId: number | null = null;
+
+  // Selection stats (main editor textarea)
+  editorSelectionStats: SelectionStats | null = null;
 
   // Inline edit state for folder (doc group)
   editingFolderName = false;
@@ -1238,6 +1247,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   async selectDoc(doc: Doc) {
+    // Selection stats should always start empty when switching docs.
+    this.editorSelectionStats = null;
     // First, save any unsaved changes from the previous doc to cache
     if (this.selectedDoc) {
       this.docStateCache.set(this.selectedDoc.id, {
@@ -1367,6 +1378,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // Select new group
     this.selectedGroup = group;
     this.selectedDoc = null; // Clear doc selection - only ONE selection at a time
+    this.editorSelectionStats = null;
     this.currentGroup = group; // Track group for create button context
     // Auto-expand on first selection
     if (!group.expanded) {
@@ -2248,6 +2260,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.autoSaveTimeout = setTimeout(() => {
       this.saveDoc();
     }, 2000);
+  }
+
+  onEditorSelectionStatsChange(stats: SelectionStats | null) {
+    this.editorSelectionStats = stats;
+    this.changeDetector.markForCheck();
   }
 
   onDocumentNotesChange() {
