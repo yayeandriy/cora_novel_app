@@ -11,6 +11,14 @@
   font-size: 0.875rem; /* match doc tree folders */
 }
 
+/* Header spacer to align with the center editor toolbar (3.5rem) */
+.right-sidebar-header {
+  height: 3.5rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+}
+
 /* Tabs Navigation */
 .tabs-nav {
   display: none; /* hidden per request */
