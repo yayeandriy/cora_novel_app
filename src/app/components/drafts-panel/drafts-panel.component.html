@@ -24,7 +24,7 @@
   @if (expanded) {
     <div class="section-content">
       @if (drafts.length === 0) {
-        <div class="empty-text">No drafts</div>
+        <div class="empty-text">No notes</div>
       }
       @for (draft of drafts; let i = $index; track draft.id) {
     <div class="draft-container">

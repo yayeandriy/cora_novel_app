@@ -83,8 +83,8 @@ describe('Drafts Error Reproduction Tests', () => {
 
       const migrations = [
         { file: '001_create_schema.sql', action: 'CREATE TABLE IF NOT EXISTS drafts (...old schema...)' },
-        { file: '002_add_tree_order.sql', action: 'No drafts changes' },
-        { file: '003_add_doc_notes.sql', action: 'No drafts changes' },
+        { file: '002_add_tree_order.sql', action: 'No notes changes' },
+        { file: '003_add_doc_notes.sql', action: 'No notes changes' },
         { file: '004_add_doc_drafts.sql', action: 'CREATE TABLE IF NOT EXISTS drafts (...new schema...) - SKIPPED!' }
       ];
 

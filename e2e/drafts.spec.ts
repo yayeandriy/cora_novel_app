@@ -68,13 +68,13 @@ test.describe('Draft Feature E2E Tests', () => {
     await expect(addButton).toBeVisible();
   });
 
-  test('should show "No drafts" message when empty', async ({ page }) => {
+  test('should show "No notes" message when empty', async ({ page }) => {
     // Expand Drafts panel if needed
     const draftsHeader = page.locator('text=Drafts').first();
     await draftsHeader.click();
     
     // Check for empty state
-    const emptyMessage = page.locator('text=No drafts');
+    const emptyMessage = page.locator('text=No notes');
     await expect(emptyMessage).toBeVisible();
   });
 

@@ -510,7 +510,7 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
     // Opening drafts when there are zero drafts needs a special path:
     // the split UI only renders when a draft is selected.
     if (this.isSplitCollapsed && !this.externalMode) {
-      // No drafts yet -> create the first draft and expand immediately.
+      // No notes yet -> create the first draft and expand immediately.
       // Parent will set selectedDraftId after creation.
       if (this.drafts.length === 0) {
         this.isSplitCollapsed = false;
