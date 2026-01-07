@@ -120,6 +120,7 @@
                       [class.active]="d.id === selectedDraftId"
                       (click)="selectOrToggle(d.id, $event)"
                       (dblclick)="startEditDraftName(d.id, d.name)"
+                      (contextmenu)="openDraftContextMenu($event, d)"
                       title="Open draft (double-click to rename)">
                       {{ d.name }}
                       @if (draftSyncStatus[d.id] === 'syncing') { <span class="tab-dot">⟳</span> }
@@ -129,6 +130,18 @@
                 </div>
               }
             </div>
+
+            @if (draftContextMenuOpen) {
+              <div
+                class="draft-context-menu"
+                [style.left.px]="draftContextMenuX"
+                [style.top.px]="draftContextMenuY"
+                (click)="$event.stopPropagation()">
+                <button class="draft-context-menu-item" (click)="onDraftContextMenuRename()">Rename</button>
+                <button class="draft-context-menu-item danger" (click)="onDraftContextMenuDelete()">Delete</button>
+              </div>
+            }
+
             <button class="toolbar-button" (click)="addDraft()" aria-label="Add draft" title="Add draft">
               <svg class="icon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5z"/>

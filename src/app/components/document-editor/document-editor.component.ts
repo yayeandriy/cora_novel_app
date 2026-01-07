@@ -72,6 +72,12 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   draftNameEdit: string = '';
   private clickTimer: any;
 
+  // Draft tab context menu
+  draftContextMenuOpen = false;
+  draftContextMenuDraftId: number | null = null;
+  draftContextMenuX = 0;
+  draftContextMenuY = 0;
+
   // Split state
   isSplitCollapsed: boolean = true; // default collapsed by default until a saved state is loaded
   draftPaneWidth: number = 360; // right pane width in px
@@ -180,6 +186,12 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
     if (changes['selectedDoc'] || changes['selectedDraftId'] || changes['externalMode'] || changes['externalDraftId']) {
       setTimeout(() => { this.autoSizePrimary(); this.autoSizeDraft(); }, 0);
     }
+
+    // If drafts list changes and the context menu draft disappeared, close the menu.
+    if (changes['drafts'] && this.draftContextMenuOpen && this.draftContextMenuDraftId != null) {
+      const stillExists = this.drafts.some(d => d.id === this.draftContextMenuDraftId);
+      if (!stillExists) this.closeDraftContextMenu();
+    }
     // Update placeholder based on doc position
     if (changes['selectedDoc'] || changes['allProjectDocs']) {
       this.updatePlaceholder();
@@ -188,6 +200,25 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
 
   ngOnDestroy(): void {
     this.detachResizeListeners();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClickForDraftContextMenu(event: MouseEvent) {
+    if (!this.draftContextMenuOpen) return;
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    // Don't close if click is inside the menu
+    if (target.closest('.draft-context-menu')) return;
+    this.closeDraftContextMenu();
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKeyDownForDraftContextMenu(event: KeyboardEvent) {
+    if (!this.draftContextMenuOpen) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeDraftContextMenu();
+    }
   }
 
   private updatePlaceholder(): void {
@@ -295,6 +326,44 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
       const el = this.draftNameInput?.nativeElement;
       if (el) { el.focus(); el.select(); }
     }, 0);
+  }
+
+  openDraftContextMenu(event: MouseEvent, draft: Draft) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.externalMode) return;
+    if (this.editingDraftId != null) return;
+
+    this.draftContextMenuOpen = true;
+    this.draftContextMenuDraftId = draft.id;
+    this.draftContextMenuX = event.clientX;
+    this.draftContextMenuY = event.clientY;
+    this.cdr.markForCheck();
+  }
+
+  closeDraftContextMenu() {
+    if (!this.draftContextMenuOpen) return;
+    this.draftContextMenuOpen = false;
+    this.draftContextMenuDraftId = null;
+    this.cdr.markForCheck();
+  }
+
+  onDraftContextMenuRename() {
+    if (this.draftContextMenuDraftId == null) return;
+    const draft = this.drafts.find(d => d.id === this.draftContextMenuDraftId);
+    if (!draft) {
+      this.closeDraftContextMenu();
+      return;
+    }
+    this.closeDraftContextMenu();
+    this.startEditDraftName(draft.id, draft.name);
+  }
+
+  onDraftContextMenuDelete() {
+    if (this.draftContextMenuDraftId == null) return;
+    const id = this.draftContextMenuDraftId;
+    this.closeDraftContextMenu();
+    this.onClickDeleteDraft(id);
   }
 
   saveDraftName() {
