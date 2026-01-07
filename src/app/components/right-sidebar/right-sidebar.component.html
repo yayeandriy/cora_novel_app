@@ -6,29 +6,30 @@
   <!-- Header spacer to align with center editor toolbar height -->
   <div class="right-sidebar-header"></div>
   
-  <!-- Tabs Navigation -->
-  <div class="tabs-nav">
-    <button 
-      class="tab-button" 
-      [class.active]="activeTab === 'doc'"
-      (click)="switchTab('doc')">
-      Doc
-    </button>
-    <button 
-      class="tab-button" 
-      [class.active]="activeTab === 'folder'"
-      (click)="switchTab('folder')">
-      Folder
-    </button>
-    <button 
-      class="tab-button" 
-      [class.active]="activeTab === 'project'"
-      (click)="switchTab('project')">
-      Project
-    </button>
-  </div>
+  <div class="right-sidebar-body">
+    <!-- Tabs Navigation -->
+    <div class="tabs-nav">
+      <button 
+        class="tab-button" 
+        [class.active]="activeTab === 'doc'"
+        (click)="switchTab('doc')">
+        Doc
+      </button>
+      <button 
+        class="tab-button" 
+        [class.active]="activeTab === 'folder'"
+        (click)="switchTab('folder')">
+        Folder
+      </button>
+      <button 
+        class="tab-button" 
+        [class.active]="activeTab === 'project'"
+        (click)="switchTab('project')">
+        Project
+      </button>
+    </div>
 
-  <div class="sidebar-content">
+    <div class="sidebar-content">
     <!-- DOC TAB CONTENT -->
     @if (activeTab === 'doc') {
       <!-- Characters Section -->
@@ -232,5 +233,6 @@
         (reorder)="placesReorder.emit($event)">
       </app-places-panel>
     }
+    </div>
   </div>
 </aside>

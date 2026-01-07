@@ -2,7 +2,6 @@
 .right-sidebar {
   position: relative;
   background: #F9F7F7;
-  border-left: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -17,6 +16,17 @@
   flex-shrink: 0;
   border-bottom: 1px solid #e5e7eb;
   background: white;
+  /* Header keeps its own left edge (white) */
+  border-left: 1px solid #fff;
+}
+
+/* Everything below the header uses the normal sidebar divider */
+.right-sidebar-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border-left: 1px solid #e5e7eb;
 }
 
 /* Tabs Navigation */
