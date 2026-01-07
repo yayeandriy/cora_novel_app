@@ -17,6 +17,167 @@ echo -e "${BLUE}📦 Creating App Store PKG Installer${NC}"
 echo "======================================"
 echo ""
 
+# -------- Version / build number helpers --------
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+PKG_JSON="$ROOT_DIR/package.json"
+TAURI_CONF="$ROOT_DIR/src-tauri/tauri.conf.json"
+TAURI_APPSTORE_CONF="$ROOT_DIR/src-tauri/tauri.appstore.conf.json"
+CARGO_TOML="$ROOT_DIR/src-tauri/Cargo.toml"
+
+read_json_path() {
+        local file="$1"
+        local dotted_path="$2"
+        node - "$file" "$dotted_path" <<'NODE'
+const fs = require('fs');
+
+// When invoked as `node - ...`, argv[1] is "-" (stdin placeholder).
+const file = process.argv[2];
+const dottedPath = process.argv[3] || '';
+
+const obj = JSON.parse(fs.readFileSync(file, 'utf8'));
+const value = dottedPath
+    .split('.')
+    .filter(Boolean)
+    .reduce((acc, key) => (acc && Object.prototype.hasOwnProperty.call(acc, key) ? acc[key] : undefined), obj);
+
+process.stdout.write(value == null ? '' : String(value));
+NODE
+}
+
+update_json_paths() {
+    local file="$1"
+    local updates_json="$2"
+    UPDATES="$updates_json" node - <<'NODE' "$file"
+const fs = require('fs');
+// When invoked as `node - ...`, argv[1] is "-" (stdin placeholder).
+const path = process.argv[2];
+const updates = JSON.parse(process.env.UPDATES);
+
+function setPath(obj, dottedPath, value) {
+    const parts = dottedPath.split('.');
+    let cur = obj;
+    for (let i = 0; i < parts.length - 1; i++) {
+        const key = parts[i];
+        if (cur[key] == null || typeof cur[key] !== 'object') cur[key] = {};
+        cur = cur[key];
+    }
+    cur[parts[parts.length - 1]] = value;
+}
+
+const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+for (const [p, v] of Object.entries(updates)) {
+    setPath(data, p, v);
+}
+fs.writeFileSync(path, JSON.stringify(data, null, 2) + '\n');
+NODE
+}
+
+bump_patch() {
+    local v="$1"
+    node -e "
+    const v = process.argv[1] || '';
+    const m = v.match(/^(\d+)\.(\d+)\.(\d+)(.*)$/);
+    if (!m) { process.stdout.write(v); process.exit(0); }
+    const major = Number(m[1]);
+    const minor = Number(m[2]);
+    const patch = Number(m[3]) + 1;
+    const suffix = m[4] || '';
+    process.stdout.write(String(major) + '.' + String(minor) + '.' + String(patch) + String(suffix));
+    " "$v"
+}
+
+prompt_for_next_version() {
+    # Current values
+    local current_version
+    current_version="$(read_json_path "$TAURI_CONF" "version")"
+    if [ -z "$current_version" ]; then
+        current_version="$(read_json_path "$PKG_JSON" "version")"
+    fi
+    local current_bundle_version
+    current_bundle_version="$(read_json_path "$TAURI_APPSTORE_CONF" "bundle.macOS.bundleVersion")"
+    if [ -z "$current_bundle_version" ]; then
+        current_bundle_version="$(read_json_path "$TAURI_CONF" "bundle.macOS.bundleVersion")"
+    fi
+
+    # Defaults
+    local default_version
+    default_version="$(bump_patch "$current_version")"
+    local default_bundle_version="$current_bundle_version"
+    if [[ "$current_bundle_version" =~ ^[0-9]+$ ]]; then
+        default_bundle_version=$((current_bundle_version + 1))
+    fi
+
+    echo -e "${BLUE}🔢 Versioning${NC}"
+    echo "Current version:        ${current_version:-<unknown>}"
+    echo "Current build number:   ${current_bundle_version:-<unknown>}"
+    echo ""
+
+    local next_version
+    read -p "Next version (default ${default_version}): " next_version
+    next_version="${next_version:-$default_version}"
+
+    local next_bundle_version
+    read -p "Next build number / bundleVersion (default ${default_bundle_version}): " next_bundle_version
+    next_bundle_version="${next_bundle_version:-$default_bundle_version}"
+
+    if [ -z "$next_version" ]; then
+        echo -e "${RED}❌ Version cannot be empty${NC}"
+        exit 1
+    fi
+    if [ -z "$next_bundle_version" ]; then
+        echo -e "${RED}❌ Build number cannot be empty${NC}"
+        exit 1
+    fi
+
+    export NEXT_VERSION="$next_version"
+    export NEXT_BUNDLE_VERSION="$next_bundle_version"
+
+    echo ""
+    echo -e "${BLUE}✍️  Writing version to source configs...${NC}"
+
+    # package.json
+    update_json_paths "$PKG_JSON" "{\"version\":\"$NEXT_VERSION\"}"
+
+    # tauri.conf.json
+    update_json_paths "$TAURI_CONF" "{\"version\":\"$NEXT_VERSION\",\"bundle.macOS.bundleVersion\":\"$NEXT_BUNDLE_VERSION\"}"
+
+    # tauri.appstore.conf.json (only contains bundleVersion)
+    update_json_paths "$TAURI_APPSTORE_CONF" "{\"bundle.macOS.bundleVersion\":\"$NEXT_BUNDLE_VERSION\"}"
+
+    # Cargo.toml [package].version (only first occurrence in [package] section)
+    NEXT_VERSION="$NEXT_VERSION" perl -0777 -i -pe 's/(\[package\][^\[]*?\nversion\s*=\s*")[^"]+("\s*\n)/$1$ENV{NEXT_VERSION}$2/s' "$CARGO_TOML"
+
+    echo -e "${GREEN}✅ Updated:${NC} version=$NEXT_VERSION, bundleVersion=$NEXT_BUNDLE_VERSION"
+    echo -e "${YELLOW}⚠️  Note:${NC} the existing built .app bundle will NOT change until you rebuild (e.g. run ./build-appstore.sh again)."
+    echo ""
+}
+
+# Ask for the *next* version/build before packaging so configs stay in sync.
+prompt_for_next_version
+
+get_app_plist_value() {
+    local app_path="$1"
+    local key="$2"
+    local plist="$app_path/Contents/Info.plist"
+    if [ ! -f "$plist" ]; then
+        echo ""
+        return 0
+    fi
+    /usr/libexec/PlistBuddy -c "Print :$key" "$plist" 2>/dev/null || echo ""
+}
+
+maybe_rebuild_appstore() {
+    echo -e "${BLUE}🔨 Rebuild (recommended)${NC}"
+    echo "To make the app bundle reflect the new version/build, a rebuild is required."
+    read -p "Run ./build-appstore.sh now? (Y/n) " rebuild_now
+    rebuild_now="${rebuild_now:-Y}"
+    if [[ "$rebuild_now" =~ ^[Yy]$ ]]; then
+        (cd "$ROOT_DIR" && ./build-appstore.sh)
+    fi
+    echo ""
+}
+
 # Detect available app bundles
 UNIVERSAL_APP="src-tauri/target/universal-apple-darwin/release/bundle/macos/Cora.app"
 ARM_APP="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Cora.app"
@@ -45,12 +206,51 @@ else
     echo "  pnpm build:appstore"
     echo "  pnpm tauri build --bundles app --config src-tauri/tauri.appstore.conf.json"
     echo ""
-    exit 1
+        # Offer to rebuild automatically now that versions are set
+        maybe_rebuild_appstore
+
+        # Re-check after rebuild attempt
+        if [ -d "$UNIVERSAL_APP" ]; then
+            APP_PATH="$UNIVERSAL_APP"
+            BUILD_TYPE="Universal"
+        elif [ -d "$ARM_APP" ]; then
+            APP_PATH="$ARM_APP"
+            BUILD_TYPE="Apple Silicon"
+        elif [ -d "$RELEASE_APP" ]; then
+            APP_PATH="$RELEASE_APP"
+            BUILD_TYPE="Current Architecture"
+        elif [ -d "$INTEL_APP" ]; then
+            APP_PATH="$INTEL_APP"
+            BUILD_TYPE="Intel"
+        else
+            exit 1
+        fi
 fi
 
 echo -e "${GREEN}Found app bundle:${NC} $BUILD_TYPE"
 echo "  $APP_PATH"
 echo ""
+
+# Validate that the built app matches the requested version/build.
+APP_CF_BUNDLE_VERSION="$(get_app_plist_value "$APP_PATH" "CFBundleVersion")"
+APP_CF_SHORT_VERSION="$(get_app_plist_value "$APP_PATH" "CFBundleShortVersionString")"
+
+if [ -n "$NEXT_BUNDLE_VERSION" ] && [ -n "$APP_CF_BUNDLE_VERSION" ] && [ "$APP_CF_BUNDLE_VERSION" != "$NEXT_BUNDLE_VERSION" ]; then
+    echo -e "${YELLOW}⚠️  App bundle build number mismatch${NC}"
+    echo "Requested bundleVersion: $NEXT_BUNDLE_VERSION"
+    echo "App CFBundleVersion:     $APP_CF_BUNDLE_VERSION"
+    echo ""
+    echo "This will likely be rejected by App Store/Transporter (must be higher than previous uploads)."
+    maybe_rebuild_appstore
+fi
+
+if [ -n "$NEXT_VERSION" ] && [ -n "$APP_CF_SHORT_VERSION" ] && [ "$APP_CF_SHORT_VERSION" != "$NEXT_VERSION" ]; then
+    echo -e "${YELLOW}⚠️  App bundle version mismatch${NC}"
+    echo "Requested version:            $NEXT_VERSION"
+    echo "App CFBundleShortVersionString: $APP_CF_SHORT_VERSION"
+    echo ""
+    maybe_rebuild_appstore
+fi
 
 # Verify code signing
 echo -e "${BLUE}🔍 Verifying app code signature...${NC}"
