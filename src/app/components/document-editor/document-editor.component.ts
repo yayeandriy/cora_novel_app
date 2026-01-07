@@ -438,11 +438,28 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   }
 
   toggleDraftControls() {
-    // If we're about to open drafts and no draft is selected, auto-select the first one
-    if (this.isSplitCollapsed && this.drafts.length > 0 && this.selectedDraftId == null) {
-      this.draftSelect.emit(this.drafts[0].id);
+    // Opening drafts when there are zero drafts needs a special path:
+    // the split UI only renders when a draft is selected.
+    if (this.isSplitCollapsed && !this.externalMode) {
+      // No drafts yet -> create the first draft and expand immediately.
+      // Parent will set selectedDraftId after creation.
+      if (this.drafts.length === 0) {
+        this.isSplitCollapsed = false;
+        try { localStorage.setItem(this.getCollapseKey(), 'false'); } catch {}
+        this.draftAdd.emit();
+        // The split container isn't in the DOM until a draft exists; retry sizing after render.
+        setTimeout(() => this.adjustWidthToContainer(), 0);
+        this.cdr.markForCheck();
+        return;
+      }
+
+      // If we're about to open drafts and no draft is selected, auto-select the first one.
+      if (this.selectedDraftId == null) {
+        this.draftSelect.emit(this.drafts[0].id);
+      }
     }
-    // Directly toggle the split; toolbar visibility follows split state
+
+    // Default behavior: toggle the split; toolbar visibility follows split state.
     this.isSplitCollapsed = !this.isSplitCollapsed;
     try { localStorage.setItem(this.getCollapseKey(), String(this.isSplitCollapsed)); } catch {}
     if (!this.isSplitCollapsed) setTimeout(() => this.adjustWidthToContainer(), 0);
