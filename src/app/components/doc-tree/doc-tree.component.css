@@ -239,30 +239,32 @@
   align-items: center;
   width: 0;
   height: 100%;
+  overflow: visible;
 }
 
 .working-marker {
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 4px 0 4px 6px;
+  width: 2px;
+  height: 14px;
+  background: transparent;
+  flex: 0 0 auto;
+  flex-shrink: 0;
   cursor: pointer;
 }
 
 .working-marker.active {
-  border-color: transparent transparent transparent #505053;
+  background: #505053;
 }
 
 .tree-item.selected .working-marker.active {
-  border-color: transparent transparent transparent #505053;
+  background: #505053;
 }
 
 .working-marker.ghost {
-  border-color: transparent transparent transparent #d1d5db;
+  background: #d1d5db;
 }
 
 .working-marker.ghost:hover {
-  border-color: transparent transparent transparent #505053;
+  background: #505053;
 }
 
 .tree-item-header > .name-with-mark {
