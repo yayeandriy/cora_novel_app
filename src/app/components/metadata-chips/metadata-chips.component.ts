@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, ViewChild, ViewEncapsulation, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -32,6 +32,7 @@ export class MetadataChipsComponent {
   @Output() editItem = new EventEmitter<{ id: number; name: string }>();
   @Output() create = new EventEmitter<string>();
   @Output() reorder = new EventEmitter<number[]>();
+  @Output() dropdownVisibleChange = new EventEmitter<boolean>();
 
   dropdownVisible = false;
   dropdownPosition = { top: 0, left: 0 };
@@ -40,6 +41,27 @@ export class MetadataChipsComponent {
   searchQuery: string = '';
 
   constructor(private cdr: ChangeDetectorRef) {}
+
+  // Global ESC key listener - intercepts ESC when dropdown is visible
+  @HostListener('document:keydown.escape', ['$event'])
+  onDocumentEsc(event: Event) {
+    if (this.dropdownVisible) {
+      event.stopPropagation();
+      event.preventDefault();
+      
+      // If we're editing an item, just cancel editing
+      if (this.editingItemId !== null) {
+        this.editingItemId = null;
+        this.editingItemName = '';
+        this.cdr.markForCheck();
+        return;
+      }
+      
+      // Otherwise, close the dropdown
+      this.closeDropdown();
+      this.cdr.markForCheck();
+    }
+  }
 
   // Check if an item is currently assigned to the doc
   isItemAssigned(id: number): boolean {
@@ -94,11 +116,13 @@ export class MetadataChipsComponent {
       
       this.dropdownPosition = { top, left };
       this.dropdownVisible = true;
+      this.dropdownVisibleChange.emit(true);
     }
   }
 
   closeDropdown() {
     this.dropdownVisible = false;
+    this.dropdownVisibleChange.emit(false);
     this.editingItemId = null;
     this.editingItemName = '';
     this.searchQuery = '';

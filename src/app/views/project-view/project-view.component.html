@@ -83,7 +83,8 @@
                     (create)="createAndAddCharacterToDoc(doc.id, $event)"
                     (deleteItem)="onSidebarCharacterDelete($event)"
                     (editItem)="onInlineCharacterEdit($event)"
-                    (reorder)="reorderDocCardCharacters(doc.id, $event)">
+                    (reorder)="reorderDocCardCharacters(doc.id, $event)"
+                    (dropdownVisibleChange)="metadataDropdownOpen = $event">
                   </app-metadata-chips>
 
                   <!-- Events row -->
@@ -98,7 +99,8 @@
                     (create)="createAndAddEventToDoc(doc.id, $event)"
                     (deleteItem)="onSidebarEventDelete($event)"
                     (editItem)="onInlineEventEdit($event)"
-                    (reorder)="reorderDocCardEvents(doc.id, $event)">
+                    (reorder)="reorderDocCardEvents(doc.id, $event)"
+                    (dropdownVisibleChange)="metadataDropdownOpen = $event">
                   </app-metadata-chips>
 
                   <!-- Places row -->
@@ -113,7 +115,8 @@
                     (create)="createAndAddPlaceToDoc(doc.id, $event)"
                     (deleteItem)="onSidebarPlaceDelete($event)"
                     (editItem)="onInlinePlaceEdit($event)"
-                    (reorder)="reorderDocCardPlaces(doc.id, $event)">
+                    (reorder)="reorderDocCardPlaces(doc.id, $event)"
+                    (dropdownVisibleChange)="metadataDropdownOpen = $event">
                   </app-metadata-chips>
                 </div>
               </div>
@@ -286,7 +289,8 @@
                             (create)="createAndAddCharacterToDoc(doc.id, $event)"
                             (deleteItem)="onSidebarCharacterDelete($event)"
                             (editItem)="onInlineCharacterEdit($event)"
-                            (reorder)="reorderDocCardCharacters(doc.id, $event)">
+                            (reorder)="reorderDocCardCharacters(doc.id, $event)"
+                            (dropdownVisibleChange)="metadataDropdownOpen = $event">
                           </app-metadata-chips>
 
                           <!-- Events row -->
@@ -301,7 +305,8 @@
                             (create)="createAndAddEventToDoc(doc.id, $event)"
                             (deleteItem)="onSidebarEventDelete($event)"
                             (editItem)="onInlineEventEdit($event)"
-                            (reorder)="reorderDocCardEvents(doc.id, $event)">
+                            (reorder)="reorderDocCardEvents(doc.id, $event)"
+                            (dropdownVisibleChange)="metadataDropdownOpen = $event">
                           </app-metadata-chips>
 
                           <!-- Places row -->
@@ -316,7 +321,8 @@
                             (create)="createAndAddPlaceToDoc(doc.id, $event)"
                             (deleteItem)="onSidebarPlaceDelete($event)"
                             (editItem)="onInlinePlaceEdit($event)"
-                            (reorder)="reorderDocCardPlaces(doc.id, $event)">
+                            (reorder)="reorderDocCardPlaces(doc.id, $event)"
+                            (dropdownVisibleChange)="metadataDropdownOpen = $event">
                           </app-metadata-chips>
                         </div>
                       </div>

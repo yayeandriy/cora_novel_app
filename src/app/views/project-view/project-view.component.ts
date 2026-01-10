@@ -96,6 +96,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Command palette state
   commandPaletteOpen = false;
   
+  // Metadata dropdown state (for ESC handling)
+  metadataDropdownOpen = false;
+  
   projectId: number = 0;
   projectName: string = '';
   editingProjectName = false;
@@ -1610,6 +1613,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // ESC always focuses the tree
     if (event.key === 'Escape') {
       event.preventDefault();
+
+      // If metadata dropdown is open, let the child component handle it
+      if (this.metadataDropdownOpen) {
+        return;
+      }
 
       // If export dialog is visible, close it
       if (this.showExportOptionsDialog) {

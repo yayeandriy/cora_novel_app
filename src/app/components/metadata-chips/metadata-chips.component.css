@@ -20,8 +20,7 @@
   cursor: grab;
   position: relative;
   max-width: 100%; /* Constrain to parent width */
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible; /* Allow overlay buttons to extend beyond */
 }
 
 .chip-text {
@@ -32,12 +31,18 @@
 }
 
 .chip-buttons {
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   gap: 0.125rem;
   opacity: 0;
   transition: opacity 0.15s ease;
-  margin-left: 0.25rem;
+  background: inherit; /* Inherit chip background color */
+  padding: 0.125rem 0.25rem;
+  border-radius: 9999px;
 }
 
 .metadata-chip:hover .chip-buttons {
