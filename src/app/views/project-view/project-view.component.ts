@@ -1421,12 +1421,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // Load metadata for all docs in this group (for group-view doc cards)
     await this.loadProjectHeaderFolderDocsMetadata(group);
 
-    // Load folder drafts if the drafts panel is expanded; else refresh count
-    if (this.folderDraftsExpanded) {
-      await this.loadFolderDrafts(group.id);
-    } else {
-      await this.refreshFolderDraftsCount(group.id);
-    }
+    // Always load folder drafts for group-view (Notes tab)
+    await this.loadFolderDrafts(group.id);
     
     this.changeDetector.detectChanges();
   }
@@ -2745,7 +2741,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
     try {
       const now = new Date();
-      const draftName = `Note ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+      // Include milliseconds to ensure uniqueness
+      const draftName = `Note ${now.toLocaleDateString()} ${now.toLocaleTimeString()}.${now.getMilliseconds().toString().padStart(3, '0')}`;
       
       // Calculate insert index if a draft is selected
       let insertIndex: number | undefined;
@@ -2776,8 +2773,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       } catch {}
       console.log('[DEBUG] createFolderDraft - final selectedFolderDraftId:', this.selectedFolderDraftId);
     } catch (e) {
-      console.error('Failed to create folder draft:', e);
-      alert('Failed to create folder draft: ' + e);
+      console.error('Failed to create part notes:', e);
+      alert('Failed to create part notes: ' + e);
     }
   }
 

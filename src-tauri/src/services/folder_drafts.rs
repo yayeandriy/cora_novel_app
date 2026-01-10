@@ -8,27 +8,35 @@ pub fn create(pool: &DbPool, doc_group_id: i64, req: FolderDraftCreate) -> anyho
     let conn = pool.get()?;
     let now = Utc::now().to_rfc3339();
     
-    // Get max sort_order (handle NULL when no drafts exist)
-    let max_order: i64 = conn.query_row(
-        "SELECT COALESCE(MAX(sort_order), 0) FROM folder_drafts WHERE doc_group_id = ?1",
-        rusqlite::params![doc_group_id],
-        |row| row.get(0)
-    )?;
-    let sort_order = max_order + 1;
+    // Determine initial sort_order
+    let sort_order: i64 = if let Some(target_index) = req.insert_at_index {
+        // Make space for the new draft at the requested position
+        // Shift all drafts at or after target_index up by 1
+        conn.execute(
+            "UPDATE folder_drafts SET sort_order = sort_order + 1 WHERE doc_group_id = ?1 AND sort_order >= ?2",
+            rusqlite::params![doc_group_id, target_index as i64],
+        )?;
+        target_index as i64
+    } else {
+        // Append at end
+        let max_order: i64 = conn.query_row(
+            "SELECT COALESCE(MAX(sort_order), -1) FROM folder_drafts WHERE doc_group_id = ?1",
+            rusqlite::params![doc_group_id],
+            |row| row.get(0)
+        )?;
+        max_order + 1
+    };
 
     conn.execute(
         "INSERT INTO folder_drafts (doc_group_id, name, content, created_at, updated_at, sort_order) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         rusqlite::params![doc_group_id, req.name, req.content, now, now, sort_order],
-    ).context("creating folder draft")?;
+    ).context("creating part notes")?;
     let id = conn.last_insert_rowid();
     
-    // If an index was requested, move the new draft to that index
-    if let Some(index) = req.insert_at_index {
-        drop(conn); // Release connection before calling move_to_index which gets its own
-        move_to_index(pool, id, index)?;
-    }
-
-    get(pool, id)?.context("folder draft not found after creation")
+    // Drop connection before calling get
+    drop(conn);
+    
+    get(pool, id)?.context("part notes not found after creation")
 }
 
 pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<FolderDraft>> {
@@ -68,29 +76,29 @@ pub fn list(pool: &DbPool, doc_group_id: i64) -> anyhow::Result<Vec<FolderDraft>
 pub fn update(pool: &DbPool, id: i64, req: FolderDraftUpdate) -> anyhow::Result<FolderDraft> {
     let conn = pool.get()?;
     let now = Utc::now().to_rfc3339();
-    let current = get(pool, id)?.context("folder draft not found")?;
+    let current = get(pool, id)?.context("part notes not found")?;
     let new_name = req.name.unwrap_or(current.name);
     let new_content = req.content.unwrap_or(current.content);
-    conn.execute("UPDATE folder_drafts SET name = ?1, content = ?2, updated_at = ?3 WHERE id = ?4", rusqlite::params![new_name, new_content, now, id]).context("updating folder draft")?;
-    get(pool, id)?.context("folder draft not found after update")
+    conn.execute("UPDATE folder_drafts SET name = ?1, content = ?2, updated_at = ?3 WHERE id = ?4", rusqlite::params![new_name, new_content, now, id]).context("updating part notes")?;
+    get(pool, id)?.context("part notes not found after update")
 }
 
 pub fn delete(pool: &DbPool, id: i64) -> anyhow::Result<()> {
     let conn = pool.get()?;
-    let n = conn.execute("DELETE FROM folder_drafts WHERE id = ?1", rusqlite::params![id]).context("deleting folder draft")?;
-    if n == 0 { anyhow::bail!("folder draft not found"); }
+    let n = conn.execute("DELETE FROM folder_drafts WHERE id = ?1", rusqlite::params![id]).context("deleting part notes")?;
+    if n == 0 { anyhow::bail!("part notes not found"); }
     Ok(())
 }
 
 pub fn delete_all_for_group(pool: &DbPool, doc_group_id: i64) -> anyhow::Result<()> {
     let conn = pool.get()?;
-    conn.execute("DELETE FROM folder_drafts WHERE doc_group_id = ?1", rusqlite::params![doc_group_id]).context("deleting folder drafts for group")?;
+    conn.execute("DELETE FROM folder_drafts WHERE doc_group_id = ?1", rusqlite::params![doc_group_id]).context("deleting part notes for part")?;
     Ok(())
 }
 
 pub fn reorder(pool: &DbPool, id: i64, direction: &str) -> anyhow::Result<()> {
     let conn = pool.get()?;
-    let current = get(pool, id)?.context("folder draft not found")?;
+    let current = get(pool, id)?.context("part notes not found")?;
     let current_order = current.sort_order.unwrap_or(0);
     
     if direction == "up" {
@@ -125,7 +133,7 @@ pub fn reorder(pool: &DbPool, id: i64, direction: &str) -> anyhow::Result<()> {
 
 pub fn move_to_index(pool: &DbPool, id: i64, new_index: usize) -> anyhow::Result<()> {
     let conn = pool.get()?;
-    let current = get(pool, id)?.context("folder draft not found")?;
+    let current = get(pool, id)?.context("part notes not found")?;
     
     // Get all drafts for the group
     let mut drafts = list(pool, current.doc_group_id)?;

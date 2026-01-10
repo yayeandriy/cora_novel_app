@@ -129,6 +129,7 @@ export class GroupViewComponent implements OnInit, OnChanges {
     try {
       localStorage.setItem(this.ACTIVE_TAB_KEY, this.activeTab);
     } catch {}
+    this.cdr.markForCheck();
   }
 
   toggleDocCards() {
@@ -136,6 +137,7 @@ export class GroupViewComponent implements OnInit, OnChanges {
     try {
       localStorage.setItem(this.ACTIVE_TAB_KEY, this.activeTab);
     } catch {}
+    this.cdr.markForCheck();
   }
 
   onNotesChange() {

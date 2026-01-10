@@ -310,6 +310,13 @@
   align-content: start;
 }
 
+/* Folder drafts component should fill available space */
+app-folder-drafts {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .doc-card {
   display: flex;
   flex-direction: column;
