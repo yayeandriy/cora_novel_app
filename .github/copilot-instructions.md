@@ -1,5 +1,17 @@
 # Copilot instructions (Cora Novel App)
 
+## UI Terminology (Critical - Read First!)
+**Always use official terminology from [docs/UI_NOMENCLATURE.md](../docs/UI_NOMENCLATURE.md):**
+- **"Part"** (NOT "Doc Group" or "Folder") - Top-level novel sections (database: `doc_groups`)
+- **"Chapter"** (NOT "Doc" or "Document") - Individual writing units (database: `docs`)
+- **"Planning Dock"** - Top panel with two modes: Storyline View and Notes View
+- **"Storyline View"** (in Planning Dock) - Overview of chapters with metadata
+- **"Notes View"** (in Planning Dock) - Folder-level planning notes
+- **"Chapter Drafts"** - Alternative versions in split-pane (database: `drafts`)
+- **"Document Navigator"** - Left sidebar tree (NOT just "Tree")
+- **"Metadata Sidebar"** - Right panel with Characters/Events/Places tabs
+- **See full nomenclature document for complete definitions and UI element names.**
+
 ## Big picture
 - Desktop app: **Tauri v2 (Rust) + Angular 20 (standalone components)**.
 - Frontend: [src/](../src/) • Backend: [src-tauri/](../src-tauri/).
