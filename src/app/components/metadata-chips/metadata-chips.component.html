@@ -2,9 +2,16 @@
   @for (item of items; track item.id) {
     <span class="metadata-chip" [ngClass]="getChipClass()" cdkDrag>
       <span class="chip-text">{{ item.name }}</span>
-      <button class="chip-delete-btn" (click)="onRemove(item.id, $event)">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>
-      </button>
+      <span class="chip-buttons">
+        <button class="chip-edit-btn" (click)="onEditItem(item, $event)" title="Edit {{ type }}">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
+          </svg>
+        </button>
+        <button class="chip-delete-btn" (click)="onRemove(item.id, $event)" title="Remove {{ type }}">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.225 4.811a1 1 0 0 0-1.414 1.414L10.586 12 4.81 17.775a1 1 0 1 0 1.414 1.414L12 13.414l5.775 5.775a1 1 0 0 0 1.414-1.414L13.414 12l5.775-5.775a1 1 0 0 0-1.414-1.414L12 10.586 6.225 4.81Z"/></svg>
+        </button>
+      </span>
     </span>
   }
   @if (items.length === 0) {
@@ -29,7 +36,9 @@
   <div class="add-metadata-dropdown" 
        [style.top.px]="dropdownPosition.top" 
        [style.left.px]="dropdownPosition.left"
-       (click)="$event.stopPropagation()">
+       (click)="$event.stopPropagation()"
+       (wheel)="$event.stopPropagation()"
+       (mousewheel)="$event.stopPropagation()">
     
     <div class="dropdown-create-row">
       <input 

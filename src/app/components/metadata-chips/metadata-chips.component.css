@@ -31,6 +31,19 @@
   min-width: 0; /* Allow text to shrink below content size */
 }
 
+.chip-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  margin-left: 0.25rem;
+}
+
+.metadata-chip:hover .chip-buttons {
+  opacity: 1;
+}
+
 .metadata-chip:active {
   cursor: grabbing;
 }
@@ -51,7 +64,8 @@
   color: #065f46;
 }
 
-/* Delete button styles */
+/* Button styles - both edit and delete */
+.chip-edit-btn,
 .chip-delete-btn {
   display: inline-flex;
   align-items: center;
@@ -60,49 +74,24 @@
   height: 1rem;
   border-radius: 50%;
   border: none;
-  background: rgba(0,0,0,0.1);
+  background: rgba(0,0,0,0.08);
   color: currentColor;
   cursor: pointer;
   padding: 0;
-  margin-left: 0.25rem;
-  opacity: 0.6;
-  transition: all 0.2s;
+  opacity: 0.7;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
+.chip-edit-btn:hover,
 .chip-delete-btn:hover {
   opacity: 1;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0,0,0,0.15);
+  transform: scale(1.1);
 }
 
+.chip-edit-btn svg,
 .chip-delete-btn svg {
-  width: 0.625rem;
-  height: 0.625rem;
-}
-
-/* Edit button styles (on chip) */
-.chip-edit-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1rem;
-  height: 1rem;
-  border-radius: 50%;
-  border: none;
-  background: rgba(0,0,0,0.1);
-  color: currentColor;
-  cursor: pointer;
-  padding: 0;
-  margin-right: 0.25rem;
-  opacity: 0.6;
-  transition: all 0.2s;
-}
-
-.chip-edit-btn:hover {
-  opacity: 1;
-  background: rgba(0,0,0,0.2);
-}
-
-.chip-edit-btn svg {
   width: 0.625rem;
   height: 0.625rem;
 }
@@ -172,9 +161,12 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   z-index: 10000;
   min-width: 18rem;
-  max-height: 15rem;
+  max-height: 20rem;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .dropdown-item {

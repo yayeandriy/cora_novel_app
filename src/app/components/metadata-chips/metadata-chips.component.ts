@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ElementRef, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, ViewChild, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -37,6 +37,8 @@ export class MetadataChipsComponent {
   dropdownPosition = { top: 0, left: 0 };
   editingItemId: number | null = null;
   editingItemName: string = '';
+
+  constructor(private cdr: ChangeDetectorRef) {}
 
   // Check if an item is currently assigned to the doc
   isItemAssigned(id: number): boolean {
@@ -110,7 +112,7 @@ export class MetadataChipsComponent {
     
     // Dropdown dimensions (approximate - 18rem = 288px)
     const dropdownWidth = 300;
-    const dropdownHeight = 240;
+    const dropdownHeight = 320;
     
     // Calculate position with viewport boundary checking
     let left = rect.left;
@@ -140,6 +142,21 @@ export class MetadataChipsComponent {
     this.dropdownVisible = true;
     this.editingItemId = item.id;
     this.editingItemName = item.name;
+    
+    // Trigger change detection and focus the input after the view updates
+    this.cdr.detectChanges();
+    setTimeout(() => {
+      const editInput = document.querySelector('.dropdown-edit-input') as HTMLInputElement;
+      if (editInput) {
+        // Scroll the editing item into view within the dropdown
+        const itemWrapper = editInput.closest('.dropdown-item-wrapper');
+        if (itemWrapper) {
+          itemWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        editInput.focus();
+        editInput.select();
+      }
+    }, 50);
   }
 
   saveEdit(event?: Event) {
