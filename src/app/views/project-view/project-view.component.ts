@@ -509,7 +509,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.selectedDoc && this.selectedDoc.id === docId) {
         this.docCharacterIds = new Set([...this.docCharacterIds, characterId]);
       }
-      this.changeDetector.markForCheck();
+      this.changeDetector.detectChanges();
     } catch (error) {
       console.error('Failed to add character to doc:', error);
     }
@@ -526,7 +526,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.selectedDoc && this.selectedDoc.id === docId) {
         this.docEventIds = new Set([...this.docEventIds, eventId]);
       }
-      this.changeDetector.markForCheck();
+      this.changeDetector.detectChanges();
     } catch (error) {
       console.error('Failed to add event to doc:', error);
     }
@@ -543,7 +543,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.selectedDoc && this.selectedDoc.id === docId) {
         this.docPlaceIds = new Set([...this.docPlaceIds, placeId]);
       }
-      this.changeDetector.markForCheck();
+      this.changeDetector.detectChanges();
     } catch (error) {
       console.error('Failed to add place to doc:', error);
     }
@@ -564,7 +564,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.selectedDoc && this.selectedDoc.id === docId) {
         this.docCharacterIds = new Set([...this.docCharacterIds, created.id]);
       }
-      this.changeDetector.markForCheck();
+      this.changeDetector.detectChanges();
     } catch (error) {
       console.error('Failed to create character:', error);
     }
@@ -584,7 +584,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.selectedDoc && this.selectedDoc.id === docId) {
         this.docEventIds = new Set([...this.docEventIds, created.id]);
       }
-      this.changeDetector.markForCheck();
+      this.changeDetector.detectChanges();
     } catch (error) {
       console.error('Failed to create event:', error);
     }
@@ -604,7 +604,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.selectedDoc && this.selectedDoc.id === docId) {
         this.docPlaceIds = new Set([...this.docPlaceIds, created.id]);
       }
-      this.changeDetector.markForCheck();
+      this.changeDetector.detectChanges();
     } catch (error) {
       console.error('Failed to create place:', error);
     }
@@ -623,7 +623,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.docCharacterIds.delete(characterId);
         this.docCharacterIds = new Set(this.docCharacterIds);
       }
-      this.changeDetector.markForCheck();
+      this.changeDetector.detectChanges();
     } catch (error) {
       console.error('Failed to remove character from doc:', error);
     }
@@ -641,7 +641,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.docEventIds.delete(eventId);
         this.docEventIds = new Set(this.docEventIds);
       }
-      this.changeDetector.markForCheck();
+      this.changeDetector.detectChanges();
     } catch (error) {
       console.error('Failed to remove event from doc:', error);
     }
@@ -659,7 +659,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.docPlaceIds.delete(placeId);
         this.docPlaceIds = new Set(this.docPlaceIds);
       }
-      this.changeDetector.markForCheck();
+      this.changeDetector.detectChanges();
     } catch (error) {
       console.error('Failed to remove place from doc:', error);
     }
