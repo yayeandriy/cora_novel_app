@@ -97,6 +97,7 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   private readonly COLLAPSE_KEY_GLOBAL = 'cora-editor-split-collapsed';
   private readonly COLUMN_PX_KEY_GLOBAL = 'cora-editor-column-px';
   private loadedProjectId: number | null = null;
+  private loadedDocId: number | null = null;
   // Draft controls follow split visibility (no separate collapse state)
 
   private lastEmittedSelection: SelectionStats | null = null;
@@ -111,8 +112,8 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   }
 
   private getCollapseKey(): string {
-    const pid = this.selectedDoc?.project_id;
-    return pid ? `${this.COLLAPSE_KEY_GLOBAL}-${pid}` : this.COLLAPSE_KEY_GLOBAL;
+    const docId = this.selectedDoc?.id;
+    return docId ? `${this.COLLAPSE_KEY_GLOBAL}-doc-${docId}` : this.COLLAPSE_KEY_GLOBAL;
   }
 
   // Visual column width for the primary (and draft) textareas in pixels
@@ -162,6 +163,9 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
     }
     if (changes['selectedDoc'] && this.selectedDoc?.project_id) {
       const pid = this.selectedDoc.project_id;
+      const docId = this.selectedDoc.id;
+      
+      // Load project-scoped settings when switching projects
       if (this.loadedProjectId !== pid) {
         this.loadedProjectId = pid;
         // Load project-scoped values, with fallback to global if missing
@@ -171,17 +175,25 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
             const w = parseInt(wStr, 10);
             if (!Number.isNaN(w)) this.draftPaneWidth = Math.max(200, Math.min(1200, w));
           }
-          const cStr = localStorage.getItem(this.getCollapseKey());
-          if (cStr == null) {
-            const globalC = localStorage.getItem(this.COLLAPSE_KEY_GLOBAL);
-            if (globalC != null) this.isSplitCollapsed = globalC === 'true';
-          } else {
-            this.isSplitCollapsed = cStr === 'true';
-          }
           const colStr = localStorage.getItem(this.getColumnPxKey()) || localStorage.getItem(this.COLUMN_PX_KEY_GLOBAL);
           if (colStr) {
             const px = parseInt(colStr, 10);
             if (!Number.isNaN(px)) this.editorWidthPx = Math.max(400, Math.min(1400, px));
+          }
+        } catch {}
+      }
+      
+      // Load document-scoped collapse state when switching documents
+      if (this.loadedDocId !== docId) {
+        this.loadedDocId = docId;
+        try {
+          const cStr = localStorage.getItem(this.getCollapseKey());
+          if (cStr == null) {
+            // Fallback to global collapse state if no doc-specific state exists
+            const globalC = localStorage.getItem(this.COLLAPSE_KEY_GLOBAL);
+            if (globalC != null) this.isSplitCollapsed = globalC === 'true';
+          } else {
+            this.isSplitCollapsed = cStr === 'true';
           }
         } catch {}
         // After view updates, ensure width fits the current container and persist if clamped

@@ -4540,14 +4540,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // Check if drafts are currently collapsed (about to be opened)
     const wasCollapsed = this.documentEditorComponent?.isSplitCollapsed ?? true;
     
-    // Call the toggle method on the document editor
-    this.documentEditorComponent?.toggleDraftControls();
-    
-    // If we just opened drafts (was collapsed, now open), close storyline/notes panels
+    // Close storyline/notes panels if we're opening drafts (before toggle to ensure it happens)
     if (wasCollapsed) {
       this.projectHeaderExpanded = false;
       this.folderHeaderExpanded = false;
     }
+    
+    // Call the toggle method on the document editor
+    this.documentEditorComponent?.toggleDraftControls();
   }
 
   // Handler for drafts panel expansion state changes
