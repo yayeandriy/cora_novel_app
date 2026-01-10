@@ -325,6 +325,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // Clear expanded doc and highlighted doc when folder changes
     this.projectHeaderExpandedDocId = null;
     this.projectHeaderHighlightedDocId = null;
+    this.changeDetector.markForCheck();
   }
 
   // Handle doc card click in project header - just highlight, don't navigate
@@ -339,7 +340,20 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   // Handle wheel scroll on docs cards container - enable horizontal scroll with vertical wheel
+  // Handle wheel scroll on docs cards container - enable horizontal scroll with vertical wheel
   onDocsContainerWheel(event: WheelEvent) {
+    const container = event.currentTarget as HTMLElement;
+    if (!container) return;
+    
+    // Use deltaY for horizontal scroll (works with and without Shift)
+    if (event.deltaY !== 0) {
+      event.preventDefault();
+      container.scrollLeft += event.deltaY;
+    }
+  }
+
+  // Handle wheel scroll on folders container - enable horizontal scroll with vertical wheel
+  onFoldersContainerWheel(event: WheelEvent) {
     const container = event.currentTarget as HTMLElement;
     if (!container) return;
     
@@ -412,6 +426,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private async loadProjectHeaderFolderDocsMetadata(group: DocGroup): Promise<void> {
     const docs = group.docs || [];
     await Promise.all(docs.map(doc => this.loadProjectHeaderDocMetadata(doc.id)));
+    this.changeDetector.detectChanges();
   }
 
   // Get docs for the folder selected in project header
@@ -1359,7 +1374,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
 
-  selectGroup(group: DocGroup, event?: MouseEvent) {
+  async selectGroup(group: DocGroup, event?: MouseEvent) {
     if (event) {
       event.stopPropagation();
     }
@@ -1397,19 +1412,23 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.docEventIds = new Set();
 
     // Load doc group characters and events
-    this.loadDocGroupCharacters(group.id);
-    this.loadDocGroupEvents(group.id);
-    this.loadDocGroupPlaces(group.id);
+    await Promise.all([
+      this.loadDocGroupCharacters(group.id),
+      this.loadDocGroupEvents(group.id),
+      this.loadDocGroupPlaces(group.id)
+    ]);
 
     // Load metadata for all docs in this group (for group-view doc cards)
-    this.loadProjectHeaderFolderDocsMetadata(group);
+    await this.loadProjectHeaderFolderDocsMetadata(group);
 
     // Load folder drafts if the drafts panel is expanded; else refresh count
     if (this.folderDraftsExpanded) {
-      this.loadFolderDrafts(group.id);
+      await this.loadFolderDrafts(group.id);
     } else {
-      this.refreshFolderDraftsCount(group.id);
+      await this.refreshFolderDraftsCount(group.id);
     }
+    
+    this.changeDetector.detectChanges();
   }
 
   private saveSelection() {

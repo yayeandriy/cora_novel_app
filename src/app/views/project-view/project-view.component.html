@@ -43,7 +43,7 @@
     <div class="floating-storyline-panel" (click)="$event.stopPropagation()">
       <!-- Only show folders list when there are multiple parts -->
       @if (docGroups.length > 1) {
-        <div class="folders-scroll-container">
+        <div class="folders-scroll-container" (wheel)="onFoldersContainerWheel($event)">
           @for (group of docGroups; track group.id; let i = $index) {
             <button 
               class="folder-chip" 
@@ -249,7 +249,7 @@
             <div class="project-content floating" (click)="$event.stopPropagation()">
               <!-- Only show folders list when there are multiple parts -->
               @if (docGroups.length > 1) {
-                <div class="folders-scroll-container">
+                <div class="folders-scroll-container" (wheel)="onFoldersContainerWheel($event)">
                   @for (group of docGroups; track group.id; let i = $index) {
                     <button 
                       class="folder-chip" 

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FolderDraftsComponent, FolderDraft } from '../folder-drafts/folder-drafts.component';
@@ -24,7 +24,8 @@ export interface DocGroup {
   styleUrls: ['./group-view.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class GroupViewComponent implements OnInit {
+export class GroupViewComponent implements OnInit, OnChanges {
+  constructor(private cdr: ChangeDetectorRef) {}
   @Input() selectedGroup: DocGroup | null = null;
   @Input() folderDrafts: FolderDraft[] = [];
   @Input() selectedFolderDraftId: number | null = null;
@@ -78,6 +79,14 @@ export class GroupViewComponent implements OnInit {
   private readonly NOTES_EXPANDED_KEY = 'cora-folder-notes-expanded';
   private readonly ACTIVE_TAB_KEY = 'cora-folder-active-tab';
 
+  // Doc card metadata helpers - cache to avoid recreating arrays on each check
+  private docCharactersResultCache = new Map<number, any[]>();
+  private docEventsResultCache = new Map<number, any[]>();
+  private docPlacesResultCache = new Map<number, any[]>();
+  private availableCharactersCache = new Map<number, any[]>();
+  private availableEventsCache = new Map<number, any[]>();
+  private availablePlacesCache = new Map<number, any[]>();
+
   ngOnInit() {
     // Restore active tab from localStorage
     try {
@@ -86,6 +95,21 @@ export class GroupViewComponent implements OnInit {
         this.activeTab = savedTab;
       }
     } catch {}
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    // When cache Maps change, trigger change detection and clear local caches
+    if (changes['docCharactersCache'] || changes['docEventsCache'] || changes['docPlacesCache'] || 
+        changes['selectedGroup'] || changes['characters'] || changes['events'] || changes['places']) {
+      // Clear local result caches when inputs change
+      this.docCharactersResultCache.clear();
+      this.docEventsResultCache.clear();
+      this.docPlacesResultCache.clear();
+      this.availableCharactersCache.clear();
+      this.availableEventsCache.clear();
+      this.availablePlacesCache.clear();
+      this.cdr.markForCheck();
+    }
   }
 
   onNameChange(group: DocGroup) {
@@ -175,36 +199,66 @@ export class GroupViewComponent implements OnInit {
 
   // Doc card metadata helpers
   getDocCharacters(docId: number): any[] {
+    if (this.docCharactersResultCache.has(docId)) {
+      return this.docCharactersResultCache.get(docId)!;
+    }
     const charIds = this.docCharactersCache.get(docId) || [];
     const charMap = new Map(this.characters.map(c => [c.id, c]));
-    return charIds.map(id => charMap.get(id)).filter((c): c is any => c !== undefined);
+    const result = charIds.map(id => charMap.get(id)).filter((c): c is any => c !== undefined);
+    this.docCharactersResultCache.set(docId, result);
+    return result;
   }
 
   getDocEvents(docId: number): any[] {
+    if (this.docEventsResultCache.has(docId)) {
+      return this.docEventsResultCache.get(docId)!;
+    }
     const eventIds = this.docEventsCache.get(docId) || [];
     const eventMap = new Map(this.events.map(e => [e.id, e]));
-    return eventIds.map(id => eventMap.get(id)).filter((e): e is any => e !== undefined);
+    const result = eventIds.map(id => eventMap.get(id)).filter((e): e is any => e !== undefined);
+    this.docEventsResultCache.set(docId, result);
+    return result;
   }
 
   getDocPlaces(docId: number): any[] {
+    if (this.docPlacesResultCache.has(docId)) {
+      return this.docPlacesResultCache.get(docId)!;
+    }
     const placeIds = this.docPlacesCache.get(docId) || [];
     const placeMap = new Map(this.places.map(p => [p.id, p]));
-    return placeIds.map(id => placeMap.get(id)).filter((p): p is any => p !== undefined);
+    const result = placeIds.map(id => placeMap.get(id)).filter((p): p is any => p !== undefined);
+    this.docPlacesResultCache.set(docId, result);
+    return result;
   }
 
   getAvailableCharactersForDoc(docId: number): any[] {
+    if (this.availableCharactersCache.has(docId)) {
+      return this.availableCharactersCache.get(docId)!;
+    }
     const linkedIds = this.docCharactersCache.get(docId) || [];
-    return this.characters.filter(c => !linkedIds.includes(c.id));
+    const result = this.characters.filter(c => !linkedIds.includes(c.id));
+    this.availableCharactersCache.set(docId, result);
+    return result;
   }
 
   getAvailableEventsForDoc(docId: number): any[] {
+    if (this.availableEventsCache.has(docId)) {
+      return this.availableEventsCache.get(docId)!;
+    }
     const linkedIds = this.docEventsCache.get(docId) || [];
-    return this.events.filter(e => !linkedIds.includes(e.id));
+    const result = this.events.filter(e => !linkedIds.includes(e.id));
+    this.availableEventsCache.set(docId, result);
+    return result;
   }
 
   getAvailablePlacesForDoc(docId: number): any[] {
+    if (this.availablePlacesCache.has(docId)) {
+      return this.availablePlacesCache.get(docId)!;
+    }
     const linkedIds = this.docPlacesCache.get(docId) || [];
-    return this.places.filter(p => !linkedIds.includes(p.id));
+    const result = this.places.filter(p => !linkedIds.includes(p.id));
+    this.availablePlacesCache.set(docId, result);
+    return result;
   }
 
   // Metadata event handlers
