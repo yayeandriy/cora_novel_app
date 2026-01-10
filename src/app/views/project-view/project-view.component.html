@@ -29,7 +29,7 @@
       </div>
       
       <!-- Drafts button (separate) -->
-      <button class="toolbar-button toggle-labeled" (click)="documentEditorComponent?.toggleDraftControls()" [class.active]="documentEditorComponent && !documentEditorComponent.isSplitCollapsed" aria-label="Drafts" title="Drafts - Document drafts">
+      <button class="toolbar-button toggle-labeled" (click)="onDraftsButtonClick()" [class.active]="documentEditorComponent && !documentEditorComponent.isSplitCollapsed" aria-label="Drafts" title="Drafts - Document drafts">
         @if (drafts.length > 0) {
           <span class="count-circle">{{ drafts.length }}</span>
         }
@@ -505,7 +505,7 @@
   [docGroupPlaceIds]="docGroupPlaceIds"
   [editingPlaceId]="editingPlaceId"
       [style.width.px]="rightWidth"
-      (draftsExpandedChange)="draftsExpanded = $event"
+      (draftsExpandedChange)="onDraftsExpandedChange($event)"
   (collapseToggle)="toggleRightSidebar()"
       (timelineHeaderToggle)="toggleTimelineHeader()"
     (charactersReorder)="onSidebarCharactersReorder($event)"

@@ -288,6 +288,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     if (this.projectHeaderExpanded) {
       this.folderHeaderExpanded = false;
     }
+    // Keep drafts open when opening storyline (no mutual exclusion with drafts)
     // Clear folder and doc selection when collapsing project header
     if (!this.projectHeaderExpanded) {
       this.projectHeaderSelectedGroupId = null;
@@ -707,6 +708,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     if (this.folderHeaderExpanded) {
       this.projectHeaderExpanded = false;
     }
+    // Keep drafts open when opening notes (no mutual exclusion with drafts)
     // Load drafts when expanding the header
     if (this.folderHeaderExpanded) {
       const group = this.selectedGroup || this.currentGroup;
@@ -720,6 +722,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   switchToNotesTab() {
     this.folderHeaderExpanded = true;
     this.projectHeaderExpanded = false;
+    // Keep drafts open when opening notes (no mutual exclusion with drafts)
     const group = this.selectedGroup || this.currentGroup;
     if (group) {
       this.loadFolderDrafts(group.id);
@@ -4529,6 +4532,33 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       console.log('[DEBUG] deleteDraft - final selectedDraftId:', this.selectedDraftId, 'drafts:', this.drafts.map(d => d.id));
     } catch (error) {
       console.error('Failed to delete draft:', error);
+    }
+  }
+
+  // Handler for drafts button click in toolbar
+  onDraftsButtonClick(): void {
+    // Check if drafts are currently collapsed (about to be opened)
+    const wasCollapsed = this.documentEditorComponent?.isSplitCollapsed ?? true;
+    
+    // Call the toggle method on the document editor
+    this.documentEditorComponent?.toggleDraftControls();
+    
+    // If we just opened drafts (was collapsed, now open), close storyline/notes panels
+    if (wasCollapsed) {
+      this.projectHeaderExpanded = false;
+      this.folderHeaderExpanded = false;
+    }
+  }
+
+  // Handler for drafts panel expansion state changes
+  onDraftsExpandedChange(expanded: boolean): void {
+    // Only close storyline/notes when user is actively opening drafts (not when already open)
+    const wasCollapsed = !this.draftsExpanded;
+    this.draftsExpanded = expanded;
+    // When drafts are being opened (action), close storyline/notes panels
+    if (expanded && wasCollapsed) {
+      this.projectHeaderExpanded = false;
+      this.folderHeaderExpanded = false;
     }
   }
 
