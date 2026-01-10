@@ -37,6 +37,7 @@ export class MetadataChipsComponent {
   dropdownPosition = { top: 0, left: 0 };
   editingItemId: number | null = null;
   editingItemName: string = '';
+  searchQuery: string = '';
 
   constructor(private cdr: ChangeDetectorRef) {}
 
@@ -47,7 +48,12 @@ export class MetadataChipsComponent {
 
   // Get dropdown items - prefer allItems if provided, otherwise use availableItems
   get dropdownItems(): MetadataItem[] {
-    return this.allItems.length > 0 ? this.allItems : this.availableItems;
+    const items = this.allItems.length > 0 ? this.allItems : this.availableItems;
+    if (!this.searchQuery.trim()) {
+      return items;
+    }
+    const query = this.searchQuery.toLowerCase();
+    return items.filter(item => item.name.toLowerCase().includes(query));
   }
 
   toggleDropdown(event: MouseEvent) {
@@ -95,6 +101,7 @@ export class MetadataChipsComponent {
     this.dropdownVisible = false;
     this.editingItemId = null;
     this.editingItemName = '';
+    this.searchQuery = '';
   }
 
   startEdit(item: MetadataItem, event: MouseEvent) {
@@ -194,10 +201,21 @@ export class MetadataChipsComponent {
   }
 
   onCreate(name: string) {
-    if (name.trim()) {
-      this.create.emit(name.trim());
-      this.closeDropdown();
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      return;
     }
+    
+    // If there are filtered results, add the first one instead of creating
+    const filtered = this.dropdownItems;
+    if (filtered.length > 0 && filtered[0].name.toLowerCase() === trimmedName.toLowerCase()) {
+      this.onAdd(filtered[0].id);
+      return;
+    }
+    
+    // Otherwise create new item
+    this.create.emit(trimmedName);
+    this.closeDropdown();
   }
 
   onRemove(id: number, event: MouseEvent) {

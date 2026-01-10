@@ -45,8 +45,9 @@
         #createInput
         type="text" 
         class="dropdown-create-input" 
-        [placeholder]="placeholder"
-        (keydown.enter)="$event.preventDefault(); onCreate(createInput.value); createInput.value = ''"
+        [placeholder]="'Search or create ' + type + '...'"
+        [(ngModel)]="searchQuery"
+        (keydown.enter)="$event.preventDefault(); onCreate(searchQuery); searchQuery = ''"
         autofocus />
     </div>
     
