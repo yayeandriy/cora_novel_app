@@ -19,6 +19,16 @@
   border: none;
   cursor: grab;
   position: relative;
+  max-width: 100%; /* Constrain to parent width */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0; /* Allow text to shrink below content size */
 }
 
 .metadata-chip:active {
