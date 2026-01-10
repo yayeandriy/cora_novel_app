@@ -31,21 +31,21 @@ const FONT_FAMILIES: Record<FontFamily, string> = {
 };
 
 const FONT_SIZES: Record<FontSize, string> = {
-  'S': '0.875rem',
-  'M': '1rem',
-  'L': '1.125rem'
+  'S': '1.125rem',
+  'M': '1.375rem',
+  'L': '1.5rem'
 };
 
 const SERIF_FONT_SIZES: Record<FontSize, string> = {
-  'S': '1rem',
-  'M': '1.125rem',
-  'L': '1.25rem'
+  'S': '1.25rem',
+  'M': '1.5rem',
+  'L': '1.625rem'
 };
 
 const SANS_FONT_SIZES: Record<FontSize, string> = {
-  'S': '1rem',
-  'M': '1.125rem',
-  'L': '1.25rem'
+  'S': '1.25rem',
+  'M': '1.5rem',
+  'L': '1.625rem'
 };
 
 const LINE_HEIGHTS: Record<LineHeight, string> = {
