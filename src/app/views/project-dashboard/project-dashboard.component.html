@@ -174,7 +174,7 @@
             <!-- Inline Import Options -->
             <div class="import-overlay" (click)="$event.stopPropagation()">
               <div class="import-message">
-                <span class="import-header">Import story</span>
+                <span class="import-header">Add project</span>
                 <div class="import-options">
                   <button class="import-option-btn" (click)="importFromFolder()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -193,8 +193,8 @@
                       <line x1="16" y1="17" x2="8" y2="17"/>
                     </svg>
                     <div class="import-option-text">
-                      <span class="import-option-title">From export</span>
-                      <span class="import-option-desc">With all metadata</span>
+                      <span class="import-option-title">Open project file</span>
+                      <span class="import-option-desc">Cora project (.cora)</span>
                     </div>
                   </button>
                 </div>
@@ -209,7 +209,7 @@
                 <line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
             </button>
-            <button class="empty-cell-btn" (click)="toggleEmptyCellImportMenu(cell.index, $event)" title="Import story">
+            <button class="empty-cell-btn" (click)="toggleEmptyCellImportMenu(cell.index, $event)" title="Add project">
               <img src="assets/icons/square.and.arrow.down.svg" alt="Import" width="24" height="24" />
             </button>
           </div>

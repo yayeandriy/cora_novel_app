@@ -959,7 +959,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Import Folders: create root-level groups, no prompts
   async onImportFoldersRequested() {
     try {
-      const folderSelection = await open({ multiple: true, directory: true, title: 'Select folder(s) to import' });
+      const folderSelection = await open({ multiple: true, directory: true, title: 'Select folder(s) to import as parts' });
       const folders = folderSelection ? (Array.isArray(folderSelection) ? folderSelection : [folderSelection]) : [];
       if (folders.length === 0) return;
       await this.projectService.importTxtFiles(this.projectId, -1, folders as string[]);
@@ -983,13 +983,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.showExportOptionsDialog = false;
     try {
       const selected = await save({
-        title: 'Save export as...',
-        filters: [{ name: 'ZIP Archive', extensions: ['zip'] }],
-        defaultPath: `${this.projectName}.zip`
+        title: 'Save project as...',
+        filters: [{ name: 'Cora Project', extensions: ['cora'] }],
+        defaultPath: `${this.projectName}.cora`
       });
       if (!selected) return;
       await this.projectService.exportProject(this.projectId, selected as string);
-      alert('Project exported successfully');
+      alert('Project saved successfully');
     } catch (err) {
       console.error('Export failed:', err);
       alert('Export failed: ' + err);

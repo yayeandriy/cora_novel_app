@@ -677,20 +677,20 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
 
     let base_path = Path::new(&folder_path);
     
-    // Check if it's a ZIP file and extract if needed
+    // Check if it's a .cora or .zip file and extract if needed
     let temp_dir_holder;
-    let base = if folder_path.to_lowercase().ends_with(".zip") {
-        // Extract ZIP to temporary directory
+    let base = if folder_path.to_lowercase().ends_with(".cora") || folder_path.to_lowercase().ends_with(".zip") {
+        // Extract archive to temporary directory
         if !base_path.exists() || !base_path.is_file() {
-            return Err("Selected ZIP file does not exist".to_string());
+            return Err("Selected project file does not exist".to_string());
         }
         
         temp_dir_holder = std::env::temp_dir().join(format!("cora_import_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()));
         fs::create_dir_all(&temp_dir_holder).map_err(|e| format!("Failed to create temp directory: {}", e))?;
         
-        // Extract ZIP
-        let file = fs::File::open(base_path).map_err(|e| format!("Failed to open ZIP file: {}", e))?;
-        let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("Failed to read ZIP archive: {}", e))?;
+        // Extract archive (both .cora and .zip are ZIP format)
+        let file = fs::File::open(base_path).map_err(|e| format!("Failed to open project file: {}", e))?;
+        let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("Failed to read project archive: {}", e))?;
         
         for i in 0..archive.len() {
             let mut file = archive.by_index(i).map_err(|e| format!("Failed to read ZIP entry: {}", e))?;
@@ -732,7 +732,7 @@ pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> 
             if direct_metadata.exists() {
                 temp_dir_holder
             } else {
-                return Err("Could not find project folder with metadata.json in ZIP".to_string());
+                return Err("Could not find project folder with metadata.json in archive".to_string());
             }
         }
     } else {
@@ -991,11 +991,14 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
     
     let pool = &state.pool;
 
-    // Ensure dest_path ends with .zip
-    let zip_path = if dest_path.ends_with(".zip") {
+    // Ensure dest_path ends with .cora (which is a ZIP file)
+    let zip_path = if dest_path.ends_with(".cora") {
         dest_path
+    } else if dest_path.ends_with(".zip") {
+        // Replace .zip with .cora if provided
+        dest_path.replace(".zip", ".cora")
     } else {
-        format!("{}.zip", dest_path)
+        format!("{}.cora", dest_path)
     };
 
     // Load project

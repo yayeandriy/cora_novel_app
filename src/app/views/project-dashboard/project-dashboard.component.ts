@@ -565,10 +565,9 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
     try {
       const selected = await open({
         multiple: false,
-        title: 'Select exported project (ZIP file or folder with metadata.json)',
+        title: 'Open project file',
         filters: [
-          { name: 'All Supported', extensions: ['zip'] },
-          { name: 'ZIP Archive', extensions: ['zip'] }
+          { name: 'Cora Project', extensions: ['cora'] }
         ]
       });
       if (!selected || Array.isArray(selected)) return;
@@ -585,9 +584,10 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
   async importProject() {
     try {
       const selected = await open({
-        directory: true,
+        directory: false,
         multiple: false,
-        title: 'Select a project folder to import'
+        filters: [{ name: 'Cora Project', extensions: ['cora'] }],
+        title: 'Open a project file'
       });
       if (!selected || Array.isArray(selected)) return;
       const imported = await this.svc.importProject(selected as string);
@@ -595,8 +595,8 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
       // Navigate to the newly imported project
       this.openProject(imported);
     } catch (err) {
-      console.error('Failed to Import story:', err);
-      alert('Failed to Import story: ' + err);
+      console.error('Failed to open project:', err);
+      alert('Failed to open project: ' + err);
     }
   }
 
