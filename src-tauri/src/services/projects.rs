@@ -118,3 +118,80 @@ pub fn delete(pool: &DbPool, id: i64) -> anyhow::Result<bool> {
     tx.commit()?;
     Ok(affected > 0)
 }
+
+/// Clears all content from a project without deleting the project itself.
+/// This is used by sync to replace project content from an external file.
+/// Deletes: doc_groups (and their docs via cascade), characters, events, places, 
+/// project_drafts, and timelines associated with this project.
+pub fn clear_project_content(pool: &DbPool, project_id: i64) -> anyhow::Result<()> {
+    let mut conn = get_conn(pool)?;
+    let tx = conn.transaction()?;
+    
+    // Verify project exists
+    let exists = tx.query_row::<i64, _, _>(
+        "SELECT id FROM projects WHERE id = ?1", 
+        rusqlite::params![project_id], 
+        |r| r.get(0)
+    ).optional()?;
+    if exists.is_none() {
+        return Err(anyhow::anyhow!("project not found"));
+    }
+    
+    // Delete in order that respects foreign key constraints:
+    // 1. First delete doc-related associations (CASCADE should handle this, but be explicit)
+    //    - doc_characters, doc_events, doc_places are CASCADE from docs
+    //    - drafts are CASCADE from docs
+    
+    // 2. Delete docs (they CASCADE from project, but doc_groups don't have CASCADE)
+    tx.execute("DELETE FROM docs WHERE project_id = ?1", rusqlite::params![project_id])?;
+    
+    // 3. Delete folder_drafts (CASCADE from doc_groups)
+    //    Need to do this before doc_groups since doc_groups may not CASCADE properly
+    tx.execute(
+        "DELETE FROM folder_drafts WHERE doc_group_id IN (SELECT id FROM doc_groups WHERE project_id = ?1)",
+        rusqlite::params![project_id]
+    )?;
+    
+    // 4. Delete doc_group associations
+    tx.execute(
+        "DELETE FROM doc_group_characters WHERE doc_group_id IN (SELECT id FROM doc_groups WHERE project_id = ?1)",
+        rusqlite::params![project_id]
+    )?;
+    tx.execute(
+        "DELETE FROM doc_group_events WHERE doc_group_id IN (SELECT id FROM doc_groups WHERE project_id = ?1)",
+        rusqlite::params![project_id]
+    )?;
+    tx.execute(
+        "DELETE FROM doc_group_places WHERE doc_group_id IN (SELECT id FROM doc_groups WHERE project_id = ?1)",
+        rusqlite::params![project_id]
+    )?;
+    
+    // 5. Delete doc_groups (no proper CASCADE from project_id)
+    tx.execute("DELETE FROM doc_groups WHERE project_id = ?1", rusqlite::params![project_id])?;
+    
+    // 6. Delete characters (CASCADE from project)
+    tx.execute("DELETE FROM characters WHERE project_id = ?1", rusqlite::params![project_id])?;
+    
+    // 7. Delete events (CASCADE from project)
+    tx.execute("DELETE FROM events WHERE project_id = ?1", rusqlite::params![project_id])?;
+    
+    // 8. Delete places (CASCADE from project)
+    tx.execute("DELETE FROM places WHERE project_id = ?1", rusqlite::params![project_id])?;
+    
+    // 9. Delete project_drafts (CASCADE from project)
+    tx.execute("DELETE FROM project_drafts WHERE project_id = ?1", rusqlite::params![project_id])?;
+    
+    // 10. Delete timelines for this project (entity_type = 'project' and entity_id = project_id)
+    //     Also delete doc timelines (entity_type = 'doc') that belonged to docs in this project
+    //     Since docs are already deleted, we just delete the project timeline
+    tx.execute(
+        "DELETE FROM timelines WHERE entity_type = 'project' AND entity_id = ?1",
+        rusqlite::params![project_id]
+    )?;
+    
+    // 11. Delete sync records for this project
+    tx.execute("DELETE FROM sync WHERE project_id = ?1", rusqlite::params![project_id])?;
+    
+    tx.commit()?;
+    Ok(())
+}

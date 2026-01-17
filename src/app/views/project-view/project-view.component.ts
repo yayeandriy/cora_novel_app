@@ -1109,14 +1109,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         // Write to database by importing (receives Uint8Array)
         writeDbContent: async (content: Uint8Array) => {
           // Write to system temp directory with unique filename
-          // Note: import_project requires .cora extension to recognize it as an archive
+          // Note: syncImportToProject requires .cora extension to recognize it as an archive
           const sysTempDir = await tempDir();
           const tempFileName = `cora-import-${this.projectId}-${Date.now()}.cora`;
           const tempPath = await join(sysTempDir, tempFileName);
           
           await writeFile(tempPath, content);
-          // Import from the temp file
-          await this.projectService.importProject(tempPath);
+          // Import from the temp file into EXISTING project (not creating new one)
+          await this.projectService.syncImportToProject(this.projectId, tempPath);
           // Reload the project to reflect changes
           await this.loadProject(true);
           
@@ -1163,22 +1163,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
           // User chose file version
           await this.syncService.resolveConflict(this.projectId, 'use_file');
           const fileContent = await readFile(this.currentSync.file_path);
-          // Note: import_project requires .cora extension to recognize it as an archive
-          const sysTempDir = await tempDir();
-          const tempFileName = `cora-conflict-import-${this.projectId}-${Date.now()}.cora`;
-          const tempPath = await join(sysTempDir, tempFileName);
-          await writeFile(tempPath, fileContent);
-          await this.projectService.importProject(tempPath);
+          // Use syncImportToProject to update existing project instead of creating new one
+          await this.projectService.syncImportToProject(this.projectId, this.currentSync.file_path);
           await this.loadProject(true);
           const fileHash = await this.syncService.calculateHash(fileContent);
           await this.syncService.markSyncCompleted(this.projectId, fileHash, fileHash);
           this.syncStatus = 'synced';
-          // Clean up temp file
-          try {
-            await writeFile(tempPath, new Uint8Array(0));
-          } catch (err) {
-            console.warn('Failed to cleanup temp file:', err);
-          }
         }
         await this.loadSyncStatus();
       } else {

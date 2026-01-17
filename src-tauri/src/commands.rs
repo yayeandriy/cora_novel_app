@@ -1575,3 +1575,306 @@ pub async fn sync_resume(state: State<'_, AppState>, project_id: i64) -> Result<
 pub async fn sync_calculate_hash(content: Vec<u8>) -> Result<String, String> {
     Ok(crate::services::sync::calculate_hash(&content))
 }
+
+/// Import content from a .cora file into an EXISTING project, replacing all its content.
+/// This is used by sync when "use file" is chosen during conflict resolution.
+/// Unlike import_project which creates a new project, this updates an existing one.
+#[tauri::command]
+pub async fn sync_import_to_project(state: State<'_, AppState>, project_id: i64, file_path: String) -> Result<(), String> {
+    let pool = &state.pool;
+    
+    let base_path = Path::new(&file_path);
+    
+    // Check if it's a .cora or .zip file and extract if needed
+    let temp_dir_holder;
+    let base = if file_path.to_lowercase().ends_with(".cora") || file_path.to_lowercase().ends_with(".zip") {
+        // Extract archive to temporary directory
+        if !base_path.exists() || !base_path.is_file() {
+            return Err("Selected project file does not exist".to_string());
+        }
+        
+        temp_dir_holder = std::env::temp_dir().join(format!("cora_sync_import_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()));
+        fs::create_dir_all(&temp_dir_holder).map_err(|e| format!("Failed to create temp directory: {}", e))?;
+        
+        // Extract archive (both .cora and .zip are ZIP format)
+        let file = fs::File::open(base_path).map_err(|e| format!("Failed to open project file: {}", e))?;
+        let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("Failed to read project archive: {}", e))?;
+        
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i).map_err(|e| format!("Failed to read ZIP entry: {}", e))?;
+            let outpath = temp_dir_holder.join(file.name());
+            
+            if file.is_dir() {
+                fs::create_dir_all(&outpath).map_err(|e| format!("Failed to create directory: {}", e))?;
+            } else {
+                if let Some(parent) = outpath.parent() {
+                    fs::create_dir_all(parent).map_err(|e| format!("Failed to create parent directory: {}", e))?;
+                }
+                let mut outfile = fs::File::create(&outpath).map_err(|e| format!("Failed to create file: {}", e))?;
+                std::io::copy(&mut file, &mut outfile).map_err(|e| format!("Failed to extract file: {}", e))?;
+            }
+        }
+        
+        // Find the project folder with metadata.json
+        let entries = fs::read_dir(&temp_dir_holder).map_err(|e| format!("Failed to read temp directory: {}", e))?;
+        let mut project_folder = None;
+        for entry in entries {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let path = entry.path();
+            if path.is_dir() {
+                let metadata_check = path.join("metadata.json");
+                if metadata_check.exists() {
+                    project_folder = Some(path);
+                    break;
+                }
+            }
+        }
+        
+        if let Some(folder) = project_folder {
+            folder
+        } else {
+            let direct_metadata = temp_dir_holder.join("metadata.json");
+            if direct_metadata.exists() {
+                temp_dir_holder
+            } else {
+                return Err("Could not find project folder with metadata.json in archive".to_string());
+            }
+        }
+    } else {
+        return Err("sync_import_to_project only supports .cora files".to_string());
+    };
+    
+    // Parse metadata.json
+    let metadata_path = base.join("metadata.json");
+    if !metadata_path.exists() || !metadata_path.is_file() {
+        return Err("metadata.json not found in archive".to_string());
+    }
+    
+    let content = fs::read_to_string(&metadata_path).map_err(|e| format!("Failed to read metadata.json: {}", e))?;
+    
+    #[derive(serde::Deserialize)]
+    struct MetaHeader { app: Option<String>, version: Option<u32>, exported_at: Option<String> }
+    #[derive(serde::Deserialize)]
+    struct ImportFile {
+        meta: Option<MetaHeader>,
+        project: crate::models::Project,
+        groups: Vec<crate::models::DocGroup>,
+        docs: Vec<crate::models::Doc>,
+        characters: Vec<crate::models::Character>,
+        events: Vec<crate::models::Event>,
+        #[serde(default)]
+        places: Vec<crate::models::Place>,
+        doc_characters: std::collections::HashMap<i64, Vec<i64>>,
+        doc_events: std::collections::HashMap<i64, Vec<i64>>,
+        #[serde(default)]
+        doc_places: std::collections::HashMap<i64, Vec<i64>>,
+        project_timeline: Option<crate::models::Timeline>,
+        doc_timelines: std::collections::HashMap<i64, Option<crate::models::Timeline>>,
+        #[serde(default)]
+        drafts_by_doc: std::collections::HashMap<i64, Vec<crate::models::Draft>>,
+        #[serde(default)]
+        folder_drafts_by_group: std::collections::HashMap<i64, Vec<crate::models::FolderDraft>>,
+    }
+    
+    let parsed: ImportFile = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse metadata.json: {}", e))?;
+    
+    if let Some(meta) = &parsed.meta {
+        if meta.app.as_deref() != Some("cora") {
+            return Err("Invalid archive: not a Cora project file".to_string());
+        }
+    }
+    
+    // Clear existing project content (but keep the project record itself)
+    crate::services::projects::clear_project_content(pool, project_id)
+        .map_err(|e| format!("Failed to clear project content: {}", e))?;
+    
+    // Update project metadata (name, desc, notes) from the imported file
+    crate::services::projects::update(
+        pool, 
+        project_id, 
+        Some(parsed.project.name.clone()),
+        parsed.project.desc.clone(),
+        None,  // Don't update path
+        parsed.project.notes.clone()
+    ).map_err(|e| format!("Failed to update project: {}", e))?;
+    
+    use std::collections::HashMap;
+    
+    // Create groups in parent-first order using original ids for mapping
+    let mut groups_by_parent: HashMap<Option<i64>, Vec<&crate::models::DocGroup>> = HashMap::new();
+    for g in &parsed.groups {
+        groups_by_parent.entry(g.parent_id).or_default().push(g);
+    }
+    for v in groups_by_parent.values_mut() {
+        v.sort_by_key(|g| g.sort_order.unwrap_or(0_i64));
+    }
+    let mut group_id_map: HashMap<i64, i64> = HashMap::new();
+    
+    // Create root groups
+    if let Some(root) = groups_by_parent.get(&None) {
+        for g in root {
+            let created = crate::services::doc_groups::create_doc_group(pool, project_id, &g.name, None)
+                .map_err(|e| e.to_string())?;
+            if let Some(notes) = &g.notes {
+                crate::services::doc_groups::update_doc_group_notes(pool, created.id, notes)
+                    .map_err(|e| e.to_string())?;
+            }
+            group_id_map.insert(g.id, created.id);
+            
+            // Recurse children
+            let mut stack: Vec<i64> = vec![g.id];
+            while let Some(parent_old_id) = stack.pop() {
+                if let Some(children) = groups_by_parent.get(&Some(parent_old_id)) {
+                    for ch in children {
+                        let new_parent_id = *group_id_map.get(&parent_old_id).expect("parent must be created");
+                        let created_child = crate::services::doc_groups::create_doc_group(pool, project_id, &ch.name, Some(new_parent_id))
+                            .map_err(|e| e.to_string())?;
+                        if let Some(notes) = &ch.notes {
+                            crate::services::doc_groups::update_doc_group_notes(pool, created_child.id, notes)
+                                .map_err(|e| e.to_string())?;
+                        }
+                        group_id_map.insert(ch.id, created_child.id);
+                        stack.push(ch.id);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Create docs
+    let mut docs_sorted: Vec<&crate::models::Doc> = parsed.docs.iter().collect();
+    docs_sorted.sort_by_key(|d| (d.doc_group_id.unwrap_or(-1_i64), d.sort_order.unwrap_or(0_i64)));
+    let mut doc_id_map: HashMap<i64, i64> = HashMap::new();
+    
+    for d in docs_sorted {
+        let name = d.name.clone().unwrap_or("Untitled".to_string());
+        let new_group = d.doc_group_id.and_then(|old_gid| group_id_map.get(&old_gid).copied());
+        let created = crate::services::docs::create_doc(pool, project_id, &name, new_group)
+            .map_err(|e| e.to_string())?;
+        if let Some(t) = d.text.clone() { 
+            crate::services::docs::update_doc(pool, created.id, &t).map_err(|e| e.to_string())?; 
+        }
+        if let Some(n) = d.notes.clone() { 
+            crate::services::docs::update_doc_notes(pool, created.id, &n).map_err(|e| e.to_string())?; 
+        }
+        doc_id_map.insert(d.id, created.id);
+    }
+    
+    // Create drafts per doc
+    for (old_doc_id, drafts) in parsed.drafts_by_doc.iter() {
+        if let Some(&new_doc_id) = doc_id_map.get(old_doc_id) {
+            for dr in drafts {
+                crate::services::drafts::create_draft(
+                    pool, 
+                    new_doc_id, 
+                    crate::models::DraftCreate { name: dr.name.clone(), content: dr.content.clone() }
+                ).map_err(|e| e.to_string())?;
+            }
+        }
+    }
+    
+    // Create folder_drafts per group
+    for (old_group_id, folder_drafts) in parsed.folder_drafts_by_group.iter() {
+        if let Some(&new_group_id) = group_id_map.get(old_group_id) {
+            for fd in folder_drafts {
+                crate::services::folder_drafts::create(
+                    pool, 
+                    new_group_id, 
+                    crate::models::FolderDraftCreate { name: fd.name.clone(), content: fd.content.clone(), insert_at_index: None }
+                ).map_err(|e| e.to_string())?;
+            }
+        }
+    }
+    
+    // Create characters
+    let mut char_id_map: HashMap<i64, i64> = HashMap::new();
+    for c in &parsed.characters {
+        let created = crate::services::characters::create(pool, project_id, &c.name, c.desc.clone())
+            .map_err(|e| e.to_string())?;
+        char_id_map.insert(c.id, created.id);
+    }
+    
+    // Create events
+    let mut event_id_map: HashMap<i64, i64> = HashMap::new();
+    for e in &parsed.events {
+        let created = crate::services::events::create(pool, project_id, &e.name, e.desc.clone(), e.start_date.clone(), e.end_date.clone(), e.date.clone())
+            .map_err(|e| e.to_string())?;
+        event_id_map.insert(e.id, created.id);
+    }
+    
+    // Create places
+    let mut place_id_map: HashMap<i64, i64> = HashMap::new();
+    for p in &parsed.places {
+        let created = crate::services::places::create(pool, project_id, &p.name, p.desc.clone())
+            .map_err(|e| e.to_string())?;
+        place_id_map.insert(p.id, created.id);
+    }
+    
+    // Create doc-character attachments
+    for (old_doc_id, old_chars) in parsed.doc_characters.iter() {
+        if let Some(&new_doc_id) = doc_id_map.get(old_doc_id) {
+            for old_ch in old_chars {
+                if let Some(&new_ch_id) = char_id_map.get(old_ch) {
+                    crate::services::characters::attach_to_doc(pool, new_doc_id, new_ch_id)
+                        .map_err(|e| e.to_string())?;
+                }
+            }
+        }
+    }
+    
+    // Create doc-event attachments
+    for (old_doc_id, old_events) in parsed.doc_events.iter() {
+        if let Some(&new_doc_id) = doc_id_map.get(old_doc_id) {
+            for old_ev in old_events {
+                if let Some(&new_ev_id) = event_id_map.get(old_ev) {
+                    crate::services::events::attach_to_doc(pool, new_doc_id, new_ev_id)
+                        .map_err(|e| e.to_string())?;
+                }
+            }
+        }
+    }
+    
+    // Create doc-place attachments
+    for (old_doc_id, old_places) in parsed.doc_places.iter() {
+        if let Some(&new_doc_id) = doc_id_map.get(old_doc_id) {
+            for old_pl in old_places {
+                if let Some(&new_pl_id) = place_id_map.get(old_pl) {
+                    crate::services::places::attach_to_doc(pool, new_doc_id, new_pl_id)
+                        .map_err(|e| e.to_string())?;
+                }
+            }
+        }
+    }
+    
+    // Create timelines
+    if let Some(tl) = parsed.project_timeline.clone() {
+        let _ = crate::services::timelines::create(
+            pool, 
+            crate::models::TimelineCreate { 
+                entity_type: "project".into(), 
+                entity_id: project_id, 
+                start_date: tl.start_date, 
+                end_date: tl.end_date 
+            }
+        ).map_err(|e| e.to_string())?;
+    }
+    
+    for (old_doc_id, maybe_tl) in parsed.doc_timelines.iter() {
+        if let Some(&new_doc_id) = doc_id_map.get(old_doc_id) {
+            if let Some(tl) = maybe_tl {
+                let _ = crate::services::timelines::create(
+                    pool, 
+                    crate::models::TimelineCreate { 
+                        entity_type: "doc".into(), 
+                        entity_id: new_doc_id, 
+                        start_date: tl.start_date.clone(), 
+                        end_date: tl.end_date.clone() 
+                    }
+                ).map_err(|e| e.to_string())?;
+            }
+        }
+    }
+    
+    Ok(())
+}
