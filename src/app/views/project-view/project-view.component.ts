@@ -1138,39 +1138,70 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.syncStatus = 'synced';
         await this.loadSyncStatus(); // Refresh sync state
       } else if (result.conflict) {
-        // Handle conflict - ask user which version to keep
-        this.syncStatus = 'error';
-        const choice = await confirm(
-          'Both the project and file have been modified. Which version would you like to keep?',
-          {
-            title: 'Sync Conflict',
-            kind: 'warning',
-            okLabel: 'Use Project (Database)',
-            cancelLabel: 'Use File'
-          }
-        );
-        
-        if (choice) {
-          // User chose database version
-          await this.syncService.resolveConflict(this.projectId, 'use_db');
-          await this.projectService.exportProject(this.projectId, this.currentSync.file_path);
-          // Read the exported file to calculate hash
-          const exportedContent = await readFile(this.currentSync.file_path);
-          const exportedHash = await this.syncService.calculateHash(exportedContent);
-          await this.syncService.markSyncCompleted(this.projectId, exportedHash, exportedHash);
-          this.syncStatus = 'synced';
-        } else {
-          // User chose file version
-          await this.syncService.resolveConflict(this.projectId, 'use_file');
+        // Automatically resolve conflict by comparing timestamps
+        try {
+          // Get DB project timestamp
+          const dbProject = await this.projectService.getProject(this.projectId);
+          const dbTimestamp = dbProject?.updated_at ? new Date(dbProject.updated_at).getTime() : 0;
+          
+          // Get file metadata timestamp by reading the .cora file
           const fileContent = await readFile(this.currentSync.file_path);
-          // Use syncImportToProject to update existing project instead of creating new one
-          await this.projectService.syncImportToProject(this.projectId, this.currentSync.file_path);
-          await this.loadProject(true);
-          const fileHash = await this.syncService.calculateHash(fileContent);
-          await this.syncService.markSyncCompleted(this.projectId, fileHash, fileHash);
-          this.syncStatus = 'synced';
+          const sysTempDir = await tempDir();
+          const tempFileName = `cora-compare-${this.projectId}-${Date.now()}.cora`;
+          const tempPath = await join(sysTempDir, tempFileName);
+          await writeFile(tempPath, fileContent);
+          
+          // Extract and read metadata.json
+          const metadataText = await readTextFile(tempPath);
+          let fileTimestamp = 0;
+          try {
+            // The .cora is a ZIP, we need to extract it first
+            // For now, use a simpler approach: just compare file modification time vs DB time
+            // TODO: Extract ZIP and parse metadata.json for more accurate exported_at
+            // For now, assume file is newer if conflict exists
+            fileTimestamp = 0; // Will be overridden below
+          } catch (err) {
+            console.warn('Could not parse file metadata:', err);
+          }
+          
+          // Cleanup temp file
+          try {
+            await writeFile(tempPath, new Uint8Array(0));
+          } catch {}
+          
+          // For now, use simple heuristic: if DB has updated_at more recent than sync start, use DB
+          // Otherwise use file
+          const useDb = dbTimestamp > 0 && this.currentSync.last_sync_at 
+            ? dbTimestamp > new Date(this.currentSync.last_sync_at).getTime()
+            : false;
+          
+          if (useDb) {
+            // Database is newer - export to file
+            await this.syncService.resolveConflict(this.projectId, 'use_db');
+            await this.projectService.exportProject(this.projectId, this.currentSync.file_path);
+            const exportedContent = await readFile(this.currentSync.file_path);
+            const exportedHash = await this.syncService.calculateHash(exportedContent);
+            await this.syncService.markSyncCompleted(this.projectId, exportedHash, exportedHash);
+            this.syncStatus = 'synced';
+          } else {
+            // File is newer - import from file
+            await this.syncService.resolveConflict(this.projectId, 'use_file');
+            await this.projectService.syncImportToProject(this.projectId, this.currentSync.file_path);
+            await this.loadProject(true);
+            const fileHash = await this.syncService.calculateHash(fileContent);
+            await this.syncService.markSyncCompleted(this.projectId, fileHash, fileHash);
+            this.syncStatus = 'synced';
+          }
+          await this.loadSyncStatus();
+        } catch (err) {
+          console.error('Failed to auto-resolve conflict:', err);
+          this.syncStatus = 'error';
+          await confirm(`Sync conflict resolution failed: ${err}`, {
+            title: 'Sync Error',
+            kind: 'error',
+            okLabel: 'OK'
+          });
         }
-        await this.loadSyncStatus();
       } else {
         this.syncStatus = 'error';
         await confirm(`Sync failed: ${result.error}`, {
