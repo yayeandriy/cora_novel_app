@@ -189,8 +189,9 @@ pub fn clear_project_content(pool: &DbPool, project_id: i64) -> anyhow::Result<(
         rusqlite::params![project_id]
     )?;
     
-    // 11. Delete sync records for this project
-    tx.execute("DELETE FROM sync WHERE project_id = ?1", rusqlite::params![project_id])?;
+    // NOTE: We intentionally do NOT delete sync records here.
+    // The sync record tracks the relationship between this project and its sync file,
+    // and should persist even when project content is replaced via "use file" sync.
     
     tx.commit()?;
     Ok(())
