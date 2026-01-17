@@ -2,8 +2,9 @@ import { Component, signal, computed, ViewChild, ElementRef, AfterViewChecked, O
 import { CommonModule } from "@angular/common";
 import { ReactiveFormsModule, FormGroup, FormControl } from "@angular/forms";
 import { ProjectService } from "../../services/project.service";
+import { SyncService } from "../../services/sync.service";
 import type { Project, Doc, Archive } from "../../shared/models";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, ask } from "@tauri-apps/plugin-dialog";
 import { Router, NavigationEnd } from "@angular/router";
 import { StartupViewComponent } from "../../components/startup-view/startup-view.component";
 import { filter } from "rxjs";
@@ -103,6 +104,7 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
 
   constructor(
     private svc: ProjectService,
+    private syncService: SyncService,
     private router: Router
   ) {
     this.form = new FormGroup({
@@ -571,8 +573,32 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
         ]
       });
       if (!selected || Array.isArray(selected)) return;
+      
+      // Check if this file is already synced with a project
+      const existingSync = await this.checkFileSync(selected as string);
+      if (existingSync) {
+        return; // Already navigated to existing project
+      }
+      
+      // Import as new project
       const imported = await this.svc.importProject(selected as string);
       await this.reload();
+      
+      // Ask user if they want to sync this file with the new project
+      const enableSync = await ask('Would you like to keep this file synced with your project? Changes will be automatically saved to this file.', {
+        title: 'Enable Sync?',
+        kind: 'info',
+        okLabel: 'Enable Sync',
+        cancelLabel: 'No, just import'
+      });
+      
+      if (enableSync) {
+        await this.syncService.initializeSync(imported.id, selected as string, {
+          syncDirection: 'db_to_file',
+          autoSyncEnabled: true
+        });
+      }
+      
       // Navigate to the newly imported project
       this.openProject(imported);
     } catch (err) {
@@ -590,13 +616,67 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
         title: 'Open a project file'
       });
       if (!selected || Array.isArray(selected)) return;
+      
+      // Check if this file is already synced with a project
+      const existingSync = await this.checkFileSync(selected as string);
+      if (existingSync) {
+        return; // Already navigated to existing project
+      }
+      
+      // Import as new project
       const imported = await this.svc.importProject(selected as string);
       await this.reload();
+      
+      // Ask user if they want to sync this file with the new project
+      const enableSync = await ask('Would you like to keep this file synced with your project? Changes will be automatically saved to this file.', {
+        title: 'Enable Sync?',
+        kind: 'info',
+        okLabel: 'Enable Sync',
+        cancelLabel: 'No, just import'
+      });
+      
+      if (enableSync) {
+        await this.syncService.initializeSync(imported.id, selected as string, {
+          syncDirection: 'db_to_file',
+          autoSyncEnabled: true
+        });
+      }
+      
       // Navigate to the newly imported project
       this.openProject(imported);
     } catch (err) {
       console.error('Failed to open project:', err);
       alert('Failed to open project: ' + err);
+    }
+  }
+
+  /**
+   * Check if a file path is already synced with a project.
+   * If it is, navigate to that project and return true.
+   * If not, return false to allow import.
+   */
+  private async checkFileSync(filePath: string): Promise<boolean> {
+    try {
+      // Get all sync records
+      const allSyncs = await this.syncService.listSyncs();
+      
+      // Find sync with matching file path
+      const existingSync = allSyncs.find(sync => sync.file_path === filePath);
+      
+      if (existingSync) {
+        // File is already synced - navigate to the existing project
+        const project = await this.svc.getProject(existingSync.project_id);
+        if (project) {
+          await this.reload();
+          this.openProject(project);
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error checking file sync:', error);
+      return false;
     }
   }
 
