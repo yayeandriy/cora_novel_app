@@ -1764,6 +1764,23 @@ app-right-sidebar {
   background: #f3f4f6;
   color: #6b7280;
 }
+
+/* Sync spinner animation in menu */
+.sync-spinner {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 16px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
  
 .key-hint{} 
  

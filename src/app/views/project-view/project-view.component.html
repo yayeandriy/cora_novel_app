@@ -709,6 +709,15 @@
           <img class="menu-icon" src="assets/icons/square.and.arrow.up.svg" alt="" />
           <span>Export</span>
         </button>
+        @if (currentSync) {
+          <button class="menu-item" (click)="performSync(); projectMenuVisible = false">
+            <img class="menu-icon" src="assets/icons/arrow.triangle.2.circlepath.svg" alt="" />
+            <span>Sync Now</span>
+            @if (syncStatus === 'syncing') {
+              <span class="sync-spinner">⟳</span>
+            }
+          </button>
+        }
         <div class="menu-separator"></div>
         <button class="menu-item" (click)="openCommandPalette('search-doc'); projectMenuVisible = false">
           <img class="menu-icon" src="assets/icons/magnifyingglass.circle.svg" alt="" />

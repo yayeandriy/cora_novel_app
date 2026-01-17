@@ -1269,6 +1269,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Load characters, events, and places
   await Promise.all([this.loadCharacters(), this.loadEvents(), this.loadPlaces()]);
 
+      // Load sync status
+      await this.loadSyncStatus();
+
       // Restore draft tool expansion states from localStorage
       try {
         const projDraftsExpanded = localStorage.getItem(this.getProjectDraftsExpandedKey(this.projectId));
