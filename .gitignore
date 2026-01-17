@@ -6,6 +6,13 @@
 /out-tsc
 /bazel-out
 
+# Tauri / Rust
+/src-tauri/target
+*.pkg
+*.dmg
+*.app
+*.ipa
+
 # Node
 /node_modules
 npm-debug.log
