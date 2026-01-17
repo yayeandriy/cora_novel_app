@@ -6,7 +6,8 @@ import { ProjectService } from '../../services/project.service';
 import { TimelineService } from '../../services/timeline.service';
 import { SyncService } from '../../services/sync.service';
 import { confirm, open, save, ask } from '@tauri-apps/plugin-dialog';
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { readTextFile, writeTextFile, readFile, writeFile } from '@tauri-apps/plugin-fs';
+import { tempDir, join } from '@tauri-apps/api/path';
 import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
 import { DocumentEditorComponent } from '../../components/document-editor/document-editor.component';
 import { GroupViewComponent } from '../../components/group-view/group-view.component';
@@ -1071,41 +1072,65 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.changeDetector.markForCheck();
       
       // Use the high-level bidirectional sync from service
+      // Note: .cora files are binary ZIP archives, so we use binary file operations
       const result = await this.syncService.performSync(this.projectId, {
-        // Get database content by exporting to memory
+        // Get database content by exporting to memory (returns Uint8Array)
         getDbContent: async () => {
-          // Export to a temporary location to get the content
-          const tempPath = `${this.currentSync!.file_path}.tmp`;
+          // Export to system temp directory with unique filename
+          // Note: exportProject adds .cora extension automatically, so we use that for reading
+          const sysTempDir = await tempDir();
+          const tempFileName = `cora-sync-${this.projectId}-${Date.now()}`;
+          const tempPath = await join(sysTempDir, tempFileName);
+          const actualFilePath = `${tempPath}.cora`; // exportProject adds .cora extension
+          
           await this.projectService.exportProject(this.projectId, tempPath);
-          const content = await readTextFile(tempPath);
-          // Note: In production, we'd clean up the temp file, but for now we'll leave it
+          const content = await readFile(actualFilePath);
+          
+          // Clean up temp file
+          try {
+            await writeFile(actualFilePath, new Uint8Array(0)); // Clear content first
+          } catch (err) {
+            console.warn('Failed to cleanup temp file:', err);
+          }
+          
           return content;
         },
         
-        // Get file content
+        // Get file content (returns Uint8Array)
         getFileContent: async () => {
           try {
-            return await readTextFile(this.currentSync!.file_path);
+            return await readFile(this.currentSync!.file_path);
           } catch (err) {
             console.warn('File not found, will be created:', err);
-            return ''; // Empty string if file doesn't exist yet
+            return new Uint8Array(0); // Empty array if file doesn't exist yet
           }
         },
         
-        // Write to database by importing
-        writeDbContent: async (content: string) => {
-          // Write to a temporary file first
-          const tempPath = `${this.currentSync!.file_path}.import.tmp`;
-          await writeTextFile(tempPath, content);
+        // Write to database by importing (receives Uint8Array)
+        writeDbContent: async (content: Uint8Array) => {
+          // Write to system temp directory with unique filename
+          // Note: import_project requires .cora extension to recognize it as an archive
+          const sysTempDir = await tempDir();
+          const tempFileName = `cora-import-${this.projectId}-${Date.now()}.cora`;
+          const tempPath = await join(sysTempDir, tempFileName);
+          
+          await writeFile(tempPath, content);
           // Import from the temp file
           await this.projectService.importProject(tempPath);
           // Reload the project to reflect changes
           await this.loadProject(true);
+          
+          // Clean up temp file
+          try {
+            await writeFile(tempPath, new Uint8Array(0)); // Clear content first
+          } catch (err) {
+            console.warn('Failed to cleanup temp file:', err);
+          }
         },
         
-        // Write to file
-        writeFileContent: async (content: string) => {
-          await writeTextFile(this.currentSync!.file_path, content);
+        // Write to file (receives Uint8Array)
+        writeFileContent: async (content: Uint8Array) => {
+          await writeFile(this.currentSync!.file_path, content);
         }
       });
       
@@ -1129,26 +1154,31 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
           // User chose database version
           await this.syncService.resolveConflict(this.projectId, 'use_db');
           await this.projectService.exportProject(this.projectId, this.currentSync.file_path);
-          await this.syncService.markSyncCompleted(
-            this.projectId,
-            await this.syncService.calculateHashFromString('db'),
-            await this.syncService.calculateHashFromString('db')
-          );
+          // Read the exported file to calculate hash
+          const exportedContent = await readFile(this.currentSync.file_path);
+          const exportedHash = await this.syncService.calculateHash(exportedContent);
+          await this.syncService.markSyncCompleted(this.projectId, exportedHash, exportedHash);
           this.syncStatus = 'synced';
         } else {
           // User chose file version
           await this.syncService.resolveConflict(this.projectId, 'use_file');
-          const fileContent = await readTextFile(this.currentSync.file_path);
-          const tempPath = `${this.currentSync.file_path}.import.tmp`;
-          await writeTextFile(tempPath, fileContent);
+          const fileContent = await readFile(this.currentSync.file_path);
+          // Note: import_project requires .cora extension to recognize it as an archive
+          const sysTempDir = await tempDir();
+          const tempFileName = `cora-conflict-import-${this.projectId}-${Date.now()}.cora`;
+          const tempPath = await join(sysTempDir, tempFileName);
+          await writeFile(tempPath, fileContent);
           await this.projectService.importProject(tempPath);
           await this.loadProject(true);
-          await this.syncService.markSyncCompleted(
-            this.projectId,
-            await this.syncService.calculateHashFromString('file'),
-            await this.syncService.calculateHashFromString('file')
-          );
+          const fileHash = await this.syncService.calculateHash(fileContent);
+          await this.syncService.markSyncCompleted(this.projectId, fileHash, fileHash);
           this.syncStatus = 'synced';
+          // Clean up temp file
+          try {
+            await writeFile(tempPath, new Uint8Array(0));
+          } catch (err) {
+            console.warn('Failed to cleanup temp file:', err);
+          }
         }
         await this.loadSyncStatus();
       } else {

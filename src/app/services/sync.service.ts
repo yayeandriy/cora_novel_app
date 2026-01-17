@@ -228,14 +228,15 @@ export class SyncService {
   /**
    * Perform a full sync cycle
    * This is a high-level operation that coordinates the sync process
+   * Uses Uint8Array for binary file content (.cora files are ZIP archives)
    */
   async performSync(
     projectId: number,
     callbacks: {
-      getDbContent: () => Promise<string>;
-      getFileContent: () => Promise<string>;
-      writeDbContent: (content: string) => Promise<void>;
-      writeFileContent: (content: string) => Promise<void>;
+      getDbContent: () => Promise<Uint8Array>;
+      getFileContent: () => Promise<Uint8Array>;
+      writeDbContent: (content: Uint8Array) => Promise<void>;
+      writeFileContent: (content: Uint8Array) => Promise<void>;
     }
   ): Promise<{ success: boolean; error?: string; conflict?: boolean }> {
     // Check if we can sync
@@ -248,16 +249,16 @@ export class SyncService {
       // Mark sync as started
       await this.markSyncStarted(projectId);
 
-      // Get current content
+      // Get current content (binary)
       const [dbContent, fileContent] = await Promise.all([
         callbacks.getDbContent(),
         callbacks.getFileContent()
       ]);
 
-      // Calculate hashes
+      // Calculate hashes (using binary hash function)
       const [dbHash, fileHash] = await Promise.all([
-        this.calculateHashFromString(dbContent),
-        this.calculateHashFromString(fileContent)
+        this.calculateHash(dbContent),
+        this.calculateHash(fileContent)
       ]);
 
       // Check for changes
