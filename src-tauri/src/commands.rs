@@ -1572,6 +1572,18 @@ pub async fn sync_resume(state: State<'_, AppState>, project_id: i64) -> Result<
 }
 
 #[tauri::command]
+pub async fn sync_should_auto_sync(state: State<'_, AppState>, project_id: i64) -> Result<bool, String> {
+    let pool = &state.pool;
+    crate::services::sync::should_auto_sync(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_mark_db_changed_simple(state: State<'_, AppState>, project_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::sync::mark_db_changed_simple(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn sync_calculate_hash(content: Vec<u8>) -> Result<String, String> {
     Ok(crate::services::sync::calculate_hash(&content))
 }

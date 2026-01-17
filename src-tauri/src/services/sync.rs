@@ -479,6 +479,65 @@ pub fn resume_sync(pool: &DbPool, project_id: i64) -> Result<Sync> {
     })
 }
 
+/// Check if auto-sync should be triggered and return true if conditions are met
+/// This function checks:
+/// 1. If a sync record exists for the project
+/// 2. If auto_sync_enabled is true
+/// 3. If we're not within the throttle window
+/// 4. If sync is not already in progress
+pub fn should_auto_sync(pool: &DbPool, project_id: i64) -> Result<bool> {
+    // Get sync record for this project
+    let sync = match get_by_project(pool, project_id)? {
+        Some(s) => s,
+        None => return Ok(false), // No sync record, skip auto-sync
+    };
+    
+    // Check if auto-sync is enabled
+    if !sync.auto_sync_enabled {
+        return Ok(false);
+    }
+    
+    // Check if sync is already in progress
+    if sync.sync_status == "syncing" {
+        return Ok(false);
+    }
+    
+    // Check throttle timing - only sync if enough time has passed
+    if let Some(last_attempt) = sync.last_sync_attempt_at {
+        if let Ok(last_time) = DateTime::parse_from_rfc3339(&last_attempt) {
+            let now = Utc::now();
+            // Convert both to UTC timestamps for comparison
+            let last_time_utc = last_time.with_timezone(&Utc);
+            let elapsed_ms = (now - last_time_utc).num_milliseconds();
+            if elapsed_ms < sync.throttle_ms {
+                return Ok(false); // Within throttle window, skip
+            }
+        }
+    }
+    
+    Ok(true)
+}
+
+/// Mark that the database has changed for a project
+/// This is called after any data modification to track when sync is needed
+pub fn mark_db_changed_simple(pool: &DbPool, project_id: i64) -> Result<()> {
+    // Check if sync record exists first
+    let sync = match get_by_project(pool, project_id)? {
+        Some(s) => s,
+        None => return Ok(()), // No sync record, nothing to mark
+    };
+    
+    let now = Utc::now().to_rfc3339();
+    let conn = get_conn(pool)?;
+    
+    conn.execute(
+        "UPDATE sync SET last_db_change_at = ?1, updated_at = ?2 WHERE id = ?3",
+        rusqlite::params![now, now, sync.id],
+    ).context("marking db changed")?;
+    
+    Ok(())
+}
+
 // Implement Default for SyncUpdate to make partial updates easier
 impl Default for SyncUpdate {
     fn default() -> Self {

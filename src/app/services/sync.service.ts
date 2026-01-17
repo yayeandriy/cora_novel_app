@@ -310,4 +310,34 @@ export class SyncService {
       return { success: false, error: errorMessage };
     }
   }
-}
+
+  // ==================== Auto-Sync Support ====================
+
+  /**
+   * Check if auto-sync should be triggered for a project
+   * Returns true if:
+   * 1. Sync record exists
+   * 2. auto_sync_enabled is true
+   * 3. Not within throttle window
+   * 4. Sync not already in progress
+   */
+  async shouldAutoSync(projectId: number): Promise<boolean> {
+    try {
+      return await invoke<boolean>("sync_should_auto_sync", { projectId });
+    } catch {
+      return false; // On error, don't auto-sync
+    }
+  }
+
+  /**
+   * Mark that the database has changed (lightweight version for auto-sync)
+   * This only updates the last_db_change_at timestamp without triggering full sync
+   */
+  async markDbChangedSimple(projectId: number): Promise<void> {
+    try {
+      await invoke<void>("sync_mark_db_changed_simple", { projectId });
+    } catch (error) {
+      // Silently fail - don't interrupt user workflow if sync tracking fails
+      console.warn('Failed to mark DB as changed:', error);
+    }
+  }}

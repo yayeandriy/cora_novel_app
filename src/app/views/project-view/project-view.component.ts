@@ -873,6 +873,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Prefer backend response if present; else fallback to requested name
       this.projectName = (updated as any)?.name ?? newName;
       this.projectNameEdit = this.projectName;
+      
+      // Trigger auto-sync check (non-blocking)
+      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
     } catch (error) {
       console.error('Failed to rename project:', error);
       alert('Failed to rename project: ' + error);
@@ -1232,6 +1235,30 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
     } catch (err) {
       console.error('Failed to load sync status:', err);
+    }
+  }
+
+  /**
+   * Check if auto-sync should trigger and execute sync if conditions are met.
+   * This is called after data modification operations (saves, updates, deletes).
+   * Non-blocking - won't interrupt user workflow if sync fails.
+   */
+  private async checkAutoSync(): Promise<void> {
+    try {
+      // Mark that database was changed (for sync tracking)
+      await this.syncService.markDbChangedSimple(this.projectId);
+      
+      // Check if auto-sync should run (checks: sync exists, enabled, not throttled, not syncing)
+      const shouldSync = await this.syncService.shouldAutoSync(this.projectId);
+      
+      if (shouldSync) {
+        console.log('[Auto-Sync] Conditions met, triggering sync...');
+        // Trigger sync asynchronously without blocking
+        await this.performSync();
+      }
+    } catch (err) {
+      // Don't throw - auto-sync failures shouldn't interrupt user workflow
+      console.warn('[Auto-Sync] Failed:', err);
     }
   }
 
@@ -2529,6 +2556,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.saveStatusTimeout = setTimeout(() => {
         this.showSaveStatus = false;
       }, 3000);
+      
+      // Trigger auto-sync check (non-blocking)
+      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
     } catch (error) {
       console.error('Failed to save doc:', error);
       alert('Failed to save document: ' + error);
@@ -2620,6 +2650,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Reload the entire doc tree to ensure everything stays in sync
       // This preserves the current selection
       await this.loadProject(true);
+      
+      // Trigger auto-sync check (non-blocking)
+      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
     } catch (error) {
       console.error('Failed to save doc notes:', error);
     }
@@ -2647,6 +2680,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       
       // Reload to keep in sync
       await this.loadProject(true);
+      
+      // Trigger auto-sync check (non-blocking)
+      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
     } catch (error) {
       console.error('Failed to save doc group notes:', error);
     }
@@ -2670,6 +2706,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       const notes = this.projectData.notes || '';
       await this.projectService.updateProject(this.projectId, { notes });
       console.log('Project notes saved successfully');
+      
+      // Trigger auto-sync check (non-blocking)
+      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
     } catch (error) {
       console.error('Failed to save project notes:', error);
     }
@@ -3462,6 +3501,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.projectDraftSyncedClearTimeouts.delete(draftId);
       }, 2500);
       this.projectDraftSyncedClearTimeouts.set(draftId, clearTimer);
+      
+      // Trigger auto-sync check (non-blocking)
+      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
       if (wasFocused && cursorPosition !== undefined) {
         // caret restoration handled by browser for now
       }
@@ -3594,6 +3636,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.folderDraftSyncedClearTimeouts.delete(draftId);
       }, 2500);
       this.folderDraftSyncedClearTimeouts.set(draftId, clearTimer);
+      
+      // Trigger auto-sync check (non-blocking)
+      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
       if (wasFocused && cursorPosition !== undefined) {
         // caret restoration handled by browser for now
       }
@@ -3834,6 +3879,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.characters[idx] = { ...this.characters[idx], name: payload.name } as any;
         this.characters = [...this.characters];
       }
+      
+      // Trigger auto-sync check (non-blocking)
+      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
     } catch (error) {
       console.error('Failed to update character name:', error);
     }
@@ -3847,6 +3895,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.characters[idx] = { ...this.characters[idx], desc: payload.desc } as any;
         this.characters = [...this.characters];
       }
+      
+      // Trigger auto-sync check (non-blocking)
+      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
     } catch (error) {
       console.error('Failed to update character description:', error);
     }
@@ -3868,6 +3919,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.editingCharacterId === payload.id) {
         this.editingCharacterId = null;
       }
+      
+      // Trigger auto-sync check (non-blocking)
+      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      
       this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to update character:', error);
@@ -3942,6 +3997,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.editingEventId === payload.id) {
         this.editingEventId = null;
       }
+      
+      // Trigger auto-sync check (non-blocking)
+      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      
       this.changeDetector.markForCheck();
     } catch (error) {
       console.error('Failed to update event:', error);
@@ -3959,6 +4018,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.projectService.deleteEvent(id);
       console.log('[ProjectView] Event deleted successfully');
       this.events = this.events.filter(e => e.id !== id);
+      
+      // Trigger auto-sync check (non-blocking)
+      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
       
       // Track if we need to refresh folder list
       const wasInDocEvents = this.docEventIds.has(id);
@@ -4730,6 +4792,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (!draft) return;
       
       await this.projectService.updateDraft(draftId, draft.name, content);
+      
+      // Trigger auto-sync check (non-blocking)
+      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
       
       // Update the draft metadata from backend without overwriting content being edited
       const updated = await this.projectService.getDraft(draftId);

@@ -153,6 +153,8 @@ pub fn run() {
             commands::sync_get_pending_retries,
             commands::sync_pause,
             commands::sync_resume,
+            commands::sync_should_auto_sync,
+            commands::sync_mark_db_changed_simple,
             commands::sync_calculate_hash,
             commands::sync_import_to_project,
         ])
