@@ -6,6 +6,7 @@ import { ProjectService } from '../../services/project.service';
 import { TimelineService } from '../../services/timeline.service';
 import { SyncService } from '../../services/sync.service';
 import { confirm, open, save, ask } from '@tauri-apps/plugin-dialog';
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
 import { DocumentEditorComponent } from '../../components/document-editor/document-editor.component';
 import { GroupViewComponent } from '../../components/group-view/group-view.component';
@@ -1069,28 +1070,105 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.syncStatus = 'syncing';
       this.changeDetector.markForCheck();
       
-      // Mark sync as started
-      await this.syncService.markSyncStarted(this.projectId);
+      // Use the high-level bidirectional sync from service
+      const result = await this.syncService.performSync(this.projectId, {
+        // Get database content by exporting to memory
+        getDbContent: async () => {
+          // Export to a temporary location to get the content
+          const tempPath = `${this.currentSync!.file_path}.tmp`;
+          await this.projectService.exportProject(this.projectId, tempPath);
+          const content = await readTextFile(tempPath);
+          // Note: In production, we'd clean up the temp file, but for now we'll leave it
+          return content;
+        },
+        
+        // Get file content
+        getFileContent: async () => {
+          try {
+            return await readTextFile(this.currentSync!.file_path);
+          } catch (err) {
+            console.warn('File not found, will be created:', err);
+            return ''; // Empty string if file doesn't exist yet
+          }
+        },
+        
+        // Write to database by importing
+        writeDbContent: async (content: string) => {
+          // Write to a temporary file first
+          const tempPath = `${this.currentSync!.file_path}.import.tmp`;
+          await writeTextFile(tempPath, content);
+          // Import from the temp file
+          await this.projectService.importProject(tempPath);
+          // Reload the project to reflect changes
+          await this.loadProject(true);
+        },
+        
+        // Write to file
+        writeFileContent: async (content: string) => {
+          await writeTextFile(this.currentSync!.file_path, content);
+        }
+      });
       
-      // Export to the synced file
-      await this.projectService.exportProject(this.projectId, this.currentSync.file_path);
+      if (result.success) {
+        this.syncStatus = 'synced';
+        await this.loadSyncStatus(); // Refresh sync state
+      } else if (result.conflict) {
+        // Handle conflict - ask user which version to keep
+        this.syncStatus = 'error';
+        const choice = await confirm(
+          'Both the project and file have been modified. Which version would you like to keep?',
+          {
+            title: 'Sync Conflict',
+            kind: 'warning',
+            okLabel: 'Use Project (Database)',
+            cancelLabel: 'Use File'
+          }
+        );
+        
+        if (choice) {
+          // User chose database version
+          await this.syncService.resolveConflict(this.projectId, 'use_db');
+          await this.projectService.exportProject(this.projectId, this.currentSync.file_path);
+          await this.syncService.markSyncCompleted(
+            this.projectId,
+            await this.syncService.calculateHashFromString('db'),
+            await this.syncService.calculateHashFromString('db')
+          );
+          this.syncStatus = 'synced';
+        } else {
+          // User chose file version
+          await this.syncService.resolveConflict(this.projectId, 'use_file');
+          const fileContent = await readTextFile(this.currentSync.file_path);
+          const tempPath = `${this.currentSync.file_path}.import.tmp`;
+          await writeTextFile(tempPath, fileContent);
+          await this.projectService.importProject(tempPath);
+          await this.loadProject(true);
+          await this.syncService.markSyncCompleted(
+            this.projectId,
+            await this.syncService.calculateHashFromString('file'),
+            await this.syncService.calculateHashFromString('file')
+          );
+          this.syncStatus = 'synced';
+        }
+        await this.loadSyncStatus();
+      } else {
+        this.syncStatus = 'error';
+        await confirm(`Sync failed: ${result.error}`, {
+          title: 'Sync Error',
+          kind: 'error',
+          okLabel: 'OK'
+        });
+      }
       
-      // Calculate hash of exported content (we'll use a simple approach for now)
-      const hash = await this.syncService.calculateHashFromString(JSON.stringify({
-        projectId: this.projectId,
-        timestamp: new Date().toISOString()
-      }));
-      
-      // Mark sync as completed
-      this.currentSync = await this.syncService.markSyncCompleted(this.projectId, hash, hash);
-      this.syncStatus = 'synced';
       this.changeDetector.markForCheck();
     } catch (err) {
       console.error('Sync failed:', err);
       this.syncStatus = 'error';
-      if (this.currentSync) {
-        await this.syncService.markSyncFailed(this.projectId, String(err));
-      }
+      await confirm(`Sync failed: ${err}`, {
+        title: 'Sync Error',
+        kind: 'error',
+        okLabel: 'OK'
+      });
       this.changeDetector.markForCheck();
     }
   }

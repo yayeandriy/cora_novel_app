@@ -31,6 +31,7 @@
     "@angular/router": "^20.1.4",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.4.2",
+    "@tauri-apps/plugin-fs": "^2.4.5",
     "@tauri-apps/plugin-opener": "^2",
     "ng-click-outside2": "^18.0.0",
     "rxjs": "~7.8.2",
