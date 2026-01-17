@@ -21,6 +21,122 @@ pub struct AppState {
     pub pool: DbPool,
 }
 
+/// Helper to mark a project as having DB changes for auto-sync.
+/// Silently ignores errors (e.g., if no sync exists for this project).
+fn mark_project_changed(pool: &DbPool, project_id: i64) {
+    let _ = crate::services::sync::mark_db_changed_simple(pool, project_id);
+}
+
+/// Get project_id from a doc by id. Returns None if doc doesn't exist.
+fn get_project_id_for_doc(pool: &DbPool, doc_id: i64) -> Option<i64> {
+    crate::services::docs::get_doc(pool, doc_id)
+        .ok()
+        .flatten()
+        .map(|d| d.project_id)
+}
+
+/// Get project_id from a doc_group by id. Returns None if group doesn't exist.
+fn get_project_id_for_doc_group(pool: &DbPool, group_id: i64) -> Option<i64> {
+    let conn = pool.get().ok()?;
+    conn.query_row(
+        "SELECT project_id FROM doc_groups WHERE id = ?1",
+        [group_id],
+        |row| row.get(0)
+    ).ok()
+}
+
+/// Get project_id from a character by id. Returns None if character doesn't exist.
+fn get_project_id_for_character(pool: &DbPool, character_id: i64) -> Option<i64> {
+    let conn = pool.get().ok()?;
+    conn.query_row(
+        "SELECT project_id FROM characters WHERE id = ?1",
+        [character_id],
+        |row| row.get(0)
+    ).ok()
+}
+
+/// Get project_id from an event by id. Returns None if event doesn't exist.
+fn get_project_id_for_event(pool: &DbPool, event_id: i64) -> Option<i64> {
+    let conn = pool.get().ok()?;
+    conn.query_row(
+        "SELECT project_id FROM events WHERE id = ?1",
+        [event_id],
+        |row| row.get(0)
+    ).ok()
+}
+
+/// Get project_id from a place by id. Returns None if place doesn't exist.
+fn get_project_id_for_place(pool: &DbPool, place_id: i64) -> Option<i64> {
+    let conn = pool.get().ok()?;
+    conn.query_row(
+        "SELECT project_id FROM places WHERE id = ?1",
+        [place_id],
+        |row| row.get(0)
+    ).ok()
+}
+
+/// Get project_id from an archive by id. Returns None if archive doesn't exist.
+fn get_project_id_for_archive(pool: &DbPool, archive_id: i64) -> Option<i64> {
+    let conn = pool.get().ok()?;
+    conn.query_row(
+        "SELECT project_id FROM archives WHERE id = ?1",
+        [archive_id],
+        |row| row.get(0)
+    ).ok()
+}
+
+/// Get project_id from a draft by id (via doc). Returns None if draft doesn't exist.
+fn get_project_id_for_draft(pool: &DbPool, draft_id: i64) -> Option<i64> {
+    let conn = pool.get().ok()?;
+    conn.query_row(
+        "SELECT d.project_id FROM drafts dr JOIN docs d ON dr.doc_id = d.id WHERE dr.id = ?1",
+        [draft_id],
+        |row| row.get(0)
+    ).ok()
+}
+
+/// Get project_id from a folder_draft by id (via doc_group). Returns None if draft doesn't exist.
+fn get_project_id_for_folder_draft(pool: &DbPool, draft_id: i64) -> Option<i64> {
+    let conn = pool.get().ok()?;
+    conn.query_row(
+        "SELECT dg.project_id FROM folder_drafts fd JOIN doc_groups dg ON fd.doc_group_id = dg.id WHERE fd.id = ?1",
+        [draft_id],
+        |row| row.get(0)
+    ).ok()
+}
+
+/// Get project_id from a project_draft by id. Returns None if draft doesn't exist.
+fn get_project_id_for_project_draft(pool: &DbPool, draft_id: i64) -> Option<i64> {
+    let conn = pool.get().ok()?;
+    conn.query_row(
+        "SELECT project_id FROM project_drafts WHERE id = ?1",
+        [draft_id],
+        |row| row.get(0)
+    ).ok()
+}
+
+/// Get project_id from a timeline entity (entity_type + entity_id). Returns None if entity doesn't exist.
+fn get_project_id_for_timeline_entity(pool: &DbPool, entity_type: &str, entity_id: i64) -> Option<i64> {
+    match entity_type {
+        "project" => Some(entity_id), // entity_id IS the project_id
+        "doc" => get_project_id_for_doc(pool, entity_id),
+        "folder" => get_project_id_for_doc_group(pool, entity_id),
+        "event" => get_project_id_for_event(pool, entity_id),
+        _ => None,
+    }
+}
+
+/// Get project_id from a timeline by id. Returns None if timeline doesn't exist.
+fn get_project_id_for_timeline(pool: &DbPool, timeline_id: i64) -> Option<i64> {
+    let conn = pool.get().ok()?;
+    let (entity_type, entity_id): (String, i64) = conn.query_row(
+        "SELECT entity_type, entity_id FROM timelines WHERE id = ?1",
+        [timeline_id],
+        |row| Ok((row.get(0)?, row.get(1)?))
+    ).ok()?;
+    get_project_id_for_timeline_entity(pool, &entity_type, entity_id)
+}
+
 #[tauri::command]
 pub async fn project_create(state: State<'_, AppState>, payload: ProjectCreate) -> Result<Project, String> {
     let pool = &state.pool;
@@ -55,7 +171,9 @@ pub async fn project_update(state: State<'_, AppState>, id: i64, changes: Option
     let desc = changes.as_ref().and_then(|c| c.get("desc").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let path = changes.as_ref().and_then(|c| c.get("path").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let notes = changes.as_ref().and_then(|c| c.get("notes").and_then(|v| v.as_str()).map(|s| s.to_string()));
-    project_service::update(pool, id, name, desc, path, notes).map_err(|e| e.to_string())
+    let result = project_service::update(pool, id, name, desc, path, notes).map_err(|e| e.to_string())?;
+    mark_project_changed(pool, id);
+    Ok(result)
 }
 
 #[tauri::command]
@@ -76,6 +194,7 @@ pub async fn doc_group_list(state: State<'_, AppState>, project_id: i64) -> Resu
 pub async fn doc_group_create(state: State<'_, AppState>, project_id: i64, name: String, parent_id: Option<i64>) -> Result<serde_json::Value, String> {
     let pool = &state.pool;
     let group = crate::services::doc_groups::create_doc_group(pool, project_id, &name, parent_id).map_err(|e| e.to_string())?;
+    mark_project_changed(pool, project_id);
     serde_json::to_value(group).map_err(|e| e.to_string())
 }
 
@@ -83,31 +202,41 @@ pub async fn doc_group_create(state: State<'_, AppState>, project_id: i64, name:
 pub async fn doc_group_create_after(state: State<'_, AppState>, project_id: i64, name: String, parent_id: Option<i64>, after_sort_order: i64) -> Result<serde_json::Value, String> {
     let pool = &state.pool;
     let group = crate::services::doc_groups::create_doc_group_after(pool, project_id, &name, parent_id, after_sort_order).map_err(|e| e.to_string())?;
+    mark_project_changed(pool, project_id);
     serde_json::to_value(group).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn doc_group_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::doc_groups::delete_doc_group(pool, id).map_err(|e| e.to_string())
+    let project_id = get_project_id_for_doc_group(pool, id);
+    let result = crate::services::doc_groups::delete_doc_group(pool, id).map_err(|e| e.to_string())?;
+    if let Some(pid) = project_id { mark_project_changed(pool, pid); }
+    Ok(result)
 }
 
 #[tauri::command]
 pub async fn doc_group_reorder(state: State<'_, AppState>, id: i64, direction: String) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::doc_groups::reorder_doc_group(pool, id, &direction).map_err(|e| e.to_string())
+    crate::services::doc_groups::reorder_doc_group(pool, id, &direction).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc_group(pool, id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn doc_group_rename(state: State<'_, AppState>, id: i64, new_name: String) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::doc_groups::rename_doc_group(pool, id, &new_name).map_err(|e| e.to_string())
+    crate::services::doc_groups::rename_doc_group(pool, id, &new_name).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc_group(pool, id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn doc_group_update_notes(state: State<'_, AppState>, id: i64, notes: String) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::doc_groups::update_doc_group_notes(pool, id, &notes).map_err(|e| e.to_string())
+    crate::services::doc_groups::update_doc_group_notes(pool, id, &notes).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc_group(pool, id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 // Docs Commands
@@ -129,6 +258,7 @@ pub async fn doc_get(state: State<'_, AppState>, id: i64) -> Result<serde_json::
 pub async fn doc_create_new(state: State<'_, AppState>, project_id: i64, name: String, doc_group_id: Option<i64>) -> Result<serde_json::Value, String> {
     let pool = &state.pool;
     let doc = crate::services::docs::create_doc(pool, project_id, &name, doc_group_id).map_err(|e| e.to_string())?;
+    mark_project_changed(pool, project_id);
     serde_json::to_value(doc).map_err(|e| e.to_string())
 }
 
@@ -136,43 +266,57 @@ pub async fn doc_create_new(state: State<'_, AppState>, project_id: i64, name: S
 pub async fn doc_create_after(state: State<'_, AppState>, project_id: i64, name: String, doc_group_id: Option<i64>, after_sort_order: i64) -> Result<serde_json::Value, String> {
     let pool = &state.pool;
     let doc = crate::services::docs::create_doc_after(pool, project_id, &name, doc_group_id, after_sort_order).map_err(|e| e.to_string())?;
+    mark_project_changed(pool, project_id);
     serde_json::to_value(doc).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn doc_update_text(state: State<'_, AppState>, id: i64, text: String) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::docs::update_doc(pool, id, &text).map_err(|e| e.to_string())
+    crate::services::docs::update_doc(pool, id, &text).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc(pool, id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn doc_update_notes(state: State<'_, AppState>, id: i64, notes: String) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::docs::update_doc_notes(pool, id, &notes).map_err(|e| e.to_string())
+    crate::services::docs::update_doc_notes(pool, id, &notes).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc(pool, id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn doc_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::docs::delete_doc(pool, id).map_err(|e| e.to_string())
+    let project_id = get_project_id_for_doc(pool, id);
+    crate::services::docs::delete_doc(pool, id).map_err(|e| e.to_string())?;
+    if let Some(pid) = project_id { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn doc_reorder(state: State<'_, AppState>, id: i64, direction: String) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::docs::reorder_doc(pool, id, &direction).map_err(|e| e.to_string())
+    crate::services::docs::reorder_doc(pool, id, &direction).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc(pool, id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn doc_move_to_group(state: State<'_, AppState>, doc_id: i64, new_group_id: Option<i64>) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::docs::move_doc_to_group(pool, doc_id, new_group_id).map_err(|e| e.to_string())
+    crate::services::docs::move_doc_to_group(pool, doc_id, new_group_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn doc_rename(state: State<'_, AppState>, id: i64, new_name: String) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::docs::rename_doc(pool, id, &new_name).map_err(|e| e.to_string())
+    crate::services::docs::rename_doc(pool, id, &new_name).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc(pool, id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 // Legacy doc_create for backward compatibility
@@ -180,13 +324,16 @@ pub async fn doc_rename(state: State<'_, AppState>, id: i64, new_name: String) -
 pub async fn doc_create(state: State<'_, AppState>, project_id: i64, path: String, name: Option<String>, text: Option<String>) -> Result<serde_json::Value, String> {
     let pool = &state.pool;
     let doc = crate::services::docs::create(pool, project_id, &path, name, None, text).map_err(|e| e.to_string())?;
+    mark_project_changed(pool, project_id);
     serde_json::to_value(doc).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn character_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>) -> Result<Character, String> {
     let pool = &state.pool;
-    crate::services::characters::create(pool, project_id, &name, desc).map_err(|e| e.to_string())
+    let result = crate::services::characters::create(pool, project_id, &name, desc).map_err(|e| e.to_string())?;
+    mark_project_changed(pool, project_id);
+    Ok(result)
 }
 
 #[tauri::command]
@@ -200,13 +347,18 @@ pub async fn character_update(state: State<'_, AppState>, id: i64, changes: Opti
     let pool = &state.pool;
     let name = changes.as_ref().and_then(|c| c.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let desc = changes.as_ref().and_then(|c| c.get("desc").and_then(|v| v.as_str()).map(|s| s.to_string()));
-    crate::services::characters::update(pool, id, name, desc).map_err(|e| e.to_string())
+    let result = crate::services::characters::update(pool, id, name, desc).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_character(pool, id) { mark_project_changed(pool, pid); }
+    Ok(result)
 }
 
 #[tauri::command]
 pub async fn character_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::characters::delete_(pool, id).map_err(|e| e.to_string())
+    let project_id = get_project_id_for_character(pool, id);
+    crate::services::characters::delete_(pool, id).map_err(|e| e.to_string())?;
+    if let Some(pid) = project_id { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
@@ -218,13 +370,17 @@ pub async fn doc_character_list(state: State<'_, AppState>, doc_id: i64) -> Resu
 #[tauri::command]
 pub async fn doc_character_attach(state: State<'_, AppState>, doc_id: i64, character_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::characters::attach_to_doc(pool, doc_id, character_id).map_err(|e| e.to_string())
+    crate::services::characters::attach_to_doc(pool, doc_id, character_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn doc_character_detach(state: State<'_, AppState>, doc_id: i64, character_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::characters::detach_from_doc(pool, doc_id, character_id).map_err(|e| e.to_string())
+    crate::services::characters::detach_from_doc(pool, doc_id, character_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
@@ -242,19 +398,25 @@ pub async fn doc_group_characters_from_docs(state: State<'_, AppState>, doc_grou
 #[tauri::command]
 pub async fn doc_group_character_attach(state: State<'_, AppState>, doc_group_id: i64, character_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::characters::attach_to_doc_group(pool, doc_group_id, character_id).map_err(|e| e.to_string())
+    crate::services::characters::attach_to_doc_group(pool, doc_group_id, character_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn doc_group_character_detach(state: State<'_, AppState>, doc_group_id: i64, character_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::characters::detach_from_doc_group(pool, doc_group_id, character_id).map_err(|e| e.to_string())
+    crate::services::characters::detach_from_doc_group(pool, doc_group_id, character_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn event_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>, start_date: Option<String>, end_date: Option<String>, date: Option<String>) -> Result<Event, String> {
     let pool = &state.pool;
-    crate::services::events::create(pool, project_id, &name, desc, start_date, end_date, date).map_err(|e| e.to_string())
+    let result = crate::services::events::create(pool, project_id, &name, desc, start_date, end_date, date).map_err(|e| e.to_string())?;
+    mark_project_changed(pool, project_id);
+    Ok(result)
 }
 
 #[tauri::command]
@@ -270,13 +432,18 @@ pub async fn event_update(state: State<'_, AppState>, id: i64, changes: Option<s
     let desc = changes.as_ref().and_then(|c| c.get("desc").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let start_date = changes.as_ref().and_then(|c| c.get("start_date").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let end_date = changes.as_ref().and_then(|c| c.get("end_date").and_then(|v| v.as_str()).map(|s| s.to_string()));
-    crate::services::events::update(pool, id, name, desc, start_date, end_date).map_err(|e| e.to_string())
+    let result = crate::services::events::update(pool, id, name, desc, start_date, end_date).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_event(pool, id) { mark_project_changed(pool, pid); }
+    Ok(result)
 }
 
 #[tauri::command]
 pub async fn event_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::events::delete_(pool, id).map_err(|e| e.to_string())
+    let project_id = get_project_id_for_event(pool, id);
+    crate::services::events::delete_(pool, id).map_err(|e| e.to_string())?;
+    if let Some(pid) = project_id { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
@@ -288,13 +455,17 @@ pub async fn doc_event_list(state: State<'_, AppState>, doc_id: i64) -> Result<V
 #[tauri::command]
 pub async fn doc_event_attach(state: State<'_, AppState>, doc_id: i64, event_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::events::attach_to_doc(pool, doc_id, event_id).map_err(|e| e.to_string())
+    crate::services::events::attach_to_doc(pool, doc_id, event_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn doc_event_detach(state: State<'_, AppState>, doc_id: i64, event_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::events::detach_from_doc(pool, doc_id, event_id).map_err(|e| e.to_string())
+    crate::services::events::detach_from_doc(pool, doc_id, event_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
@@ -312,19 +483,25 @@ pub async fn doc_group_events_from_docs(state: State<'_, AppState>, doc_group_id
 #[tauri::command]
 pub async fn doc_group_event_attach(state: State<'_, AppState>, doc_group_id: i64, event_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::events::attach_to_doc_group(pool, doc_group_id, event_id).map_err(|e| e.to_string())
+    crate::services::events::attach_to_doc_group(pool, doc_group_id, event_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn doc_group_event_detach(state: State<'_, AppState>, doc_group_id: i64, event_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::events::detach_from_doc_group(pool, doc_group_id, event_id).map_err(|e| e.to_string())
+    crate::services::events::detach_from_doc_group(pool, doc_group_id, event_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn place_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>) -> Result<Place, String> {
     let pool = &state.pool;
-    crate::services::places::create(pool, project_id, &name, desc).map_err(|e| e.to_string())
+    let result = crate::services::places::create(pool, project_id, &name, desc).map_err(|e| e.to_string())?;
+    mark_project_changed(pool, project_id);
+    Ok(result)
 }
 
 #[tauri::command]
@@ -338,13 +515,18 @@ pub async fn place_update(state: State<'_, AppState>, id: i64, changes: Option<s
     let pool = &state.pool;
     let name = changes.as_ref().and_then(|c| c.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let desc = changes.as_ref().and_then(|c| c.get("desc").and_then(|v| v.as_str()).map(|s| s.to_string()));
-    crate::services::places::update(pool, id, name, desc).map_err(|e| e.to_string())
+    let result = crate::services::places::update(pool, id, name, desc).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_place(pool, id) { mark_project_changed(pool, pid); }
+    Ok(result)
 }
 
 #[tauri::command]
 pub async fn place_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::places::delete_(pool, id).map_err(|e| e.to_string())
+    let project_id = get_project_id_for_place(pool, id);
+    crate::services::places::delete_(pool, id).map_err(|e| e.to_string())?;
+    if let Some(pid) = project_id { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
@@ -356,13 +538,17 @@ pub async fn doc_place_list(state: State<'_, AppState>, doc_id: i64) -> Result<V
 #[tauri::command]
 pub async fn doc_place_attach(state: State<'_, AppState>, doc_id: i64, place_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::places::attach_to_doc(pool, doc_id, place_id).map_err(|e| e.to_string())
+    crate::services::places::attach_to_doc(pool, doc_id, place_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn doc_place_detach(state: State<'_, AppState>, doc_id: i64, place_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::places::detach_from_doc(pool, doc_id, place_id).map_err(|e| e.to_string())
+    crate::services::places::detach_from_doc(pool, doc_id, place_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
@@ -380,13 +566,17 @@ pub async fn doc_group_places_from_docs(state: State<'_, AppState>, doc_group_id
 #[tauri::command]
 pub async fn doc_group_place_attach(state: State<'_, AppState>, doc_group_id: i64, place_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::places::attach_to_doc_group(pool, doc_group_id, place_id).map_err(|e| e.to_string())
+    crate::services::places::attach_to_doc_group(pool, doc_group_id, place_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn doc_group_place_detach(state: State<'_, AppState>, doc_group_id: i64, place_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::places::detach_from_doc_group(pool, doc_group_id, place_id).map_err(|e| e.to_string())
+    crate::services::places::detach_from_doc_group(pool, doc_group_id, place_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 // Archive Commands
@@ -394,7 +584,9 @@ pub async fn doc_group_place_detach(state: State<'_, AppState>, doc_group_id: i6
 #[tauri::command]
 pub async fn archive_create(state: State<'_, AppState>, project_id: i64, payload: ArchiveCreate) -> Result<Archive, String> {
     let pool = &state.pool;
-    crate::services::archives::create(pool, project_id, payload).map_err(|e| e.to_string())
+    let result = crate::services::archives::create(pool, project_id, payload).map_err(|e| e.to_string())?;
+    mark_project_changed(pool, project_id);
+    Ok(result)
 }
 
 #[tauri::command]
@@ -412,20 +604,27 @@ pub async fn archive_get(state: State<'_, AppState>, id: i64) -> Result<Option<A
 #[tauri::command]
 pub async fn archive_update(state: State<'_, AppState>, id: i64, payload: ArchiveUpdate) -> Result<Archive, String> {
     let pool = &state.pool;
-    crate::services::archives::update(pool, id, payload).map_err(|e| e.to_string())
+    let result = crate::services::archives::update(pool, id, payload).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_archive(pool, id) { mark_project_changed(pool, pid); }
+    Ok(result)
 }
 
 #[tauri::command]
 pub async fn archive_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::archives::delete(pool, id).map_err(|e| e.to_string())
+    let project_id = get_project_id_for_archive(pool, id);
+    crate::services::archives::delete(pool, id).map_err(|e| e.to_string())?;
+    if let Some(pid) = project_id { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 // Draft Commands
 #[tauri::command]
 pub async fn draft_create(state: State<'_, AppState>, doc_id: i64, payload: DraftCreate) -> Result<Draft, String> {
     let pool = &state.pool;
-    crate::services::drafts::create_draft(pool, doc_id, payload).map_err(|e| e.to_string())
+    let result = crate::services::drafts::create_draft(pool, doc_id, payload).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
+    Ok(result)
 }
 
 #[tauri::command]
@@ -443,32 +642,43 @@ pub async fn draft_list(state: State<'_, AppState>, doc_id: i64) -> Result<Vec<D
 #[tauri::command]
 pub async fn draft_update(state: State<'_, AppState>, id: i64, payload: DraftUpdate) -> Result<Draft, String> {
     let pool = &state.pool;
-    crate::services::drafts::update_draft(pool, id, payload).map_err(|e| e.to_string())
+    let result = crate::services::drafts::update_draft(pool, id, payload).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_draft(pool, id) { mark_project_changed(pool, pid); }
+    Ok(result)
 }
 
 #[tauri::command]
 pub async fn draft_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::drafts::delete_draft(pool, id).map_err(|e| e.to_string())
+    let project_id = get_project_id_for_draft(pool, id);
+    crate::services::drafts::delete_draft(pool, id).map_err(|e| e.to_string())?;
+    if let Some(pid) = project_id { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn draft_restore(state: State<'_, AppState>, draft_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::drafts::restore_draft_to_doc(pool, draft_id).map_err(|e| e.to_string())
+    crate::services::drafts::restore_draft_to_doc(pool, draft_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_draft(pool, draft_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn draft_delete_all(state: State<'_, AppState>, doc_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::drafts::delete_all_drafts_for_doc(pool, doc_id).map_err(|e| e.to_string())
+    crate::services::drafts::delete_all_drafts_for_doc(pool, doc_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 // Project Draft Commands
 #[tauri::command]
 pub async fn project_draft_create(state: State<'_, AppState>, project_id: i64, payload: ProjectDraftCreate) -> Result<ProjectDraft, String> {
     let pool = &state.pool;
-    crate::services::project_drafts::create(pool, project_id, payload).map_err(|e| e.to_string())
+    let result = crate::services::project_drafts::create(pool, project_id, payload).map_err(|e| e.to_string())?;
+    mark_project_changed(pool, project_id);
+    Ok(result)
 }
 
 #[tauri::command]
@@ -486,26 +696,35 @@ pub async fn project_draft_list(state: State<'_, AppState>, project_id: i64) -> 
 #[tauri::command]
 pub async fn project_draft_update(state: State<'_, AppState>, id: i64, payload: ProjectDraftUpdate) -> Result<ProjectDraft, String> {
     let pool = &state.pool;
-    crate::services::project_drafts::update(pool, id, payload).map_err(|e| e.to_string())
+    let result = crate::services::project_drafts::update(pool, id, payload).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_project_draft(pool, id) { mark_project_changed(pool, pid); }
+    Ok(result)
 }
 
 #[tauri::command]
 pub async fn project_draft_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::project_drafts::delete(pool, id).map_err(|e| e.to_string())
+    let project_id = get_project_id_for_project_draft(pool, id);
+    crate::services::project_drafts::delete(pool, id).map_err(|e| e.to_string())?;
+    if let Some(pid) = project_id { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn project_draft_delete_all(state: State<'_, AppState>, project_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::project_drafts::delete_all_for_project(pool, project_id).map_err(|e| e.to_string())
+    crate::services::project_drafts::delete_all_for_project(pool, project_id).map_err(|e| e.to_string())?;
+    mark_project_changed(pool, project_id);
+    Ok(())
 }
 
 // Folder (Doc Group) Draft Commands
 #[tauri::command]
 pub async fn folder_draft_create(state: State<'_, AppState>, doc_group_id: i64, payload: FolderDraftCreate) -> Result<FolderDraft, String> {
     let pool = &state.pool;
-    crate::services::folder_drafts::create(pool, doc_group_id, payload).map_err(|e| e.to_string())
+    let result = crate::services::folder_drafts::create(pool, doc_group_id, payload).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
+    Ok(result)
 }
 
 #[tauri::command]
@@ -523,38 +742,56 @@ pub async fn folder_draft_list(state: State<'_, AppState>, doc_group_id: i64) ->
 #[tauri::command]
 pub async fn folder_draft_update(state: State<'_, AppState>, id: i64, payload: FolderDraftUpdate) -> Result<FolderDraft, String> {
     let pool = &state.pool;
-    crate::services::folder_drafts::update(pool, id, payload).map_err(|e| e.to_string())
+    let result = crate::services::folder_drafts::update(pool, id, payload).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_folder_draft(pool, id) { mark_project_changed(pool, pid); }
+    Ok(result)
 }
 
 #[tauri::command]
 pub async fn folder_draft_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::folder_drafts::delete(pool, id).map_err(|e| e.to_string())
+    let project_id = get_project_id_for_folder_draft(pool, id);
+    crate::services::folder_drafts::delete(pool, id).map_err(|e| e.to_string())?;
+    if let Some(pid) = project_id { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn folder_draft_delete_all(state: State<'_, AppState>, doc_group_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::folder_drafts::delete_all_for_group(pool, doc_group_id).map_err(|e| e.to_string())
+    crate::services::folder_drafts::delete_all_for_group(pool, doc_group_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn folder_draft_reorder(state: State<'_, AppState>, id: i64, direction: String) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::folder_drafts::reorder(pool, id, &direction).map_err(|e| e.to_string())
+    crate::services::folder_drafts::reorder(pool, id, &direction).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_folder_draft(pool, id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn folder_draft_move(state: State<'_, AppState>, id: i64, new_index: usize) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::folder_drafts::move_to_index(pool, id, new_index).map_err(|e| e.to_string())
+    crate::services::folder_drafts::move_to_index(pool, id, new_index).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_folder_draft(pool, id) { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 // Timeline Commands
 #[tauri::command]
 pub async fn timeline_create(state: State<'_, AppState>, payload: TimelineCreate) -> Result<Timeline, String> {
     let pool = &state.pool;
-    crate::services::timelines::create(pool, payload).map_err(|e| e.to_string())
+    // Extract entity info before consuming payload
+    let entity_type = payload.entity_type.clone();
+    let entity_id = payload.entity_id;
+    let result = crate::services::timelines::create(pool, payload).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_timeline_entity(pool, &entity_type, entity_id) {
+        mark_project_changed(pool, pid);
+    }
+    Ok(result)
 }
 
 #[tauri::command]
@@ -578,19 +815,27 @@ pub async fn timeline_list(state: State<'_, AppState>) -> Result<Vec<Timeline>, 
 #[tauri::command]
 pub async fn timeline_update(state: State<'_, AppState>, id: i64, payload: TimelineUpdate) -> Result<Timeline, String> {
     let pool = &state.pool;
-    crate::services::timelines::update(pool, id, payload).map_err(|e| e.to_string())
+    let result = crate::services::timelines::update(pool, id, payload).map_err(|e| e.to_string())?;
+    if let Some(pid) = get_project_id_for_timeline(pool, id) { mark_project_changed(pool, pid); }
+    Ok(result)
 }
 
 #[tauri::command]
 pub async fn timeline_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::timelines::delete(pool, id).map_err(|e| e.to_string())
+    let project_id = get_project_id_for_timeline(pool, id);
+    crate::services::timelines::delete(pool, id).map_err(|e| e.to_string())?;
+    if let Some(pid) = project_id { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn timeline_delete_by_entity(state: State<'_, AppState>, entity_type: String, entity_id: i64) -> Result<(), String> {
     let pool = &state.pool;
-    crate::services::timelines::delete_by_entity(pool, &entity_type, entity_id).map_err(|e| e.to_string())
+    let project_id = get_project_id_for_timeline_entity(pool, &entity_type, entity_id);
+    crate::services::timelines::delete_by_entity(pool, &entity_type, entity_id).map_err(|e| e.to_string())?;
+    if let Some(pid) = project_id { mark_project_changed(pool, pid); }
+    Ok(())
 }
 
 /// Import multiple paths (files or folders).
@@ -642,6 +887,7 @@ pub async fn import_txt_files(state: State<'_, AppState>, project_id: i64, doc_g
         }
     }
 
+    mark_project_changed(pool, project_id);
     Ok(imported)
 }
 
