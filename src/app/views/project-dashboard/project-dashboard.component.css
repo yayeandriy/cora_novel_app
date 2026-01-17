@@ -237,7 +237,6 @@
   width: 100%;
   padding: 12px;
   background: white;
-  border: 1px solid #e5e7eb;
   border-radius: 8px;
   cursor: pointer;
   text-align: left;
@@ -246,12 +245,11 @@
 
 .import-option-btn:hover {
   background-color: #f9fafb;
-  border-color: #d1d5db;
 }
 
 .import-option-btn svg {
   flex-shrink: 0;
-  color: #6b7280;
+  color: #3b82f6;
 }
 
 .import-option-text {
@@ -265,6 +263,7 @@
   font-size: 0.875rem;
   font-weight: 500;
   color: #111827;
+  margin-left: auto;
 }
 
 .import-option-desc {
