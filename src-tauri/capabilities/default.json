@@ -8,6 +8,15 @@
     "opener:default",
     "dialog:default",
     "fs:allow-read-text-file",
-    "fs:allow-write-text-file"
+    "fs:allow-write-text-file",
+    "fs:allow-read-file",
+    "fs:allow-write-file",
+    "fs:allow-exists",
+    "fs:allow-remove",
+    "fs:scope-document",
+    "fs:scope-home",
+    "fs:scope-desktop",
+    "fs:scope-download",
+    "fs:scope-tmp"
   ]
 }
