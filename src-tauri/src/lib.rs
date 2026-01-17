@@ -30,6 +30,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             // Open the main window maximized by default (not macOS fullscreen space)
             if let Some(win) = app.get_webview_window("main") {

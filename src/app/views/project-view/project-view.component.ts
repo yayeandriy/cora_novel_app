@@ -1314,6 +1314,22 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     return path.split('/').pop() || path.split('\\').pop() || path;
   }
 
+  async revealSyncFileInFinder(): Promise<void> {
+    if (!this.currentSync?.file_path) return;
+    
+    try {
+      const { Command } = await import('@tauri-apps/plugin-shell');
+      await Command.create('open', ['-R', this.currentSync.file_path]).execute();
+    } catch (error) {
+      console.error('Failed to reveal file in Finder:', error);
+      await confirm(`Failed to reveal file in Finder: ${error}`, {
+        title: 'Error',
+        kind: 'error',
+        okLabel: 'OK'
+      });
+    }
+  }
+
   async exportToPdf() {
     this.showExportOptionsDialog = false;
     await this.onExportProjectToPdfRequested();
@@ -1425,8 +1441,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Load characters, events, and places
   await Promise.all([this.loadCharacters(), this.loadEvents(), this.loadPlaces()]);
 
-      // Load sync status
+      // Load sync status and perform sync on project open if configured
       await this.loadSyncStatus();
+      
+      // Sync on project open (non-blocking)
+      if (this.currentSync && this.currentSync.auto_sync_enabled) {
+        this.performSync().catch(err => console.warn('Sync on project open failed:', err));
+      }
 
       // Restore draft tool expansion states from localStorage
       try {

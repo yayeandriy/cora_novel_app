@@ -711,11 +711,15 @@
         </button>
         @if (currentSync) {
           <button class="menu-item" (click)="performSync(); projectMenuVisible = false">
-            <img class="menu-icon" src="assets/icons/arrow.triangle.2.circlepath.svg" alt="" />
+            <img class="menu-icon" src="assets/icons/arrow.trianglehead.2.clockwise.rotate.90.circle.fill.svg" alt="" />
             <span>Sync Now</span>
             @if (syncStatus === 'syncing') {
               <span class="sync-spinner">⟳</span>
             }
+          </button>
+          <button class="menu-item" (click)="revealSyncFileInFinder(); projectMenuVisible = false">
+            <img class="menu-icon" src="assets/icons/finder.svg" alt="" />
+            <span>Reveal in Finder</span>
           </button>
         }
         <div class="menu-separator"></div>
