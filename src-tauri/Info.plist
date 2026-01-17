@@ -15,6 +15,20 @@
   <array>
     <dict>
       <key>CFBundleTypeName</key>
+      <string>Cora Project</string>
+      <key>CFBundleTypeExtensions</key>
+      <array>
+        <string>cora</string>
+      </array>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>CFBundleTypeIconFile</key>
+      <string>file.icns</string>
+      <key>LSHandlerRank</key>
+      <string>Owner</string>
+    </dict>
+    <dict>
+      <key>CFBundleTypeName</key>
       <string>Text Document</string>
       <key>CFBundleTypeExtensions</key>
       <array>

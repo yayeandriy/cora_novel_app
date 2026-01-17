@@ -232,7 +232,7 @@
 
 .import-option-btn {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   width: 100%;
   padding: 12px;
@@ -251,7 +251,6 @@
 
 .import-option-btn svg {
   flex-shrink: 0;
-  margin-top: 2px;
   color: #6b7280;
 }
 

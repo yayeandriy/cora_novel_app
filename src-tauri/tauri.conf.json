@@ -30,7 +30,17 @@
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
-      "icons/icon.ico"
+      "icons/icon.ico",
+      "icons/file.icns"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["cora"],
+        "name": "Cora Project",
+        "description": "Cora Novel Project File",
+        "role": "Editor",
+        "mimeType": "application/x-cora-project"
+      }
     ],
     "macOS": {
       "bundleVersion": "104",

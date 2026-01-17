@@ -174,17 +174,7 @@
             <!-- Inline Import Options -->
             <div class="import-overlay" (click)="$event.stopPropagation()">
               <div class="import-message">
-                <span class="import-header">Add project</span>
                 <div class="import-options">
-                  <button class="import-option-btn" (click)="importFromFolder()">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                    </svg>
-                    <div class="import-option-text">
-                      <span class="import-option-title">From folder</span>
-                      <span class="import-option-desc">Subfolders as chapters</span>
-                    </div>
-                  </button>
                   <button class="import-option-btn" (click)="importFromExport()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -192,10 +182,13 @@
                       <line x1="16" y1="13" x2="8" y2="13"/>
                       <line x1="16" y1="17" x2="8" y2="17"/>
                     </svg>
-                    <div class="import-option-text">
-                      <span class="import-option-title">Open project file</span>
-                      <span class="import-option-desc">Cora project (.cora)</span>
-                    </div>
+                    <span class="import-option-title">Open</span>
+                  </button>
+                  <button class="import-option-btn" (click)="importFromFolder()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span class="import-option-title">Import</span>
                   </button>
                 </div>
                 <button class="import-cancel-btn" (click)="cancelImport($event)">Cancel</button>
