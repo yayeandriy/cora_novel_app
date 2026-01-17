@@ -179,3 +179,106 @@ export interface ArchiveUpdate {
   desc?: string | null;
   archived_at?: string | null;
 }
+
+// Sync entity for project-file synchronization
+export interface Sync {
+  id: number;
+  project_id: number;
+  file_path: string;
+  
+  // Sync status tracking
+  sync_status: 'pending' | 'syncing' | 'synced' | 'conflict' | 'error' | 'paused';
+  sync_direction: 'bidirectional' | 'db_to_file' | 'file_to_db';
+  
+  // Version control for optimistic locking
+  sync_version: number;
+  db_version: number;
+  file_version: number;
+  
+  // Content hashes for change detection
+  db_hash?: string | null;
+  file_hash?: string | null;
+  
+  // Timestamps for sync coordination
+  last_sync_at?: string | null;
+  last_db_change_at?: string | null;
+  last_file_change_at?: string | null;
+  
+  // Throttling and rate limiting
+  throttle_ms: number;
+  last_sync_attempt_at?: string | null;
+  next_allowed_sync_at?: string | null;
+  
+  // Retry logic with exponential backoff
+  retry_count: number;
+  max_retries: number;
+  next_retry_at?: string | null;
+  base_retry_delay_ms: number;
+  
+  // Error handling
+  last_error?: string | null;
+  last_error_at?: string | null;
+  consecutive_errors: number;
+  
+  // Conflict resolution
+  conflict_data?: string | null;
+  conflict_resolved_at?: string | null;
+  conflict_resolution?: string | null;
+  
+  // Feature flags
+  auto_sync_enabled: boolean;
+  watch_file_enabled: boolean;
+  watch_db_enabled: boolean;
+  
+  // Metadata
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SyncCreate {
+  project_id: number;
+  file_path: string;
+  sync_direction?: 'bidirectional' | 'db_to_file' | 'file_to_db';
+  throttle_ms?: number;
+  auto_sync_enabled?: boolean;
+}
+
+export interface SyncUpdate {
+  file_path?: string | null;
+  sync_status?: string | null;
+  sync_direction?: string | null;
+  sync_version?: number | null;
+  db_version?: number | null;
+  file_version?: number | null;
+  db_hash?: string | null;
+  file_hash?: string | null;
+  last_sync_at?: string | null;
+  last_db_change_at?: string | null;
+  last_file_change_at?: string | null;
+  throttle_ms?: number | null;
+  last_sync_attempt_at?: string | null;
+  next_allowed_sync_at?: string | null;
+  retry_count?: number | null;
+  max_retries?: number | null;
+  next_retry_at?: string | null;
+  base_retry_delay_ms?: number | null;
+  last_error?: string | null;
+  last_error_at?: string | null;
+  consecutive_errors?: number | null;
+  conflict_data?: string | null;
+  conflict_resolved_at?: string | null;
+  conflict_resolution?: string | null;
+  auto_sync_enabled?: boolean | null;
+  watch_file_enabled?: boolean | null;
+  watch_db_enabled?: boolean | null;
+}
+
+// Sync status response with computed fields
+export interface SyncStatus {
+  sync: Sync;
+  can_sync_now: boolean;
+  next_sync_in_ms?: number | null;
+  has_pending_changes: boolean;
+  is_file_newer: boolean;
+  is_db_newer: boolean;
+}

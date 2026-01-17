@@ -6,7 +6,8 @@ use crate::models::{
     ProjectDraft, ProjectDraftCreate, ProjectDraftUpdate,
     FolderDraft, FolderDraftCreate, FolderDraftUpdate,
     Timeline, TimelineCreate, TimelineUpdate,
-    Archive, ArchiveCreate, ArchiveUpdate
+    Archive, ArchiveCreate, ArchiveUpdate,
+    Sync, SyncCreate, SyncUpdate, SyncStatus
 };
 use std::io::Cursor;
 use crate::services::projects as project_service;
@@ -1452,4 +1453,125 @@ pub async fn export_project_to_pdf(state: State<'_, AppState>, project_id: i64, 
         .map_err(|e| e.to_string())?;
     
     Ok(())
+}
+
+// ==================== Sync Commands ====================
+
+#[tauri::command]
+pub async fn sync_create(state: State<'_, AppState>, payload: SyncCreate) -> Result<Sync, String> {
+    let pool = &state.pool;
+    crate::services::sync::create(pool, payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_get(state: State<'_, AppState>, id: i64) -> Result<Option<Sync>, String> {
+    let pool = &state.pool;
+    crate::services::sync::get(pool, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_get_by_project(state: State<'_, AppState>, project_id: i64) -> Result<Option<Sync>, String> {
+    let pool = &state.pool;
+    crate::services::sync::get_by_project(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_list(state: State<'_, AppState>) -> Result<Vec<Sync>, String> {
+    let pool = &state.pool;
+    crate::services::sync::list(pool).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_update(state: State<'_, AppState>, id: i64, payload: SyncUpdate) -> Result<Sync, String> {
+    let pool = &state.pool;
+    crate::services::sync::update(pool, id, payload).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::sync::delete(pool, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_delete_by_project(state: State<'_, AppState>, project_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    crate::services::sync::delete_by_project(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_get_status(state: State<'_, AppState>, project_id: i64) -> Result<Option<SyncStatus>, String> {
+    let pool = &state.pool;
+    crate::services::sync::get_status(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_mark_started(state: State<'_, AppState>, project_id: i64) -> Result<Sync, String> {
+    let pool = &state.pool;
+    crate::services::sync::mark_sync_started(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_mark_completed(state: State<'_, AppState>, project_id: i64, db_hash: String, file_hash: String) -> Result<Sync, String> {
+    let pool = &state.pool;
+    crate::services::sync::mark_sync_completed(pool, project_id, db_hash, file_hash).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_mark_failed(state: State<'_, AppState>, project_id: i64, error: String) -> Result<Sync, String> {
+    let pool = &state.pool;
+    crate::services::sync::mark_sync_failed(pool, project_id, error).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_mark_conflict(state: State<'_, AppState>, project_id: i64, conflict_data: String) -> Result<Sync, String> {
+    let pool = &state.pool;
+    crate::services::sync::mark_sync_conflict(pool, project_id, conflict_data).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_resolve_conflict(state: State<'_, AppState>, project_id: i64, resolution: String) -> Result<Sync, String> {
+    let pool = &state.pool;
+    crate::services::sync::resolve_conflict(pool, project_id, resolution).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_reset_retries(state: State<'_, AppState>, project_id: i64) -> Result<Sync, String> {
+    let pool = &state.pool;
+    crate::services::sync::reset_retries(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_mark_db_changed(state: State<'_, AppState>, project_id: i64) -> Result<Option<Sync>, String> {
+    let pool = &state.pool;
+    crate::services::sync::mark_db_changed(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_mark_file_changed(state: State<'_, AppState>, project_id: i64) -> Result<Option<Sync>, String> {
+    let pool = &state.pool;
+    crate::services::sync::mark_file_changed(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_get_pending_retries(state: State<'_, AppState>) -> Result<Vec<Sync>, String> {
+    let pool = &state.pool;
+    crate::services::sync::get_pending_retries(pool).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_pause(state: State<'_, AppState>, project_id: i64) -> Result<Sync, String> {
+    let pool = &state.pool;
+    crate::services::sync::pause_sync(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_resume(state: State<'_, AppState>, project_id: i64) -> Result<Sync, String> {
+    let pool = &state.pool;
+    crate::services::sync::resume_sync(pool, project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn sync_calculate_hash(content: Vec<u8>) -> Result<String, String> {
+    Ok(crate::services::sync::calculate_hash(&content))
 }

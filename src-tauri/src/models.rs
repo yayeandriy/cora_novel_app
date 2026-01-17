@@ -191,3 +191,110 @@ pub struct ArchiveUpdate {
     pub desc: Option<String>,
     pub archived_at: Option<String>,
 }
+
+// Sync entity for project-file synchronization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Sync {
+    pub id: i64,
+    pub project_id: i64,
+    pub file_path: String,
+    
+    // Sync status tracking
+    pub sync_status: String,  // pending, syncing, synced, conflict, error, paused
+    pub sync_direction: String,  // bidirectional, db_to_file, file_to_db
+    
+    // Version control for optimistic locking
+    pub sync_version: i64,
+    pub db_version: i64,
+    pub file_version: i64,
+    
+    // Content hashes for change detection
+    pub db_hash: Option<String>,
+    pub file_hash: Option<String>,
+    
+    // Timestamps for sync coordination
+    pub last_sync_at: Option<String>,
+    pub last_db_change_at: Option<String>,
+    pub last_file_change_at: Option<String>,
+    
+    // Throttling and rate limiting
+    pub throttle_ms: i64,
+    pub last_sync_attempt_at: Option<String>,
+    pub next_allowed_sync_at: Option<String>,
+    
+    // Retry logic with exponential backoff
+    pub retry_count: i64,
+    pub max_retries: i64,
+    pub next_retry_at: Option<String>,
+    pub base_retry_delay_ms: i64,
+    
+    // Error handling
+    pub last_error: Option<String>,
+    pub last_error_at: Option<String>,
+    pub consecutive_errors: i64,
+    
+    // Conflict resolution
+    pub conflict_data: Option<String>,
+    pub conflict_resolved_at: Option<String>,
+    pub conflict_resolution: Option<String>,
+    
+    // Feature flags
+    pub auto_sync_enabled: bool,
+    pub watch_file_enabled: bool,
+    pub watch_db_enabled: bool,
+    
+    // Metadata
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncCreate {
+    pub project_id: i64,
+    pub file_path: String,
+    pub sync_direction: Option<String>,
+    pub throttle_ms: Option<i64>,
+    pub auto_sync_enabled: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncUpdate {
+    pub file_path: Option<String>,
+    pub sync_status: Option<String>,
+    pub sync_direction: Option<String>,
+    pub sync_version: Option<i64>,
+    pub db_version: Option<i64>,
+    pub file_version: Option<i64>,
+    pub db_hash: Option<String>,
+    pub file_hash: Option<String>,
+    pub last_sync_at: Option<String>,
+    pub last_db_change_at: Option<String>,
+    pub last_file_change_at: Option<String>,
+    pub throttle_ms: Option<i64>,
+    pub last_sync_attempt_at: Option<String>,
+    pub next_allowed_sync_at: Option<String>,
+    pub retry_count: Option<i64>,
+    pub max_retries: Option<i64>,
+    pub next_retry_at: Option<String>,
+    pub base_retry_delay_ms: Option<i64>,
+    pub last_error: Option<String>,
+    pub last_error_at: Option<String>,
+    pub consecutive_errors: Option<i64>,
+    pub conflict_data: Option<String>,
+    pub conflict_resolved_at: Option<String>,
+    pub conflict_resolution: Option<String>,
+    pub auto_sync_enabled: Option<bool>,
+    pub watch_file_enabled: Option<bool>,
+    pub watch_db_enabled: Option<bool>,
+}
+
+// Sync status response with computed fields
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncStatus {
+    pub sync: Sync,
+    pub can_sync_now: bool,
+    pub next_sync_in_ms: Option<i64>,
+    pub has_pending_changes: bool,
+    pub is_file_newer: bool,
+    pub is_db_newer: bool,
+}

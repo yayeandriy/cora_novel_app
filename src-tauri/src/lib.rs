@@ -12,6 +12,7 @@ mod services {
     pub mod folder_drafts;
     pub mod timelines;
     pub mod archives;
+    pub mod sync;
 }
 mod commands;
 
@@ -131,6 +132,27 @@ pub fn run() {
             commands::import_project,
             commands::export_project,
             commands::export_project_to_pdf,
+            // Sync commands
+            commands::sync_create,
+            commands::sync_get,
+            commands::sync_get_by_project,
+            commands::sync_list,
+            commands::sync_update,
+            commands::sync_delete,
+            commands::sync_delete_by_project,
+            commands::sync_get_status,
+            commands::sync_mark_started,
+            commands::sync_mark_completed,
+            commands::sync_mark_failed,
+            commands::sync_mark_conflict,
+            commands::sync_resolve_conflict,
+            commands::sync_reset_retries,
+            commands::sync_mark_db_changed,
+            commands::sync_mark_file_changed,
+            commands::sync_get_pending_retries,
+            commands::sync_pause,
+            commands::sync_resume,
+            commands::sync_calculate_hash,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

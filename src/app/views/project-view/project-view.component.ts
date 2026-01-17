@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ProjectService } from '../../services/project.service';
 import { TimelineService } from '../../services/timeline.service';
+import { SyncService } from '../../services/sync.service';
 import { confirm, open, save, ask } from '@tauri-apps/plugin-dialog';
 import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
 import { DocumentEditorComponent } from '../../components/document-editor/document-editor.component';
@@ -15,7 +16,7 @@ import { AppFooterComponent } from '../../components/app-footer/app-footer.compo
 import { FolderDraftsComponent } from '../../components/folder-drafts/folder-drafts.component';
 import { CommandPaletteComponent, CommandMode } from '../../components/command-palette/command-palette.component';
 import { NgClickOutsideDirective, NgClickOutsideExcludeDirective } from 'ng-click-outside2';
-import type { Timeline, FolderDraft } from '../../shared/models';
+import type { Timeline, FolderDraft, Sync } from '../../shared/models';
 
 interface DocGroup {
   id: number;
@@ -236,6 +237,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   pendingImportFolders: string[] = [];
   importTargetGroupId: number | null = null;
   flattenedGroups: Array<{ id: number; label: string }> = [];
+  
+  // Sync state
+  currentSync: Sync | null = null;
+  showSyncDialog = false;
+  pendingSyncFilePath: string | null = null;
+  syncStatus: 'idle' | 'syncing' | 'synced' | 'error' | 'conflict' = 'idle';
   // Header notes expansion state
   projectHeaderExpanded = false;
   folderHeaderExpanded = false;
@@ -264,6 +271,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     private router: Router,
     private projectService: ProjectService,
     private timelineService: TimelineService,
+    private syncService: SyncService,
     private changeDetector: ChangeDetectorRef
   ) {}
 
@@ -988,12 +996,166 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         defaultPath: `${this.projectName}.cora`
       });
       if (!selected) return;
+      
+      // Export the project
       await this.projectService.exportProject(this.projectId, selected as string);
-      alert('Project saved successfully');
+      
+      // Normalize file path (ensure .cora extension)
+      const filePath = selected.endsWith('.cora') ? selected : `${selected}.cora`;
+      
+      // Check if project already has a sync configuration
+      const existingSync = await this.syncService.getSyncByProject(this.projectId);
+      
+      if (existingSync) {
+        // Project already has sync - ask what to do
+        if (existingSync.file_path === filePath) {
+          // Same file - just update sync and perform sync
+          await this.performSync();
+          alert('Project saved and synced successfully');
+        } else {
+          // Different file - show dialog
+          this.pendingSyncFilePath = filePath;
+          this.showSyncDialog = true;
+        }
+      } else {
+        // No sync exists - ask if user wants to enable sync
+        const enableSync = await ask('Would you like to keep this file synced with your project? Changes will be automatically saved to this file.', {
+          title: 'Enable Sync?',
+          kind: 'info',
+          okLabel: 'Enable Sync',
+          cancelLabel: 'No, just export'
+        });
+        
+        if (enableSync) {
+          await this.initializeSync(filePath);
+          alert('Project saved and sync enabled');
+        } else {
+          alert('Project saved successfully');
+        }
+      }
     } catch (err) {
       console.error('Export failed:', err);
       alert('Export failed: ' + err);
     }
+  }
+
+  // ==================== Sync Methods ====================
+
+  async initializeSync(filePath: string): Promise<void> {
+    try {
+      this.currentSync = await this.syncService.initializeSync(this.projectId, filePath, {
+        syncDirection: 'db_to_file', // For now, only sync from DB to file
+        autoSyncEnabled: true
+      });
+      this.syncStatus = 'synced';
+      this.changeDetector.markForCheck();
+    } catch (err) {
+      console.error('Failed to initialize sync:', err);
+      throw err;
+    }
+  }
+
+  async performSync(): Promise<void> {
+    if (!this.currentSync) {
+      this.currentSync = await this.syncService.getSyncByProject(this.projectId);
+    }
+    
+    if (!this.currentSync) {
+      console.warn('No sync configuration found');
+      return;
+    }
+
+    try {
+      this.syncStatus = 'syncing';
+      this.changeDetector.markForCheck();
+      
+      // Mark sync as started
+      await this.syncService.markSyncStarted(this.projectId);
+      
+      // Export to the synced file
+      await this.projectService.exportProject(this.projectId, this.currentSync.file_path);
+      
+      // Calculate hash of exported content (we'll use a simple approach for now)
+      const hash = await this.syncService.calculateHashFromString(JSON.stringify({
+        projectId: this.projectId,
+        timestamp: new Date().toISOString()
+      }));
+      
+      // Mark sync as completed
+      this.currentSync = await this.syncService.markSyncCompleted(this.projectId, hash, hash);
+      this.syncStatus = 'synced';
+      this.changeDetector.markForCheck();
+    } catch (err) {
+      console.error('Sync failed:', err);
+      this.syncStatus = 'error';
+      if (this.currentSync) {
+        await this.syncService.markSyncFailed(this.projectId, String(err));
+      }
+      this.changeDetector.markForCheck();
+    }
+  }
+
+  async loadSyncStatus(): Promise<void> {
+    try {
+      this.currentSync = await this.syncService.getSyncByProject(this.projectId);
+      if (this.currentSync) {
+        this.syncStatus = this.currentSync.sync_status as any || 'idle';
+      }
+    } catch (err) {
+      console.error('Failed to load sync status:', err);
+    }
+  }
+
+  // Sync dialog handlers
+  cancelSyncDialog(): void {
+    this.showSyncDialog = false;
+    this.pendingSyncFilePath = null;
+  }
+
+  async keepOldSync(): Promise<void> {
+    this.showSyncDialog = false;
+    this.pendingSyncFilePath = null;
+    // Just perform sync with existing file
+    await this.performSync();
+    alert('Project exported. Existing sync maintained.');
+  }
+
+  async useNewSync(): Promise<void> {
+    if (!this.pendingSyncFilePath) return;
+    
+    this.showSyncDialog = false;
+    const newFilePath = this.pendingSyncFilePath;
+    this.pendingSyncFilePath = null;
+    
+    try {
+      // Delete old sync and create new one
+      await this.syncService.deleteSyncByProject(this.projectId);
+      await this.initializeSync(newFilePath);
+      alert('Project saved and now syncing with new file');
+    } catch (err) {
+      console.error('Failed to switch sync file:', err);
+      alert('Failed to switch sync file: ' + err);
+    }
+  }
+
+  async disableSync(): Promise<void> {
+    this.showSyncDialog = false;
+    this.pendingSyncFilePath = null;
+    
+    try {
+      await this.syncService.deleteSyncByProject(this.projectId);
+      this.currentSync = null;
+      this.syncStatus = 'idle';
+      alert('Project exported. Sync disabled.');
+    } catch (err) {
+      console.error('Failed to disable sync:', err);
+    }
+  }
+
+  getSyncFileName(): string {
+    if (!this.currentSync?.file_path) return '';
+    const path = this.currentSync.file_path;
+    return path.split('/').pop() || path.split('\\').pop() || path;
   }
 
   async exportToPdf() {

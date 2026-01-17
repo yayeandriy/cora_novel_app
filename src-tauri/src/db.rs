@@ -161,6 +161,17 @@ pub fn init_pool() -> anyhow::Result<DbPool> {
         conn.execute_batch(include_str!("../migrations/016_add_project_timestamps.sql")).context("running migrations 016")?;
     }
 
+    // Conditionally run 017: create sync table
+    let table_exists: bool = conn.query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='sync'",
+        [],
+        |row| row.get(0)
+    ).unwrap_or(0) > 0;
+    
+    if !table_exists {
+        conn.execute_batch(include_str!("../migrations/017_add_sync.sql")).context("running migrations 017")?;
+    }
+
     Ok(pool)
 }
 
