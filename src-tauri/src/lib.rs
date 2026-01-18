@@ -31,6 +31,9 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
+        // Persisted scope MUST come after fs plugin - it saves/restores file access permissions
+        // across app restarts (security-scoped bookmarks on macOS)
+        .plugin(tauri_plugin_persisted_scope::init())
         .setup(|app| {
             // Open the main window maximized by default (not macOS fullscreen space)
             if let Some(win) = app.get_webview_window("main") {

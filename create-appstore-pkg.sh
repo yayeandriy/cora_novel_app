@@ -149,12 +149,23 @@ prompt_for_next_version() {
     NEXT_VERSION="$NEXT_VERSION" perl -0777 -i -pe 's/(\[package\][^\[]*?\nversion\s*=\s*")[^"]+("\s*\n)/$1$ENV{NEXT_VERSION}$2/s' "$CARGO_TOML"
 
     echo -e "${GREEN}✅ Updated:${NC} version=$NEXT_VERSION, bundleVersion=$NEXT_BUNDLE_VERSION"
-    echo -e "${YELLOW}⚠️  Note:${NC} the existing built .app bundle will NOT change until you rebuild (e.g. run ./build-appstore.sh again)."
     echo ""
 }
 
 # Ask for the *next* version/build before packaging so configs stay in sync.
 prompt_for_next_version
+
+# Automatically rebuild after updating versions
+echo -e "${BLUE}🔨 Rebuilding app bundle with new version...${NC}"
+echo ""
+if ! (cd "$ROOT_DIR" && ./build-appstore.sh); then
+    echo ""
+    echo -e "${RED}❌ Build failed${NC}"
+    exit 1
+fi
+echo ""
+echo -e "${GREEN}✅ Build completed successfully!${NC}"
+echo ""
 
 get_app_plist_value() {
     local app_path="$1"
@@ -165,17 +176,6 @@ get_app_plist_value() {
         return 0
     fi
     /usr/libexec/PlistBuddy -c "Print :$key" "$plist" 2>/dev/null || echo ""
-}
-
-maybe_rebuild_appstore() {
-    echo -e "${BLUE}🔨 Rebuild (recommended)${NC}"
-    echo "To make the app bundle reflect the new version/build, a rebuild is required."
-    read -p "Run ./build-appstore.sh now? (Y/n) " rebuild_now
-    rebuild_now="${rebuild_now:-Y}"
-    if [[ "$rebuild_now" =~ ^[Yy]$ ]]; then
-        (cd "$ROOT_DIR" && ./build-appstore.sh)
-    fi
-    echo ""
 }
 
 # Detect available app bundles
@@ -202,29 +202,14 @@ elif [ -d "$INTEL_APP" ]; then
 else
     echo -e "${RED}❌ Error: No app bundle found${NC}"
     echo ""
-    echo "Please build your app first using one of:"
+    echo "Please build your app first using:"
+    echo "  ./build-appstore.sh"
+    echo ""
+    echo "Or manually:"
     echo "  pnpm build:appstore"
     echo "  pnpm tauri build --bundles app --config src-tauri/tauri.appstore.conf.json"
     echo ""
-        # Offer to rebuild automatically now that versions are set
-        maybe_rebuild_appstore
-
-        # Re-check after rebuild attempt
-        if [ -d "$UNIVERSAL_APP" ]; then
-            APP_PATH="$UNIVERSAL_APP"
-            BUILD_TYPE="Universal"
-        elif [ -d "$ARM_APP" ]; then
-            APP_PATH="$ARM_APP"
-            BUILD_TYPE="Apple Silicon"
-        elif [ -d "$RELEASE_APP" ]; then
-            APP_PATH="$RELEASE_APP"
-            BUILD_TYPE="Current Architecture"
-        elif [ -d "$INTEL_APP" ]; then
-            APP_PATH="$INTEL_APP"
-            BUILD_TYPE="Intel"
-        else
-            exit 1
-        fi
+    exit 1
 fi
 
 echo -e "${GREEN}Found app bundle:${NC} $BUILD_TYPE"
@@ -235,22 +220,29 @@ echo ""
 APP_CF_BUNDLE_VERSION="$(get_app_plist_value "$APP_PATH" "CFBundleVersion")"
 APP_CF_SHORT_VERSION="$(get_app_plist_value "$APP_PATH" "CFBundleShortVersionString")"
 
+echo -e "${BLUE}📋 Version verification:${NC}"
+echo "Config version:       $NEXT_VERSION"
+echo "App bundle version:   $APP_CF_SHORT_VERSION"
+echo "Config build number:  $NEXT_BUNDLE_VERSION"
+echo "App bundle build:     $APP_CF_BUNDLE_VERSION"
+echo ""
+
 if [ -n "$NEXT_BUNDLE_VERSION" ] && [ -n "$APP_CF_BUNDLE_VERSION" ] && [ "$APP_CF_BUNDLE_VERSION" != "$NEXT_BUNDLE_VERSION" ]; then
-    echo -e "${YELLOW}⚠️  App bundle build number mismatch${NC}"
-    echo "Requested bundleVersion: $NEXT_BUNDLE_VERSION"
-    echo "App CFBundleVersion:     $APP_CF_BUNDLE_VERSION"
+    echo -e "${RED}❌ Error: App bundle build number mismatch${NC}"
+    echo "This should not happen after rebuild. Please check build output."
     echo ""
-    echo "This will likely be rejected by App Store/Transporter (must be higher than previous uploads)."
-    maybe_rebuild_appstore
+    exit 1
 fi
 
 if [ -n "$NEXT_VERSION" ] && [ -n "$APP_CF_SHORT_VERSION" ] && [ "$APP_CF_SHORT_VERSION" != "$NEXT_VERSION" ]; then
-    echo -e "${YELLOW}⚠️  App bundle version mismatch${NC}"
-    echo "Requested version:            $NEXT_VERSION"
-    echo "App CFBundleShortVersionString: $APP_CF_SHORT_VERSION"
+    echo -e "${RED}❌ Error: App bundle version mismatch${NC}"
+    echo "This should not happen after rebuild. Please check build output."
     echo ""
-    maybe_rebuild_appstore
+    exit 1
 fi
+
+echo -e "${GREEN}✅ Version numbers match!${NC}"
+echo ""
 
 # Verify code signing
 echo -e "${BLUE}🔍 Verifying app code signature...${NC}"

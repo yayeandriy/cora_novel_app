@@ -1070,6 +1070,24 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // If we're already in a conflict state from a previous sync, auto-resolve it first
+    if (this.currentSync.sync_status === 'conflict') {
+      console.log('[Sync] Found existing conflict state, auto-resolving...');
+      try {
+        await this.autoResolveConflict();
+        // Reload sync status after resolution
+        this.currentSync = await this.syncService.getSyncByProject(this.projectId);
+        if (!this.currentSync || this.currentSync.sync_status === 'conflict') {
+          console.warn('Failed to resolve conflict');
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to auto-resolve existing conflict:', err);
+        this.syncStatus = 'error';
+        return;
+      }
+    }
+
     try {
       this.syncStatus = 'syncing';
       this.changeDetector.markForCheck();
@@ -1104,6 +1122,21 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
           try {
             return await readFile(this.currentSync!.file_path);
           } catch (err) {
+            // Check if this is a permission error (macOS sandbox)
+            if (this.isPermissionError(err)) {
+              const newPath = await this.promptReGrantFileAccess();
+              if (newPath) {
+                await this.syncService.updateSync(this.currentSync!.id, { file_path: newPath });
+                this.currentSync!.file_path = newPath;
+                return await readFile(newPath);
+              } else {
+                // User chose to disable sync
+                await this.syncService.deleteSyncByProject(this.projectId);
+                this.currentSync = null;
+                this.syncStatus = 'idle';
+                throw new Error('Sync disabled by user');
+              }
+            }
             console.warn('File not found, will be created:', err);
             return new Uint8Array(0); // Empty array if file doesn't exist yet
           }
@@ -1143,6 +1176,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       } else if (result.conflict) {
         // Automatically resolve conflict by comparing timestamps
         try {
+          // Reset sync status from 'conflict' to 'pending' to allow resolution
+          await this.syncService.updateSync(this.currentSync.id, { sync_status: 'pending' });
+          
           // Get DB project timestamp
           const dbProject = await this.projectService.getProject(this.projectId);
           const dbTimestamp = dbProject?.updated_at ? new Date(dbProject.updated_at).getTime() : 0;
@@ -1206,23 +1242,46 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
           });
         }
       } else {
+        // Check if this is a throttle response (expected behavior, not an error)
+        const isThrottled = result.error?.includes('Throttled') || result.error?.includes('Next sync in');
+        
+        if (isThrottled) {
+          // Throttling is expected - just log and keep status as idle
+          console.debug('Sync throttled:', result.error);
+          this.syncStatus = 'idle';
+        } else {
+          // Actual sync error - show to user
+          this.syncStatus = 'error';
+          await confirm(`Sync failed: ${result.error}`, {
+            title: 'Sync Error',
+            kind: 'error',
+            okLabel: 'OK'
+          });
+        }
+      }
+      
+      this.changeDetector.markForCheck();
+    } catch (err) {
+      console.error('Sync failed:', err);
+      
+      // Check if this is a throttle error in the exception message
+      const errStr = String(err);
+      const isThrottled = errStr.includes('Throttled') || errStr.includes('Next sync in');
+      
+      if (isThrottled) {
+        // Throttling is expected - just log and keep status as idle
+        console.debug('Sync throttled:', err);
+        this.syncStatus = 'idle';
+      } else {
+        // Actual sync error - show to user
         this.syncStatus = 'error';
-        await confirm(`Sync failed: ${result.error}`, {
+        await confirm(`Sync failed: ${err}`, {
           title: 'Sync Error',
           kind: 'error',
           okLabel: 'OK'
         });
       }
       
-      this.changeDetector.markForCheck();
-    } catch (err) {
-      console.error('Sync failed:', err);
-      this.syncStatus = 'error';
-      await confirm(`Sync failed: ${err}`, {
-        title: 'Sync Error',
-        kind: 'error',
-        okLabel: 'OK'
-      });
       this.changeDetector.markForCheck();
     }
   }
@@ -1236,6 +1295,142 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     } catch (err) {
       console.error('Failed to load sync status:', err);
     }
+  }
+
+  /**
+   * Check if an error is a macOS permission/sandbox error.
+   * After app restart, file access permissions are lost for files outside the sandbox.
+   */
+  private isPermissionError(err: any): boolean {
+    const errStr = String(err).toLowerCase();
+    return errStr.includes('operation not permitted') ||
+           errStr.includes('os error 1') ||
+           errStr.includes('permission denied') ||
+           errStr.includes('not permitted');
+  }
+
+  /**
+   * Prompt user to re-grant file access after permission was lost (e.g., after app restart).
+   * Returns the new file path if user selects a file, or null if cancelled.
+   */
+  private async promptReGrantFileAccess(): Promise<string | null> {
+    const shouldReselect = await ask(
+      'File access permission was lost (this happens after restarting the app on macOS). Would you like to re-select the sync file to restore access?',
+      {
+        title: 'File Access Required',
+        kind: 'warning',
+        okLabel: 'Select File',
+        cancelLabel: 'Disable Sync'
+      }
+    );
+
+    if (!shouldReselect) {
+      return null;
+    }
+
+    // Open file picker to re-grant access
+    const selected = await open({
+      title: 'Select the sync file to restore access',
+      filters: [{ name: 'Cora Project', extensions: ['cora'] }],
+      multiple: false,
+      directory: false
+    });
+
+    if (!selected || Array.isArray(selected)) {
+      return null;
+    }
+
+    return selected as string;
+  }
+
+  /**
+   * Auto-resolve a sync conflict by comparing timestamps and choosing the newer version.
+   * Uses DB updated_at vs last_sync_at to determine which source is newer.
+   */
+  private async autoResolveConflict(): Promise<void> {
+    if (!this.currentSync) {
+      throw new Error('No sync configuration');
+    }
+
+    // Reset sync status from 'conflict' to 'pending' to allow resolution
+    await this.syncService.updateSync(this.currentSync.id, { sync_status: 'pending' });
+
+    // Get DB project timestamp
+    const dbProject = await this.projectService.getProject(this.projectId);
+    const dbTimestamp = dbProject?.updated_at ? new Date(dbProject.updated_at).getTime() : 0;
+
+    // Try to read file content, handling permission errors
+    let fileContent: Uint8Array;
+    try {
+      fileContent = await readFile(this.currentSync.file_path);
+    } catch (err) {
+      if (this.isPermissionError(err)) {
+        // Prompt user to re-grant access
+        const newPath = await this.promptReGrantFileAccess();
+        if (newPath) {
+          // Update sync with new path and retry
+          await this.syncService.updateSync(this.currentSync.id, { file_path: newPath });
+          this.currentSync.file_path = newPath;
+          fileContent = await readFile(newPath);
+        } else {
+          // User chose to disable sync
+          await this.syncService.deleteSyncByProject(this.projectId);
+          this.currentSync = null;
+          this.syncStatus = 'idle';
+          throw new Error('Sync disabled by user');
+        }
+      } else {
+        throw err;
+      }
+    }
+
+    // Determine which source is newer using simple heuristic:
+    // If DB has updated_at more recent than last sync, use DB; otherwise use file
+    const useDb = dbTimestamp > 0 && this.currentSync.last_sync_at 
+      ? dbTimestamp > new Date(this.currentSync.last_sync_at).getTime()
+      : false;
+
+    if (useDb) {
+      // Database is newer - export to file
+      console.log('[Sync] Resolving conflict: using database (newer)');
+      await this.syncService.resolveConflict(this.projectId, 'use_db');
+      try {
+        await this.projectService.exportProject(this.projectId, this.currentSync.file_path);
+        const exportedContent = await readFile(this.currentSync.file_path);
+        const exportedHash = await this.syncService.calculateHash(exportedContent);
+        await this.syncService.markSyncCompleted(this.projectId, exportedHash, exportedHash);
+      } catch (err) {
+        if (this.isPermissionError(err)) {
+          // Prompt user to re-grant access for export
+          const newPath = await this.promptReGrantFileAccess();
+          if (newPath) {
+            await this.syncService.updateSync(this.currentSync.id, { file_path: newPath });
+            this.currentSync.file_path = newPath;
+            await this.projectService.exportProject(this.projectId, newPath);
+            const exportedContent = await readFile(newPath);
+            const exportedHash = await this.syncService.calculateHash(exportedContent);
+            await this.syncService.markSyncCompleted(this.projectId, exportedHash, exportedHash);
+          } else {
+            await this.syncService.deleteSyncByProject(this.projectId);
+            this.currentSync = null;
+            this.syncStatus = 'idle';
+            throw new Error('Sync disabled by user');
+          }
+        } else {
+          throw err;
+        }
+      }
+    } else {
+      // File is newer - import from file
+      console.log('[Sync] Resolving conflict: using file (newer)');
+      await this.syncService.resolveConflict(this.projectId, 'use_file');
+      await this.projectService.syncImportToProject(this.projectId, this.currentSync.file_path);
+      await this.loadProject(true);
+      const fileHash = await this.syncService.calculateHash(fileContent);
+      await this.syncService.markSyncCompleted(this.projectId, fileHash, fileHash);
+    }
+
+    this.syncStatus = 'synced';
   }
 
   /**

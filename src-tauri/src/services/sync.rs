@@ -10,7 +10,7 @@ pub fn create(pool: &DbPool, payload: SyncCreate) -> Result<Sync> {
     let now = Utc::now().to_rfc3339();
     
     let sync_direction = payload.sync_direction.unwrap_or_else(|| "bidirectional".to_string());
-    let throttle_ms = payload.throttle_ms.unwrap_or(2000);
+    let throttle_ms = payload.throttle_ms.unwrap_or(5000); // Increased to 5 seconds to reduce throttle errors
     let auto_sync_enabled = payload.auto_sync_enabled.unwrap_or(true);
     
     conn.execute(

@@ -102,19 +102,64 @@ After these changes:
 3. Sync operations can now create temp files in Documents folder
 4. No more "forbidden path" errors
 
+---
+
+## Update: Persisted Scope for App Restart (Security-Scoped Bookmarks)
+
+### Additional Problem
+Even with proper filesystem scopes, on macOS, file access permissions are lost when the app restarts due to the sandbox. This caused "Operation not permitted (os error 1)" after restarting the app.
+
+### Solution: `tauri-plugin-persisted-scope`
+Added the persisted-scope plugin which automatically saves and restores filesystem access scopes across app restarts. On macOS, this leverages **Security-Scoped Bookmarks**.
+
+### Implementation
+
+**1. Added to `src-tauri/Cargo.toml`:**
+```toml
+tauri-plugin-persisted-scope = "2"
+```
+
+**2. Registered in `src-tauri/src/lib.rs`:**
+```rust
+tauri::Builder::default()
+    .plugin(tauri_plugin_opener::init())
+    .plugin(tauri_plugin_dialog::init())
+    .plugin(tauri_plugin_fs::init())
+    .plugin(tauri_plugin_shell::init())
+    // Persisted scope MUST come after fs plugin - saves/restores file access
+    .plugin(tauri_plugin_persisted_scope::init())
+```
+
+**Critical**: The persisted-scope plugin MUST be registered AFTER the fs plugin.
+
+### How It Works
+1. When user selects a file via dialog picker, the scope is automatically saved
+2. On app restart, the plugin restores all previously granted scopes
+3. Sync works immediately without re-prompting the user
+
+### Platform Support
+- **macOS**: Uses Security-Scoped Bookmarks (the native solution for sandboxed apps)
+- **Windows/Linux**: Works automatically (no sandbox restrictions)
+
+---
+
 ## Testing Checklist
 - [ ] Click "Sync Now" button on a synced project
 - [ ] Verify temp file creation succeeds (e.g., `project_name.cora.tmp`)
 - [ ] Confirm sync completes without permission errors
 - [ ] Check that temp files are cleaned up after sync
 - [ ] Test sync in different directories (Documents, Desktop, Downloads)
+- [ ] **Quit app completely and restart** - sync should work without re-selecting file
 
 ## Related Files
 - `src-tauri/capabilities/default.json` - Permissions and scope configuration
 - `src-tauri/tauri.conf.json` - Main Tauri configuration (security.csp only)
+- `src-tauri/Cargo.toml` - Persisted-scope plugin dependency
+- `src-tauri/src/lib.rs` - Plugin registration order
 - `src/app/views/project-view/project-view.component.ts` - Sync implementation with file I/O
 
 ## References
 - [Tauri v2 Capabilities Documentation](https://v2.tauri.app/security/capabilities/)
 - [Tauri v2 Filesystem Plugin](https://v2.tauri.app/plugin/file-system/)
+- [Tauri v2 Persisted Scope Plugin](https://v2.tauri.app/plugin/persisted-scope/)
 - [Tauri v2 Migration Guide](https://v2.tauri.app/start/migrate/from-tauri-1/)

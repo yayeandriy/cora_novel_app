@@ -33,7 +33,7 @@
         {
           "name": "open",
           "cmd": "open",
-          "args": ["-R", { "validator": "\\S+" }]
+          "args": true
         }
       ]
     }
