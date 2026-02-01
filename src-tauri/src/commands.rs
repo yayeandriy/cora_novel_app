@@ -1839,9 +1839,16 @@ pub async fn export_project_to_word(state: State<'_, AppState>, project_id: i64,
     };
     let line_twips = ((body_size_pt * 20.0) * line_multiplier).round() as u32;
 
-    let line_spacing = LineSpacing::new()
+    let base_line_spacing = LineSpacing::new()
         .line(line_twips as i32)
         .line_rule(LineSpacingType::Auto);
+    let title_after_twips = (line_twips as f64 * 3.0).round() as u32;
+    let part_after_twips = (line_twips as f64 * 2.0).round() as u32;
+    let chapter_after_twips = (line_twips as f64 * 1.5).round() as u32;
+    let title_line_spacing = base_line_spacing.clone().after(title_after_twips);
+    let part_line_spacing = base_line_spacing.clone().after(part_after_twips);
+    let chapter_line_spacing = base_line_spacing.clone().after(chapter_after_twips);
+    let body_line_spacing = base_line_spacing.clone().after(line_twips);
 
     let make_run = |text: &str, size_half_points: u32, bold: bool| {
         let mut run = Run::new()
@@ -1895,17 +1902,45 @@ pub async fn export_project_to_word(state: State<'_, AppState>, project_id: i64,
         }
     }
 
-    let mut docx = Docx::new();
+    // Create document with defined styles
+    let title_style = Style::new("Title", StyleType::Paragraph)
+        .name("Title")
+        .size(title_size_half_points as usize)
+        .bold()
+        .fonts(RunFonts::new().ascii(font_family).hi_ansi(font_family))
+        .line_spacing(title_line_spacing.clone());
+
+    let heading1_style = Style::new("Heading1", StyleType::Paragraph)
+        .name("Heading 1")
+        .size(part_size_half_points as usize)
+        .bold()
+        .fonts(RunFonts::new().ascii(font_family).hi_ansi(font_family))
+        .line_spacing(part_line_spacing.clone());
+
+    let heading2_style = Style::new("Heading2", StyleType::Paragraph)
+        .name("Heading 2")
+        .size(chapter_size_half_points as usize)
+        .bold()
+        .fonts(RunFonts::new().ascii(font_family).hi_ansi(font_family))
+        .line_spacing(chapter_line_spacing.clone());
+
+    let mut docx = Docx::new()
+        .add_style(title_style)
+        .add_style(heading1_style)
+        .add_style(heading2_style);
+
     docx = docx.add_paragraph(
         Paragraph::new()
-            .line_spacing(line_spacing.clone())
+            .style("Title")
+            .line_spacing(title_line_spacing.clone())
             .add_run(make_run(&project.name, title_size_half_points, true))
     );
 
     for (group_id, group_name, _parent) in &groups {
         docx = docx.add_paragraph(
             Paragraph::new()
-                .line_spacing(line_spacing.clone())
+                .style("Heading1")
+                .line_spacing(part_line_spacing.clone())
                 .add_run(make_run(group_name, part_size_half_points, true))
         );
 
@@ -1913,7 +1948,8 @@ pub async fn export_project_to_word(state: State<'_, AppState>, project_id: i64,
             if doc_group_id.as_ref() == Some(group_id) {
                 docx = docx.add_paragraph(
                     Paragraph::new()
-                        .line_spacing(line_spacing.clone())
+                        .style("Heading2")
+                        .line_spacing(chapter_line_spacing.clone())
                         .add_run(make_run(doc_name, chapter_size_half_points, true))
                 );
 
@@ -1925,12 +1961,27 @@ pub async fn export_project_to_word(state: State<'_, AppState>, project_id: i64,
                     let text = clean.replace('\n', " ");
                     docx = docx.add_paragraph(
                         Paragraph::new()
-                            .line_spacing(line_spacing.clone())
+                            .line_spacing(body_line_spacing.clone())
                             .add_run(make_run(text.as_str(), body_size_half_points, false))
                     );
                 }
+
+                // Page break after each chapter
+                docx = docx.add_paragraph(
+                    Paragraph::new()
+                        .line_spacing(base_line_spacing.clone())
+                        .add_run(Run::new().add_break(BreakType::Page))
+                );
             }
         }
+
+        // Decorative icon after each part
+        docx = docx.add_paragraph(
+            Paragraph::new()
+                .line_spacing(base_line_spacing.clone().after(part_after_twips))
+                .align(AlignmentType::Center)
+                .add_run(make_run("✦", body_size_half_points, false))
+        );
     }
 
     let docx_path = Path::new(&dest_path).join(format!("{}.docx", project.name));
