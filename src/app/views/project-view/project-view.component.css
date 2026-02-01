@@ -1666,6 +1666,151 @@ app-right-sidebar {
   background-color: #e5e7eb;
 }
 
+/* Export Dialog */
+.export-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 22px;
+  width: 100%;
+  max-width: 360px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.export-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: #e5e7eb;
+  border-radius: 999px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.export-tab {
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.export-tab.active {
+  background: #818cf8;
+  color: white;
+}
+
+.export-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 2px;
+}
+
+.export-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.export-label {
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+.export-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.export-radio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  color: #111827;
+}
+
+.export-radio input {
+  width: 16px;
+  height: 16px;
+  accent-color: #6366f1;
+}
+
+.export-select {
+  width: 100%;
+  border: none;
+  background: #e5e7eb;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  color: #111827;
+}
+
+.export-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.export-range-input {
+  width: 100%;
+  border: none;
+  background: #e5e7eb;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.export-range-sep {
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.export-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.export-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.export-btn.cancel {
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
+.export-btn.cancel:hover {
+  background: #d1d5db;
+}
+
+.export-btn.primary {
+  background: #7c83ff;
+  color: white;
+}
+
+.export-btn.primary:hover {
+  background: #6366f1;
+}
+
 /* Sync Dialog Styles */
 .sync-dialog {
   width: 480px;

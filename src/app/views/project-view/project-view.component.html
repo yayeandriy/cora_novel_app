@@ -560,35 +560,91 @@
     </div>
   </div>
 
-  <!-- Export options dialog -->
+  <!-- Export dialog -->
   @if (showExportOptionsDialog) {
     <div class="modal-overlay" (click)="cancelExportOptions()">
-      <div class="import-options-modal" (click)="$event.stopPropagation()" (keydown.escape)="cancelExportOptions()" tabindex="-1">
-        <div class="import-header">Export story</div>
-        <div class="import-options">
-          <button class="import-option-btn" (click)="exportToFolder()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-            </svg>
-            <div class="import-option-text">
-              <span class="import-option-title">To Cora file</span>
-              <span class="import-option-desc">With all metadata</span>
-            </div>
-          </button>
-          <button class="import-option-btn" (click)="exportToPdf()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-            </svg>
-            <div class="import-option-text">
-              <span class="import-option-title">To PDF</span>
-              <span class="import-option-desc">Formatted for reading</span>
-            </div>
-          </button>
+      <div class="export-dialog" (click)="$event.stopPropagation()" (keydown.escape)="cancelExportOptions()" tabindex="-1">
+        <div class="export-tabs" role="tablist">
+          <button class="export-tab" [class.active]="exportFormat === 'pdf'" (click)="exportFormat = 'pdf'" role="tab" aria-selected="exportFormat === 'pdf'">PDF</button>
+          <button class="export-tab" [class.active]="exportFormat === 'word'" (click)="exportFormat = 'word'" role="tab" aria-selected="exportFormat === 'word'">Word</button>
+          <button class="export-tab" [class.active]="exportFormat === 'text'" (click)="exportFormat = 'text'" role="tab" aria-selected="exportFormat === 'text'">Plain text</button>
         </div>
-        <button class="import-cancel-btn" (click)="cancelExportOptions()">Cancel</button>
+
+        <div class="export-section">
+          <div class="export-row">
+            <div class="export-label">Font style:</div>
+            <div class="export-radio-group">
+              <label class="export-radio">
+                <input type="radio" name="export-font" value="mono" [(ngModel)]="exportFontStyle" />
+                <span>Mono</span>
+              </label>
+              <label class="export-radio">
+                <input type="radio" name="export-font" value="serif" [(ngModel)]="exportFontStyle" />
+                <span>Serif</span>
+              </label>
+              <label class="export-radio">
+                <input type="radio" name="export-font" value="sans" [(ngModel)]="exportFontStyle" />
+                <span>Sans</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="export-row">
+            <div class="export-label">Font size:</div>
+            <select class="export-select" [(ngModel)]="exportFontSize">
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </div>
+
+          <div class="export-row">
+            <div class="export-label">Linespace:</div>
+            <select class="export-select" [(ngModel)]="exportLineSpace">
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </div>
+
+          <div class="export-row">
+            <div class="export-label">Chapters:</div>
+            <div class="export-radio-group">
+              <label class="export-radio">
+                <input type="radio" name="export-chapters" value="all" [(ngModel)]="exportChapterMode" />
+                <span>All</span>
+              </label>
+              <label class="export-radio">
+                <input type="radio" name="export-chapters" value="range" [(ngModel)]="exportChapterMode" />
+                <span>Range</span>
+              </label>
+            </div>
+          </div>
+
+          @if (exportChapterMode === 'range') {
+            <div class="export-row">
+              <div class="export-label"></div>
+              <select class="export-select" [(ngModel)]="exportRangePartId">
+                @for (group of docGroups; track group.id) {
+                  <option [value]="group.id">{{ group.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="export-row">
+              <div class="export-label"></div>
+              <div class="export-range">
+                <input class="export-range-input" type="number" min="1" [(ngModel)]="exportRangeStart" />
+                <span class="export-range-sep">—</span>
+                <input class="export-range-input" type="number" min="1" [(ngModel)]="exportRangeEnd" />
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="export-actions">
+          <button class="export-btn cancel" (click)="cancelExportOptions()">Cancel</button>
+          <button class="export-btn primary" (click)="confirmExportDialog()">Export...</button>
+        </div>
       </div>
     </div>
   }

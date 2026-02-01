@@ -16,7 +16,7 @@ Fixes:
   ✔ Layout of tools @done(26-02-01 14:41)
 
 Features:
-  ☐ Build number
+  ✔ Build number @done(26-02-01 14:57)
   ☐ Export to TXT/DOCx
   ☐ Import from DOC
   ☐ Link to sync

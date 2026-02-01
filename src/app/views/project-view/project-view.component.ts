@@ -239,6 +239,15 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   pendingImportFolders: string[] = [];
   importTargetGroupId: number | null = null;
   flattenedGroups: Array<{ id: number; label: string }> = [];
+  // Export dialog state (UI only for now)
+  exportFormat: 'pdf' | 'word' | 'text' = 'pdf';
+  exportFontStyle: 'mono' | 'serif' | 'sans' = 'serif';
+  exportFontSize: 'small' | 'medium' | 'large' = 'small';
+  exportLineSpace: 'small' | 'medium' | 'large' = 'small';
+  exportChapterMode: 'all' | 'range' = 'all';
+  exportRangePartId: number | null = null;
+  exportRangeStart = 1;
+  exportRangeEnd = 1;
   
   // Sync state
   currentSync: Sync | null = null;
@@ -986,10 +995,23 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Show export options dialog
   openExportOptionsDialog() {
     this.showExportOptionsDialog = true;
+    if (this.exportRangePartId == null && this.docGroups.length > 0) {
+      this.exportRangePartId = this.docGroups[0].id;
+    }
   }
 
   cancelExportOptions() {
     this.showExportOptionsDialog = false;
+  }
+
+  async confirmExportDialog() {
+    if (this.exportFormat === 'pdf') {
+      await this.exportToPdf();
+      return;
+    }
+
+    // Placeholder until Word/Plain text exporters are implemented.
+    alert('This export format is not supported yet.');
   }
 
   async exportToFolder() {
