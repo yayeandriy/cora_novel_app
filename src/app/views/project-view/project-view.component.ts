@@ -4761,6 +4761,85 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }, 50);
   }
 
+  async onCommandPaletteReplaceInAllDocs(payload: { searchQuery: string; replacement: string; caseSensitive: boolean }) {
+    // Replace in all documents in the project
+    const query = payload.caseSensitive ? payload.searchQuery : payload.searchQuery.toLowerCase();
+    let totalReplacements = 0;
+    let docsModified = 0;
+
+    for (const doc of this.allProjectDocs) {
+      if (!doc.text) continue;
+
+      const text = doc.text;
+      const searchText = payload.caseSensitive ? text : text.toLowerCase();
+
+      // Find all matches and replace
+      let newText = text;
+      let hasChanges = false;
+      let searchStart = 0;
+
+      // Build list of all match positions
+      const matches: Array<{ start: number; end: number }> = [];
+      while (true) {
+        const matchIndex = searchText.indexOf(query, searchStart);
+        if (matchIndex === -1) break;
+
+        matches.push({
+          start: matchIndex,
+          end: matchIndex + payload.searchQuery.length
+        });
+
+        searchStart = matchIndex + 1;
+      }
+
+      // Replace all matches from end to start to preserve positions
+      if (matches.length > 0) {
+        matches.sort((a, b) => b.start - a.start);
+
+        for (const match of matches) {
+          newText = newText.substring(0, match.start) + payload.replacement + newText.substring(match.end);
+          totalReplacements++;
+          hasChanges = true;
+        }
+
+        // Save the modified document
+        if (hasChanges) {
+          try {
+            await this.projectService.updateDocText(doc.id, newText);
+            docsModified++;
+
+            // If this is the currently selected doc, update the UI
+            if (this.selectedDoc && this.selectedDoc.id === doc.id) {
+              this.selectedDoc.text = newText;
+              this.docStateCache.set(doc.id, {
+                text: newText,
+                notes: this.selectedDoc.notes
+              });
+            }
+          } catch (error) {
+            console.error(`Failed to update document ${doc.id}:`, error);
+          }
+        }
+      }
+    }
+
+    // Close command palette
+    this.commandPaletteOpen = false;
+
+    // Show confirmation
+    if (totalReplacements > 0) {
+      alert(`Replaced ${totalReplacements} occurrence(s) across ${docsModified} chapter(s)`);
+      
+      // Reload project to ensure consistency
+      await this.loadProject(true);
+      
+      // Trigger auto-sync check (non-blocking)
+      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+    } else {
+      alert('No matches found');
+    }
+  }
+
   toggleProjectMenu() {
     this.projectMenuVisible = !this.projectMenuVisible;
     this.changeDetector.markForCheck();

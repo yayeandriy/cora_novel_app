@@ -46,6 +46,7 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
   @Output() navigateToDoc = new EventEmitter<number>();
   @Output() navigateToDocAtPosition = new EventEmitter<{ docId: number; position: number }>();
   @Output() replaceInCurrentDoc = new EventEmitter<{ position: number; length: number; replacement: string }>();
+  @Output() replaceInAllDocs = new EventEmitter<{ searchQuery: string; replacement: string; caseSensitive: boolean }>();
   @Output() focusEditorAtPosition = new EventEmitter<number>();
 
   mode: CommandMode = 'commands';
@@ -454,7 +455,7 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
     
     if (this.replaceInAllChapters) {
       // Replace in all chapters
-      this.replaceInAllDocs();
+      this.handleReplaceInAllDocs();
     } else {
       // Replace in current chapter only
       if (this.currentDocMatches.length === 0) return;
@@ -474,54 +475,14 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
     this.closePanel();
   }
   
-  private replaceInAllDocs() {
-    // First, search in all docs to find all matches
-    const query = this.caseSensitive ? this.searchQuery : this.searchQuery.toLowerCase();
-    let totalReplacements = 0;
-    
-    for (const doc of this.docs) {
-      if (!doc.text) continue;
-      
-      const text = doc.text;
-      const searchText = this.caseSensitive ? text : text.toLowerCase();
-      
-      // Find all matches in this doc
-      const matches: Array<{ position: number; length: number }> = [];
-      let searchStart = 0;
-      
-      while (true) {
-        const matchIndex = searchText.indexOf(query, searchStart);
-        if (matchIndex === -1) break;
-        
-        matches.push({
-          position: matchIndex,
-          length: this.searchQuery.length
-        });
-        
-        searchStart = matchIndex + 1;
-      }
-      
-      // If this is the current doc, emit replacements
-      if (matches.length > 0 && doc.id === this.currentDocId) {
-        // Replace from end to start to preserve positions
-        matches.sort((a, b) => b.position - a.position);
-        
-        for (const match of matches) {
-          this.replaceInCurrentDoc.emit({
-            position: match.position,
-            length: match.length,
-            replacement: this.replaceQuery
-          });
-          totalReplacements++;
-        }
-      } else if (matches.length > 0) {
-        // For other docs, we need to navigate to them and replace
-        // Since we can't modify other docs directly from here,
-        // we'll need to collect all replacements and handle them differently
-        // For now, just count them (we'll need parent component support for cross-doc replace)
-        totalReplacements += matches.length;
-      }
-    }
+  private handleReplaceInAllDocs() {
+    // Emit a batch replacement event that will be handled by the parent component
+    // The parent will replace in all documents, including ones not currently loaded
+    this.replaceInAllDocs.emit({
+      searchQuery: this.searchQuery,
+      replacement: this.replaceQuery,
+      caseSensitive: this.caseSensitive
+    });
   }
 
   toggleCaseSensitive() {
