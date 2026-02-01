@@ -1708,72 +1708,111 @@ app-right-sidebar {
 .export-section {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 4px 2px;
+  gap: 18px;
+  padding: 8px 4px;
 }
 
 .export-row {
   display: grid;
-  grid-template-columns: 110px 1fr;
-  align-items: center;
-  gap: 10px;
+  grid-template-columns: 100px 1fr;
+  align-items: start;
+  gap: 16px;
+}
+
+.export-row .export-label {
+  padding-top: 2px;
 }
 
 .export-label {
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   color: #9ca3af;
+}
+
+.export-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 4px 0;
 }
 
 .export-radio-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .export-radio {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 0.95rem;
+  gap: 12px;
+  font-size: 1rem;
   color: #111827;
+  cursor: pointer;
 }
 
 .export-radio input {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   accent-color: #6366f1;
+  margin: 0;
 }
 
 .export-select {
-  width: 100%;
+  width: auto;
+  min-width: 120px;
   border: none;
   background: #e5e7eb;
   border-radius: 999px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
+  padding: 10px 16px;
+  font-size: 0.9375rem;
   color: #111827;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23374151' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.export-range-row {
+  margin-top: -4px;
 }
 
 .export-range {
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
+  gap: 12px;
+  width: auto;
 }
 
 .export-range-input {
-  width: 100%;
+  width: 60px;
   border: none;
   background: #e5e7eb;
   border-radius: 999px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
+  padding: 10px 16px;
+  font-size: 0.9375rem;
   text-align: center;
+}
+
+.export-range-input::-webkit-inner-spin-button,
+.export-range-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.export-range-input {
+  -moz-appearance: textfield;
 }
 
 .export-range-sep {
   color: #9ca3af;
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.export-hidden {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .export-actions {

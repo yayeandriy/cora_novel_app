@@ -567,91 +567,72 @@
         <div class="export-tabs" role="tablist">
           <button class="export-tab" [class.active]="exportFormat === 'pdf'" (click)="exportFormat = 'pdf'" role="tab" aria-selected="exportFormat === 'pdf'">PDF</button>
           <button class="export-tab" [class.active]="exportFormat === 'word'" (click)="exportFormat = 'word'" role="tab" aria-selected="exportFormat === 'word'">Word</button>
-          <button class="export-tab" [class.active]="exportFormat === 'text'" (click)="exportFormat = 'text'; exportChapterMode = 'range'" role="tab" aria-selected="exportFormat === 'text'">Plain text</button>
+          <button class="export-tab" [class.active]="exportFormat === 'text'" (click)="exportFormat = 'text'" role="tab" aria-selected="exportFormat === 'text'">Plain text</button>
         </div>
 
         <div class="export-section">
-          @if (exportFormat !== 'text') {
-            <div class="export-row">
-              <div class="export-label">Font style:</div>
-              <div class="export-radio-group">
-                <label class="export-radio">
-                  <input type="radio" name="export-font" value="mono" [(ngModel)]="exportFontStyle" />
-                  <span>Mono</span>
-                </label>
-                <label class="export-radio">
-                  <input type="radio" name="export-font" value="serif" [(ngModel)]="exportFontStyle" />
-                  <span>Serif</span>
-                </label>
-                <label class="export-radio">
-                  <input type="radio" name="export-font" value="sans" [(ngModel)]="exportFontStyle" />
-                  <span>Sans</span>
-                </label>
-              </div>
+          <div class="export-row" [class.export-hidden]="exportFormat === 'text'">
+            <div class="export-label">Font style:</div>
+            <div class="export-radio-group">
+              <label class="export-radio">
+                <input type="radio" name="export-font" value="mono" [(ngModel)]="exportFontStyle" />
+                <span>Mono</span>
+              </label>
+              <label class="export-radio">
+                <input type="radio" name="export-font" value="serif" [(ngModel)]="exportFontStyle" />
+                <span>Serif</span>
+              </label>
+              <label class="export-radio">
+                <input type="radio" name="export-font" value="sans" [(ngModel)]="exportFontStyle" />
+                <span>Sans</span>
+              </label>
             </div>
+          </div>
 
-            <div class="export-row">
-              <div class="export-label">Font size:</div>
-              <select class="export-select" [(ngModel)]="exportFontSize">
-                <option value="small">Small</option>
-                <option value="medium">Medium</option>
-                <option value="large">Large</option>
-              </select>
+          <div class="export-row" [class.export-hidden]="exportFormat === 'text'">
+            <div class="export-label">Font size:</div>
+            <select class="export-select" [(ngModel)]="exportFontSize">
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </div>
+
+          <div class="export-row" [class.export-hidden]="exportFormat === 'text'">
+            <div class="export-label">Linespace:</div>
+            <select class="export-select" [(ngModel)]="exportLineSpace">
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </div>
+
+          <div class="export-divider" [class.export-hidden]="exportFormat === 'text'"></div>
+
+          <div class="export-row">
+            <div class="export-label">Chapters:</div>
+            <div class="export-radio-group">
+              <label class="export-radio">
+                <input type="radio" name="export-chapters" value="all" [(ngModel)]="exportChapterMode" />
+                <span>All</span>
+              </label>
+              <label class="export-radio">
+                <input type="radio" name="export-chapters" value="range" [(ngModel)]="exportChapterMode" />
+                <span>Range</span>
+              </label>
             </div>
+          </div>
 
-            <div class="export-row">
-              <div class="export-label">Linespace:</div>
-              <select class="export-select" [(ngModel)]="exportLineSpace">
-                <option value="small">Small</option>
-                <option value="medium">Medium</option>
-                <option value="large">Large</option>
-              </select>
-            </div>
-
-            <div class="export-row">
-              <div class="export-label">Chapters:</div>
-              <div class="export-radio-group">
-                <label class="export-radio">
-                  <input type="radio" name="export-chapters" value="all" [(ngModel)]="exportChapterMode" />
-                  <span>All</span>
-                </label>
-                <label class="export-radio">
-                  <input type="radio" name="export-chapters" value="range" [(ngModel)]="exportChapterMode" />
-                  <span>Range</span>
-                </label>
-              </div>
-            </div>
-
-            @if (exportChapterMode === 'range') {
-              <div class="export-row">
-                <div class="export-label"></div>
-                <select class="export-select" [(ngModel)]="exportRangePartId">
-                  @for (group of docGroups; track group.id) {
-                    <option [ngValue]="group.id">{{ group.name }}</option>
-                  }
-                </select>
-              </div>
-              <div class="export-row">
-                <div class="export-label"></div>
-                <div class="export-range">
-                  <input class="export-range-input" type="number" min="1" [(ngModel)]="exportRangeStart" />
-                  <span class="export-range-sep">—</span>
-                  <input class="export-range-input" type="number" min="1" [(ngModel)]="exportRangeEnd" />
-                </div>
-              </div>
-            }
-          }
-
-          @if (exportFormat === 'text') {
-            <div class="export-row">
-              <div class="export-label">Range:</div>
+          @if (exportChapterMode === 'range') {
+            <div class="export-row export-range-row">
+              <div class="export-label"></div>
               <select class="export-select" [(ngModel)]="exportRangePartId">
                 @for (group of docGroups; track group.id) {
                   <option [ngValue]="group.id">{{ group.name }}</option>
                 }
               </select>
             </div>
-            <div class="export-row">
+            <div class="export-row export-range-row">
               <div class="export-label"></div>
               <div class="export-range">
                 <input class="export-range-input" type="number" min="1" [(ngModel)]="exportRangeStart" />
