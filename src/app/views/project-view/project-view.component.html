@@ -705,57 +705,59 @@
     (editorWidthChange)="setEditorWidth($event)"
   ></app-footer>
 
-  <!-- Floating command button -->
-  @if (!leftCollapsed) {
-    <button class="floating-command-button" title="Project actions" (click)="toggleProjectMenu()">
-      <img src="assets/icons/command.svg" alt="Menu" />
-    </button>
-    
-    <!-- Project actions menu -->
-    @if (projectMenuVisible) {
-      <div class="project-menu" (click)="$event.stopPropagation()">
-        <button class="menu-item" (click)="openExportOptionsDialog(); projectMenuVisible = false">
-          <img class="menu-icon" src="assets/icons/square.and.arrow.up.svg" alt="" />
-          <span>Export</span>
-        </button>
-        @if (currentSync) {
-          <button class="menu-item" (click)="performSync(); projectMenuVisible = false">
-            <img class="menu-icon" src="assets/icons/arrow.trianglehead.2.clockwise.rotate.90.circle.fill.svg" alt="" />
-            <span>Sync Now</span>
-            @if (syncStatus === 'syncing') {
-              <span class="sync-spinner">⟳</span>
-            }
-          </button>
-          <button class="menu-item" (click)="revealSyncFileInFinder(); projectMenuVisible = false">
-            <img class="menu-icon" src="assets/icons/finder.svg" alt="" />
-            <span>Reveal in Finder</span>
-          </button>
-        }
-        <div class="menu-separator"></div>
-        <button class="menu-item" (click)="openCommandPalette('search-doc'); projectMenuVisible = false">
-          <img class="menu-icon" src="assets/icons/magnifyingglass.circle.svg" alt="" />
-          <span>Search in chapter</span>
-          <span class="menu-shortcut">⌘F</span>
-        </button>
-        <button class="menu-item" (click)="openCommandPalette('search-project'); projectMenuVisible = false">
-          <img class="menu-icon" src="assets/icons/rectangle.and.text.magnifyingglass.svg" alt="" />
-          <span>Search all chapters</span>
-          <span class="menu-shortcut">⌘⇧F</span>
-        </button>
-        <button class="menu-item" (click)="openCommandPalette('search-replace'); projectMenuVisible = false">
-          <img class="menu-icon" src="assets/icons/arrow.2.squarepath.svg" alt="" />
-          <span>Search & replace</span>
-          <span class="menu-shortcut">⌘H</span>
-        </button>
-      </div>
-    }
-  }
-
-  <!-- Floating sidebar controls -->
-  <div class="floating-sidebar-controls">
+  <!-- Floating command + tree toggle -->
+  <div class="floating-command-controls">
     <button class="sidebar-control-button" [class.active]="!leftCollapsed" title="Toggle tree (⌘1)" (click)="toggleLeftSidebar()">
       <img src="assets/icons/sidebar.left.svg" alt="Left sidebar" />
     </button>
+    @if (!leftCollapsed) {
+      <button class="floating-command-button" title="Project actions" (click)="toggleProjectMenu()">
+        <img src="assets/icons/command.svg" alt="Menu" />
+      </button>
+      
+      <!-- Project actions menu -->
+      @if (projectMenuVisible) {
+        <div class="project-menu" (click)="$event.stopPropagation()">
+          <button class="menu-item" (click)="openExportOptionsDialog(); projectMenuVisible = false">
+            <img class="menu-icon" src="assets/icons/square.and.arrow.up.svg" alt="" />
+            <span>Export</span>
+          </button>
+          @if (currentSync) {
+            <button class="menu-item" (click)="performSync(); projectMenuVisible = false">
+              <img class="menu-icon" src="assets/icons/arrow.trianglehead.2.clockwise.rotate.90.circle.fill.svg" alt="" />
+              <span>Sync Now</span>
+              @if (syncStatus === 'syncing') {
+                <span class="sync-spinner">⟳</span>
+              }
+            </button>
+            <button class="menu-item" (click)="revealSyncFileInFinder(); projectMenuVisible = false">
+              <img class="menu-icon" src="assets/icons/finder.svg" alt="" />
+              <span>Reveal in Finder</span>
+            </button>
+          }
+          <div class="menu-separator"></div>
+          <button class="menu-item" (click)="openCommandPalette('search-doc'); projectMenuVisible = false">
+            <img class="menu-icon" src="assets/icons/magnifyingglass.circle.svg" alt="" />
+            <span>Search in chapter</span>
+            <span class="menu-shortcut">⌘F</span>
+          </button>
+          <button class="menu-item" (click)="openCommandPalette('search-project'); projectMenuVisible = false">
+            <img class="menu-icon" src="assets/icons/rectangle.and.text.magnifyingglass.svg" alt="" />
+            <span>Search all chapters</span>
+            <span class="menu-shortcut">⌘⇧F</span>
+          </button>
+          <button class="menu-item" (click)="openCommandPalette('search-replace'); projectMenuVisible = false">
+            <img class="menu-icon" src="assets/icons/arrow.2.squarepath.svg" alt="" />
+            <span>Search & replace</span>
+            <span class="menu-shortcut">⌘H</span>
+          </button>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Floating sidebar controls -->
+  <div class="floating-sidebar-controls">
     <button class="sidebar-control-button" [class.active]="leftCollapsed && rightCollapsed" title="Full width (⌘2)" (click)="toggleBothSidebars()">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" />

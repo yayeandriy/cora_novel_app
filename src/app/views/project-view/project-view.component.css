@@ -51,11 +51,18 @@
   display: block;
 }
 
-/* Floating command button at bottom-left */
-.floating-command-button {
+/* Floating command + tree toggle at bottom-left */
+.floating-command-controls {
   position: fixed;
   bottom: 1rem;
   left: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 70;
+}
+
+.floating-command-button {
   width: 3rem;
   height: 3rem;
   display: flex;
@@ -67,7 +74,6 @@
   border: none;
   border-radius: 1.5rem;
   cursor: pointer;
-  z-index: 70;
   box-shadow: none;
   transition: all 200ms ease;
   padding: 0;
@@ -92,7 +98,7 @@
 .project-menu {
   position: fixed;
   bottom: 4.5rem;
-  left: 1rem;
+  left: 3.5rem;
   min-width: 12rem;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
