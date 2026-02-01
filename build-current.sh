@@ -5,6 +5,8 @@
 
 set -e
 
+./scripts/release-manager.sh --auto
+
 CURRENT_ARCH=$(uname -m)
 
 echo "🚀 Building Cora Novel App for current architecture..."

@@ -12,14 +12,14 @@ Sync:
 
 
 Fixes:
-  ☐ Find and Replace
-  ☐ Layout of tools
+  ✔ Find and Replace @done(26-02-01 14:41)
+  ✔ Layout of tools @done(26-02-01 14:41)
 
 Features:
-  ☐ Link to sync
   ☐ Build number
   ☐ Export to TXT/DOCx
   ☐ Import from DOC
+  ☐ Link to sync
 
 Dashboard:
   ☐ Add export to context menu (dashboard)

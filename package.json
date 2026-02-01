@@ -1,6 +1,6 @@
 {
   "name": "cora",
-  "version": "0.1.11",
+  "version": "0.2.1",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -15,6 +15,9 @@
     "build:current": "./build-current.sh",
     "build:release": "./build-release.sh",
     "build:appstore": "./build-appstore.sh",
+    "release:manage": "./scripts/release-manager.sh",
+    "release:auto": "./scripts/release-manager.sh --auto",
+    "hooks:install": "./scripts/setup-githooks.sh",
     "create:pkg": "./create-appstore-pkg.sh",
     "test:unit": "jest",
     "test:e2e": "playwright test",

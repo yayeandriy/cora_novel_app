@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -e
+
+ROOT_DIR="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [[ -z "$ROOT_DIR" ]]; then
+  exit 0
+fi
+
+if [[ -n "$SKIP_RELEASE_BUMP" ]]; then
+  exit 0
+fi
+
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+if [[ "$branch" == "dev" ]]; then
+  "$ROOT_DIR/scripts/release-manager.sh" --bump minor
+elif [[ "$branch" == "main" ]]; then
+  "$ROOT_DIR/scripts/release-manager.sh" --bump major
+fi

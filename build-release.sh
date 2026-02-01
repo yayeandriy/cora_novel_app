@@ -5,6 +5,8 @@
 
 set -e
 
+./scripts/release-manager.sh --auto
+
 echo "🚀 Building Cora Novel App production releases..."
 echo ""
 
