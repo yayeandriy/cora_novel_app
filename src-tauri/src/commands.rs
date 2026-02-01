@@ -1999,6 +1999,122 @@ pub async fn export_project_to_word(state: State<'_, AppState>, project_id: i64,
     Ok(())
 }
 
+#[tauri::command]
+pub async fn export_project_to_text(state: State<'_, AppState>, project_id: i64, dest_path: String, options: Option<ExportPdfOptions>) -> Result<(), String> {
+    let pool = &state.pool;
+    let conn = pool.get().map_err(|e| e.to_string())?;
+
+    // Get project
+    let project: Project = conn.query_row(
+        "SELECT id, name, desc, path, notes, timeline_start, timeline_end, grid_order, created_at, updated_at FROM projects WHERE id = ?",
+        [project_id],
+        |row| Ok(Project {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            desc: row.get(2)?,
+            path: row.get(3)?,
+            notes: row.get(4)?,
+            timeline_start: row.get(5)?,
+            timeline_end: row.get(6)?,
+            grid_order: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
+        })
+    ).map_err(|e| e.to_string())?;
+
+    let chapter_mode = options.as_ref().and_then(|o| o.chapter_mode.as_deref()).unwrap_or("all");
+    let range_part_id = options.as_ref().and_then(|o| o.range_part_id);
+    let range_start = options.as_ref().and_then(|o| o.range_start).unwrap_or(1).max(1);
+    let range_end = options.as_ref().and_then(|o| o.range_end).unwrap_or(range_start).max(range_start);
+
+    // Get all groups and docs
+    let mut groups_stmt = conn.prepare(
+        "SELECT id, name, parent_id FROM doc_groups WHERE project_id = ? ORDER BY sort_order"
+    ).map_err(|e| e.to_string())?;
+    let mut groups: Vec<(i64, String, Option<i64>)> = groups_stmt.query_map([project_id], |row| {
+        Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+    }).map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    let mut docs_stmt = conn.prepare(
+        "SELECT id, name, text, doc_group_id FROM docs WHERE project_id = ? ORDER BY sort_order"
+    ).map_err(|e| e.to_string())?;
+    let mut docs: Vec<(i64, String, String, Option<i64>)> = docs_stmt.query_map([project_id], |row| {
+        Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+    }).map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    if chapter_mode == "range" {
+        let target_group_id = range_part_id.or_else(|| groups.first().map(|g| g.0));
+        if let Some(group_id) = target_group_id {
+            groups = groups.into_iter().filter(|g| g.0 == group_id).collect();
+            let mut part_docs: Vec<(i64, String, String, Option<i64>)> = docs
+                .into_iter()
+                .filter(|d| d.3 == Some(group_id))
+                .collect();
+
+            let start_idx = (range_start - 1) as usize;
+            let end_idx = range_end as usize;
+            part_docs = part_docs
+                .into_iter()
+                .enumerate()
+                .filter(|(idx, _)| *idx >= start_idx && *idx < end_idx)
+                .map(|(_, d)| d)
+                .collect();
+
+            docs = part_docs;
+        }
+    }
+
+    let mut output = String::new();
+
+    let mut push_heading = |text: &str, buffer: &mut String| {
+        buffer.push_str(text);
+        buffer.push('\n');
+        buffer.push('\n');
+    };
+
+    let mut push_paragraph = |text: &str, buffer: &mut String| {
+        buffer.push_str(text);
+        buffer.push('\n');
+        buffer.push('\n');
+    };
+
+    push_heading(&project.name, &mut output);
+
+    for (group_id, group_name, _parent) in &groups {
+        push_heading(group_name, &mut output);
+
+        for (_doc_id, doc_name, content, doc_group_id) in &docs {
+            if doc_group_id.as_ref() == Some(group_id) {
+                push_heading(doc_name, &mut output);
+
+                for paragraph in content.split("\n\n") {
+                    let clean = paragraph.trim();
+                    if clean.is_empty() {
+                        continue;
+                    }
+                    let text = clean.replace('\n', " ");
+                    push_paragraph(text.as_str(), &mut output);
+                }
+
+                // Three empty lines after each chapter
+                output.push('\n');
+                output.push('\n');
+                output.push('\n');
+                output.push('\n');
+            }
+        }
+    }
+
+    let text_path = Path::new(&dest_path).join(format!("{}.txt", project.name));
+    std::fs::write(&text_path, output).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 // ==================== Sync Commands ====================
 
 #[tauri::command]

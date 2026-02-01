@@ -384,6 +384,10 @@ export class ProjectService {
     return invoke<void>("export_project_to_word", { projectId, destPath, options: options ?? null });
   }
 
+  async exportProjectToText(projectId: number, destPath: string, options?: ExportPdfOptions): Promise<void> {
+    return invoke<void>("export_project_to_text", { projectId, destPath, options: options ?? null });
+  }
+
   // Import .cora file content into an EXISTING project (for sync "use file")
   async syncImportToProject(projectId: number, filePath: string): Promise<void> {
     return invoke<void>("sync_import_to_project", { projectId, filePath });

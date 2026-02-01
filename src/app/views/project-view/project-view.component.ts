@@ -1015,8 +1015,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Placeholder until Word/Plain text exporters are implemented.
-    alert('This export format is not supported yet.');
+    if (this.exportFormat === 'text') {
+      await this.exportToText();
+      return;
+    }
   }
 
   async exportToFolder() {
@@ -1560,6 +1562,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   async exportToWord() {
     this.showExportOptionsDialog = false;
     await this.onExportProjectToWordRequested();
+  }
+
+  async exportToText() {
+    this.showExportOptionsDialog = false;
+    await this.onExportProjectToTextRequested();
   }
 
   // Import Files: ask for destination folder
@@ -2121,6 +2128,41 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     } catch (err) {
       console.error('Word export failed:', err);
       alert('Word export failed: ' + err);
+    }
+  }
+
+  async onExportProjectToTextRequested() {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select destination folder for Plain Text export'
+      });
+      if (!selected || Array.isArray(selected)) return;
+      const rangePartId = this.exportChapterMode === 'range' && this.exportRangePartId != null
+        ? Number(this.exportRangePartId)
+        : null;
+      const rangeStart = this.exportChapterMode === 'range'
+        ? Math.max(1, Number(this.exportRangeStart || 1))
+        : null;
+      const rangeEnd = this.exportChapterMode === 'range'
+        ? Math.max(rangeStart ?? 1, Number(this.exportRangeEnd || rangeStart || 1))
+        : null;
+
+      const options = {
+        fontStyle: this.exportFontStyle,
+        fontSize: this.exportFontSize,
+        lineSpace: this.exportLineSpace,
+        chapterMode: this.exportChapterMode,
+        rangePartId,
+        rangeStart,
+        rangeEnd
+      };
+      await this.projectService.exportProjectToText(this.projectId, selected as string, options);
+      alert('Plain text exported successfully');
+    } catch (err) {
+      console.error('Plain text export failed:', err);
+      alert('Plain text export failed: ' + err);
     }
   }
 
