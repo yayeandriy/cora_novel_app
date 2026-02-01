@@ -1924,10 +1924,17 @@ pub async fn export_project_to_word(state: State<'_, AppState>, project_id: i64,
         .fonts(RunFonts::new().ascii(font_family).hi_ansi(font_family))
         .line_spacing(chapter_line_spacing.clone());
 
+    let body_style = Style::new("Body", StyleType::Paragraph)
+        .name("Body")
+        .size(body_size_half_points as usize)
+        .fonts(RunFonts::new().ascii(font_family).hi_ansi(font_family))
+        .line_spacing(body_line_spacing.clone());
+
     let mut docx = Docx::new()
         .add_style(title_style)
         .add_style(heading1_style)
-        .add_style(heading2_style);
+        .add_style(heading2_style)
+        .add_style(body_style);
 
     docx = docx.add_paragraph(
         Paragraph::new()
@@ -1961,6 +1968,7 @@ pub async fn export_project_to_word(state: State<'_, AppState>, project_id: i64,
                     let text = clean.replace('\n', " ");
                     docx = docx.add_paragraph(
                         Paragraph::new()
+                            .style("Body")
                             .line_spacing(body_line_spacing.clone())
                             .add_run(make_run(text.as_str(), body_size_half_points, false))
                     );
