@@ -298,3 +298,15 @@ pub struct SyncStatus {
     pub is_file_newer: bool,
     pub is_db_newer: bool,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportPdfOptions {
+    pub font_style: Option<String>,
+    pub font_size: Option<String>,
+    pub line_space: Option<String>,
+    pub chapter_mode: Option<String>,
+    pub range_part_id: Option<i64>,
+    pub range_start: Option<i64>,
+    pub range_end: Option<i64>,
+}

@@ -282,3 +282,13 @@ export interface SyncStatus {
   is_file_newer: boolean;
   is_db_newer: boolean;
 }
+
+export interface ExportPdfOptions {
+  fontStyle?: 'mono' | 'serif' | 'sans';
+  fontSize?: 'small' | 'medium' | 'large';
+  lineSpace?: 'small' | 'medium' | 'large';
+  chapterMode?: 'all' | 'range';
+  rangePartId?: number | null;
+  rangeStart?: number | null;
+  rangeEnd?: number | null;
+}

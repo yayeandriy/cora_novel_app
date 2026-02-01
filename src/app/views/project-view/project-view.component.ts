@@ -2052,7 +2052,26 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         title: 'Select destination folder for PDF export'
       });
       if (!selected || Array.isArray(selected)) return;
-      await this.projectService.exportProjectToPdf(this.projectId, selected as string);
+      const rangePartId = this.exportChapterMode === 'range' && this.exportRangePartId != null
+        ? Number(this.exportRangePartId)
+        : null;
+      const rangeStart = this.exportChapterMode === 'range'
+        ? Math.max(1, Number(this.exportRangeStart || 1))
+        : null;
+      const rangeEnd = this.exportChapterMode === 'range'
+        ? Math.max(rangeStart ?? 1, Number(this.exportRangeEnd || rangeStart || 1))
+        : null;
+
+      const options = {
+        fontStyle: this.exportFontStyle,
+        fontSize: this.exportFontSize,
+        lineSpace: this.exportLineSpace,
+        chapterMode: this.exportChapterMode,
+        rangePartId,
+        rangeStart,
+        rangeEnd
+      };
+      await this.projectService.exportProjectToPdf(this.projectId, selected as string, options);
       alert('PDF exported successfully');
     } catch (err) {
       console.error('PDF export failed:', err);

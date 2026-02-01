@@ -7,6 +7,7 @@ use crate::models::{
     FolderDraft, FolderDraftCreate, FolderDraftUpdate,
     Timeline, TimelineCreate, TimelineUpdate,
     Archive, ArchiveCreate, ArchiveUpdate,
+    ExportPdfOptions,
     Sync, SyncCreate, SyncUpdate, SyncStatus
 };
 use std::io::Cursor;
@@ -1423,7 +1424,7 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
 }
 
 #[tauri::command]
-pub async fn export_project_to_pdf(state: State<'_, AppState>, project_id: i64, dest_path: String) -> Result<(), String> {
+pub async fn export_project_to_pdf(state: State<'_, AppState>, project_id: i64, dest_path: String, options: Option<ExportPdfOptions>) -> Result<(), String> {
     let pool = &state.pool;
     let conn = pool.get().map_err(|e| e.to_string())?;
     
@@ -1445,6 +1446,15 @@ pub async fn export_project_to_pdf(state: State<'_, AppState>, project_id: i64, 
         })
     ).map_err(|e| e.to_string())?;
     
+    // Resolve export options
+    let font_style = options.as_ref().and_then(|o| o.font_style.as_deref()).unwrap_or("serif");
+    let font_size = options.as_ref().and_then(|o| o.font_size.as_deref()).unwrap_or("small");
+    let line_space = options.as_ref().and_then(|o| o.line_space.as_deref()).unwrap_or("small");
+    let chapter_mode = options.as_ref().and_then(|o| o.chapter_mode.as_deref()).unwrap_or("all");
+    let range_part_id = options.as_ref().and_then(|o| o.range_part_id);
+    let range_start = options.as_ref().and_then(|o| o.range_start).unwrap_or(1).max(1);
+    let range_end = options.as_ref().and_then(|o| o.range_end).unwrap_or(range_start).max(range_start);
+
     // PDF Configuration
     let page_width = Mm(210.0);   // A4 width
     let page_height = Mm(297.0);  // A4 height
@@ -1460,37 +1470,87 @@ pub async fn export_project_to_pdf(state: State<'_, AppState>, project_id: i64, 
     let text_end_y = margin_bottom + footer_height;
     
     // Font sizes
-    let title_size = 24.0;
-    let part_size = 18.0;
-    let chapter_size = 14.0;
-    let body_size = 11.0;
-    let header_size = 9.0;
-    let footer_size = 9.0;
+    let body_size = match font_size {
+        "medium" => 12.5,
+        "large" => 14.0,
+        _ => 11.0,
+    };
+    let scale = body_size / 11.0;
+    let title_size = 24.0 * scale;
+    let part_size = 18.0 * scale;
+    let chapter_size = 14.0 * scale;
+    let header_size = 9.0 * scale;
+    let footer_size = 9.0 * scale;
     
     // Line heights (spacing between lines)
-    let body_line_height = Mm(5.0);
-    let paragraph_spacing = Mm(3.0);
-    
+    let body_line_height = match line_space {
+        "medium" => Mm(6.0),
+        "large" => Mm(7.0),
+        _ => Mm(5.0),
+    };
+    let paragraph_spacing = match line_space {
+        "medium" => Mm(4.0),
+        "large" => Mm(5.0),
+        _ => Mm(3.0),
+    };
+
     // Character width approximation for wrapping
-    // At 11pt Arial, average character width is approximately 2.0-2.2mm
-    let avg_char_width_mm = 2.0;
+    // At 11pt, average character width is approximately 2.0mm (mono is wider)
+    let base_char_width_mm = 2.0 * (body_size / 11.0);
+    let avg_char_width_mm = match font_style {
+        "mono" => base_char_width_mm * 1.18,
+        _ => base_char_width_mm,
+    };
     let max_chars = (text_area_width.0 / avg_char_width_mm) as usize;  // ~80 chars for 160mm
     
     // Create PDF document
     let (doc, page1, layer1) = PdfDocument::new(&project.name, page_width, page_height, "Layer 1");
     
-    // Load fonts that support Cyrillic characters
-    let font_paths = vec![
-        "/System/Library/Fonts/Supplemental/Arial.ttf",  // macOS
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  // Linux
-        "C:\\Windows\\Fonts\\arial.ttf",  // Windows
-    ];
-    
-    let bold_font_paths = vec![
-        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",  // macOS
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  // Linux
-        "C:\\Windows\\Fonts\\arialbd.ttf",  // Windows
-    ];
+    // Load fonts (style-aware) with Cyrillic support where possible
+    let (font_paths, bold_font_paths, fallback_font, fallback_font_bold) = match font_style {
+        "mono" => (
+            vec![
+                "/System/Library/Fonts/Supplemental/Courier New.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+                "C:\\Windows\\Fonts\\consola.ttf",
+            ],
+            vec![
+                "/System/Library/Fonts/Supplemental/Courier New Bold.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
+                "C:\\Windows\\Fonts\\consolab.ttf",
+            ],
+            BuiltinFont::Courier,
+            BuiltinFont::CourierBold,
+        ),
+        "sans" => (
+            vec![
+                "/System/Library/Fonts/Supplemental/Arial.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "C:\\Windows\\Fonts\\arial.ttf",
+            ],
+            vec![
+                "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "C:\\Windows\\Fonts\\arialbd.ttf",
+            ],
+            BuiltinFont::Helvetica,
+            BuiltinFont::HelveticaBold,
+        ),
+        _ => (
+            vec![
+                "/System/Library/Fonts/Supplemental/Times New Roman.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
+                "C:\\Windows\\Fonts\\times.ttf",
+            ],
+            vec![
+                "/System/Library/Fonts/Supplemental/Times New Roman Bold.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+                "C:\\Windows\\Fonts\\timesbd.ttf",
+            ],
+            BuiltinFont::TimesRoman,
+            BuiltinFont::TimesBold,
+        ),
+    };
     
     let mut font_data = None;
     for path in &font_paths {
@@ -1511,13 +1571,13 @@ pub async fn export_project_to_pdf(state: State<'_, AppState>, project_id: i64, 
     let font = if let Some(data) = font_data {
         doc.add_external_font(Cursor::new(data)).map_err(|e| e.to_string())?
     } else {
-        doc.add_builtin_font(BuiltinFont::TimesRoman).map_err(|e| e.to_string())?
+        doc.add_builtin_font(fallback_font).map_err(|e| e.to_string())?
     };
     
     let font_bold = if let Some(data) = bold_font_data {
         doc.add_external_font(Cursor::new(data)).map_err(|e| e.to_string())?
     } else {
-        doc.add_builtin_font(BuiltinFont::TimesBold).map_err(|e| e.to_string())?
+        doc.add_builtin_font(fallback_font_bold).map_err(|e| e.to_string())?
     };
     
     // Helper function to add a new page with header and footer
@@ -1589,7 +1649,7 @@ pub async fn export_project_to_pdf(state: State<'_, AppState>, project_id: i64, 
         "SELECT id, name, parent_id FROM doc_groups WHERE project_id = ? ORDER BY sort_order"
     ).map_err(|e| e.to_string())?;
     
-    let groups: Vec<(i64, String, Option<i64>)> = groups_stmt.query_map([project_id], |row| {
+    let mut groups: Vec<(i64, String, Option<i64>)> = groups_stmt.query_map([project_id], |row| {
         Ok((row.get(0)?, row.get(1)?, row.get(2)?))
     }).map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
@@ -1600,11 +1660,33 @@ pub async fn export_project_to_pdf(state: State<'_, AppState>, project_id: i64, 
         "SELECT id, name, text, doc_group_id FROM docs WHERE project_id = ? ORDER BY sort_order"
     ).map_err(|e| e.to_string())?;
     
-    let docs: Vec<(i64, String, String, Option<i64>)> = docs_stmt.query_map([project_id], |row| {
+    let mut docs: Vec<(i64, String, String, Option<i64>)> = docs_stmt.query_map([project_id], |row| {
         Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
     }).map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
+
+    if chapter_mode == "range" {
+        let target_group_id = range_part_id.or_else(|| groups.first().map(|g| g.0));
+        if let Some(group_id) = target_group_id {
+            groups = groups.into_iter().filter(|g| g.0 == group_id).collect();
+            let mut part_docs: Vec<(i64, String, String, Option<i64>)> = docs
+                .into_iter()
+                .filter(|d| d.3 == Some(group_id))
+                .collect();
+
+            let start_idx = (range_start - 1) as usize;
+            let end_idx = range_end as usize;
+            part_docs = part_docs
+                .into_iter()
+                .enumerate()
+                .filter(|(idx, _)| *idx >= start_idx && *idx < end_idx)
+                .map(|(_, d)| d)
+                .collect();
+
+            docs = part_docs;
+        }
+    }
     
     // Process groups and docs
     for (group_id, group_name, _parent) in &groups {

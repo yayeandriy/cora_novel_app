@@ -6,7 +6,8 @@ import type {
   Draft, DraftCreate,
   ProjectDraft, ProjectDraftCreate, ProjectDraftUpdate,
   FolderDraft, FolderDraftCreate, FolderDraftUpdate,
-  Archive, ArchiveCreate, ArchiveUpdate
+  Archive, ArchiveCreate, ArchiveUpdate,
+  ExportPdfOptions
 } from "../shared/models";
 
 @Injectable({ providedIn: "root" })
@@ -375,8 +376,8 @@ export class ProjectService {
     return invoke<void>("export_project", { projectId, destPath });
   }
 
-  async exportProjectToPdf(projectId: number, destPath: string): Promise<void> {
-    return invoke<void>("export_project_to_pdf", { projectId, destPath });
+  async exportProjectToPdf(projectId: number, destPath: string, options?: ExportPdfOptions): Promise<void> {
+    return invoke<void>("export_project_to_pdf", { projectId, destPath, options: options ?? null });
   }
 
   // Import .cora file content into an EXISTING project (for sync "use file")

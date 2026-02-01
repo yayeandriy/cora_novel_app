@@ -626,7 +626,7 @@
               <div class="export-label"></div>
               <select class="export-select" [(ngModel)]="exportRangePartId">
                 @for (group of docGroups; track group.id) {
-                  <option [value]="group.id">{{ group.name }}</option>
+                  <option [ngValue]="group.id">{{ group.name }}</option>
                 }
               </select>
             </div>
