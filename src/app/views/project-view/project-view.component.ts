@@ -1010,6 +1010,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.exportFormat === 'word') {
+      await this.exportToWord();
+      return;
+    }
+
     // Placeholder until Word/Plain text exporters are implemented.
     alert('This export format is not supported yet.');
   }
@@ -1552,6 +1557,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     await this.onExportProjectToPdfRequested();
   }
 
+  async exportToWord() {
+    this.showExportOptionsDialog = false;
+    await this.onExportProjectToWordRequested();
+  }
+
   // Import Files: ask for destination folder
   async onImportFilesRequested() {
     try {
@@ -2076,6 +2086,41 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     } catch (err) {
       console.error('PDF export failed:', err);
       alert('PDF export failed: ' + err);
+    }
+  }
+
+  async onExportProjectToWordRequested() {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'Select destination folder for Word export'
+      });
+      if (!selected || Array.isArray(selected)) return;
+      const rangePartId = this.exportChapterMode === 'range' && this.exportRangePartId != null
+        ? Number(this.exportRangePartId)
+        : null;
+      const rangeStart = this.exportChapterMode === 'range'
+        ? Math.max(1, Number(this.exportRangeStart || 1))
+        : null;
+      const rangeEnd = this.exportChapterMode === 'range'
+        ? Math.max(rangeStart ?? 1, Number(this.exportRangeEnd || rangeStart || 1))
+        : null;
+
+      const options = {
+        fontStyle: this.exportFontStyle,
+        fontSize: this.exportFontSize,
+        lineSpace: this.exportLineSpace,
+        chapterMode: this.exportChapterMode,
+        rangePartId,
+        rangeStart,
+        rangeEnd
+      };
+      await this.projectService.exportProjectToWord(this.projectId, selected as string, options);
+      alert('Word document exported successfully');
+    } catch (err) {
+      console.error('Word export failed:', err);
+      alert('Word export failed: ' + err);
     }
   }
 

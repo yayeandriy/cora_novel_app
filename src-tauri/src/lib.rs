@@ -137,6 +137,7 @@ pub fn run() {
             commands::import_project,
             commands::export_project,
             commands::export_project_to_pdf,
+            commands::export_project_to_word,
             // Sync commands
             commands::sync_create,
             commands::sync_get,

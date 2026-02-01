@@ -36,4 +36,5 @@ thiserror = "1.0"
 dirs = "4"
 printpdf = "0.7"
 zip = "0.6"
+docx-rs = "0.4.3"
 

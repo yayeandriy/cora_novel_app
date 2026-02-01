@@ -12,6 +12,7 @@ use crate::models::{
 };
 use std::io::Cursor;
 use crate::services::projects as project_service;
+use docx_rs::*;
 use tauri::State;
 use std::path::Path;
 use std::fs;
@@ -1780,6 +1781,162 @@ pub async fn export_project_to_pdf(state: State<'_, AppState>, project_id: i64, 
     doc.save(&mut std::io::BufWriter::new(std::fs::File::create(&pdf_path).map_err(|e| e.to_string())?))
         .map_err(|e| e.to_string())?;
     
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn export_project_to_word(state: State<'_, AppState>, project_id: i64, dest_path: String, options: Option<ExportPdfOptions>) -> Result<(), String> {
+    let pool = &state.pool;
+    let conn = pool.get().map_err(|e| e.to_string())?;
+
+    // Get project
+    let project: Project = conn.query_row(
+        "SELECT id, name, desc, path, notes, timeline_start, timeline_end, grid_order, created_at, updated_at FROM projects WHERE id = ?",
+        [project_id],
+        |row| Ok(Project {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            desc: row.get(2)?,
+            path: row.get(3)?,
+            notes: row.get(4)?,
+            timeline_start: row.get(5)?,
+            timeline_end: row.get(6)?,
+            grid_order: row.get(7)?,
+            created_at: row.get(8)?,
+            updated_at: row.get(9)?,
+        })
+    ).map_err(|e| e.to_string())?;
+
+    // Resolve export options
+    let font_style = options.as_ref().and_then(|o| o.font_style.as_deref()).unwrap_or("serif");
+    let font_size = options.as_ref().and_then(|o| o.font_size.as_deref()).unwrap_or("small");
+    let line_space = options.as_ref().and_then(|o| o.line_space.as_deref()).unwrap_or("small");
+    let chapter_mode = options.as_ref().and_then(|o| o.chapter_mode.as_deref()).unwrap_or("all");
+    let range_part_id = options.as_ref().and_then(|o| o.range_part_id);
+    let range_start = options.as_ref().and_then(|o| o.range_start).unwrap_or(1).max(1);
+    let range_end = options.as_ref().and_then(|o| o.range_end).unwrap_or(range_start).max(range_start);
+
+    let font_family = match font_style {
+        "mono" => "Courier New",
+        "sans" => "Arial",
+        _ => "Times New Roman",
+    };
+
+    let body_size_pt: f64 = match font_size {
+        "medium" => 12.5_f64,
+        "large" => 14.0_f64,
+        _ => 11.0_f64,
+    };
+    let body_size_half_points = (body_size_pt * 2.0_f64).round() as u32;
+    let title_size_half_points = (24.0_f64 * (body_size_pt / 11.0_f64) * 2.0_f64).round() as u32;
+    let part_size_half_points = (18.0_f64 * (body_size_pt / 11.0_f64) * 2.0_f64).round() as u32;
+    let chapter_size_half_points = (14.0_f64 * (body_size_pt / 11.0_f64) * 2.0_f64).round() as u32;
+
+    let line_multiplier = match line_space {
+        "medium" => 1.5,
+        "large" => 1.8,
+        _ => 1.2,
+    };
+    let line_twips = ((body_size_pt * 20.0) * line_multiplier).round() as u32;
+
+    let line_spacing = LineSpacing::new()
+        .line(line_twips as i32)
+        .line_rule(LineSpacingType::Auto);
+
+    let make_run = |text: &str, size_half_points: u32, bold: bool| {
+        let mut run = Run::new()
+            .add_text(text)
+            .size(size_half_points as usize)
+            .fonts(RunFonts::new().ascii(font_family).hi_ansi(font_family));
+        if bold {
+            run = run.bold();
+        }
+        run
+    };
+
+    // Get all groups and docs
+    let mut groups_stmt = conn.prepare(
+        "SELECT id, name, parent_id FROM doc_groups WHERE project_id = ? ORDER BY sort_order"
+    ).map_err(|e| e.to_string())?;
+    let mut groups: Vec<(i64, String, Option<i64>)> = groups_stmt.query_map([project_id], |row| {
+        Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+    }).map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    let mut docs_stmt = conn.prepare(
+        "SELECT id, name, text, doc_group_id FROM docs WHERE project_id = ? ORDER BY sort_order"
+    ).map_err(|e| e.to_string())?;
+    let mut docs: Vec<(i64, String, String, Option<i64>)> = docs_stmt.query_map([project_id], |row| {
+        Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+    }).map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    if chapter_mode == "range" {
+        let target_group_id = range_part_id.or_else(|| groups.first().map(|g| g.0));
+        if let Some(group_id) = target_group_id {
+            groups = groups.into_iter().filter(|g| g.0 == group_id).collect();
+            let mut part_docs: Vec<(i64, String, String, Option<i64>)> = docs
+                .into_iter()
+                .filter(|d| d.3 == Some(group_id))
+                .collect();
+
+            let start_idx = (range_start - 1) as usize;
+            let end_idx = range_end as usize;
+            part_docs = part_docs
+                .into_iter()
+                .enumerate()
+                .filter(|(idx, _)| *idx >= start_idx && *idx < end_idx)
+                .map(|(_, d)| d)
+                .collect();
+
+            docs = part_docs;
+        }
+    }
+
+    let mut docx = Docx::new();
+    docx = docx.add_paragraph(
+        Paragraph::new()
+            .line_spacing(line_spacing.clone())
+            .add_run(make_run(&project.name, title_size_half_points, true))
+    );
+
+    for (group_id, group_name, _parent) in &groups {
+        docx = docx.add_paragraph(
+            Paragraph::new()
+                .line_spacing(line_spacing.clone())
+                .add_run(make_run(group_name, part_size_half_points, true))
+        );
+
+        for (_doc_id, doc_name, content, doc_group_id) in &docs {
+            if doc_group_id.as_ref() == Some(group_id) {
+                docx = docx.add_paragraph(
+                    Paragraph::new()
+                        .line_spacing(line_spacing.clone())
+                        .add_run(make_run(doc_name, chapter_size_half_points, true))
+                );
+
+                for paragraph in content.split("\n\n") {
+                    let clean = paragraph.trim();
+                    if clean.is_empty() {
+                        continue;
+                    }
+                    let text = clean.replace('\n', " ");
+                    docx = docx.add_paragraph(
+                        Paragraph::new()
+                            .line_spacing(line_spacing.clone())
+                            .add_run(make_run(text.as_str(), body_size_half_points, false))
+                    );
+                }
+            }
+        }
+    }
+
+    let docx_path = Path::new(&dest_path).join(format!("{}.docx", project.name));
+    let file = std::fs::File::create(&docx_path).map_err(|e| e.to_string())?;
+    docx.build().pack(file).map_err(|e| e.to_string())?;
+
     Ok(())
 }
 
