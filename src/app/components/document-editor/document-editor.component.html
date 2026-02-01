@@ -47,6 +47,14 @@
           }
           <span class="tool-label">Drafts</span>
         </button>
+        
+        <!-- Metadata Sidebar button -->
+        <button class="toolbar-button toggle-labeled" (click)="rightSidebarToggle.emit()" [class.active]="!rightSidebarCollapsed" aria-label="Metadata" title="Metadata - Characters, Events, Places (⌘3)">
+          <svg class="icon-metadata" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 5h18v2H3V5zm0 4h18v2H3V9zm0 4h18v2H3v-2zm0 4h18v2H3v-2z"/>
+          </svg>
+          <span class="tool-label">Metadata</span>
+        </button>
       </div>
     </div>
   </div>

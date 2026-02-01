@@ -51,8 +51,11 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   @Input() folderNotesExpanded: boolean = false;
   // Doc cards (project overview) integration
   @Input() docCardsExpanded: boolean = false;
+  // Right sidebar state
+  @Input() rightSidebarCollapsed: boolean = false;
   
   @Output() draftAdd = new EventEmitter<void>();
+  @Output() rightSidebarToggle = new EventEmitter<void>();
   @Output() draftSelect = new EventEmitter<number | null>();
   @Output() draftRenamed = new EventEmitter<{ id: number; name: string }>();
   @Output() draftChanged = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();

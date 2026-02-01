@@ -35,6 +35,13 @@
         }
         <span class="tool-label">Drafts</span>
       </button>
+
+      <!-- Metadata Sidebar button -->
+      <button class="toolbar-button toggle-labeled" (click)="toggleRightSidebar()" [class.active]="!rightCollapsed" aria-label="Metadata Sidebar" title="Metadata Sidebar - Characters, Events, Places (⌘3)">
+        <svg class="icon-metadata" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 5h18v2H3V5zm0 4h18v2H3V9zm0 4h18v2H3v-2zm0 4h18v2H3v-2z"/>
+        </svg>
+      </button>
     </div>
   }
 
@@ -407,6 +414,7 @@
         [folderDraftsCount]="folderDraftsCount"
         [folderNotesExpanded]="folderHeaderExpanded"
         [docCardsExpanded]="projectHeaderExpanded"
+        [rightSidebarCollapsed]="rightCollapsed"
         (docNameChange)="renameDoc($event)"
         (docTextChange)="onDocumentTextChange()"
         (docSaved)="saveDoc()"
@@ -420,7 +428,8 @@
         (draftDeleted)="deleteDraft($event)"
         (selectionStatsChange)="onEditorSelectionStatsChange($event)"
         (folderNotesToggle)="onFolderHeaderClick()"
-        (docCardsToggle)="toggleDocCardsView()">
+        (docCardsToggle)="toggleDocCardsView()"
+        (rightSidebarToggle)="toggleRightSidebar()">
       </app-document-editor>
       }
 
@@ -751,9 +760,6 @@
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" />
       </svg>
-    </button>
-    <button class="sidebar-control-button" [class.active]="!rightCollapsed" title="Toggle sidebar (⌘3)" (click)="toggleRightSidebar()">
-      <img src="assets/icons/sidebar.right.svg" alt="Right sidebar" />
     </button>
   </div>
 
