@@ -158,7 +158,7 @@ prompt_for_next_version
 # Automatically rebuild after updating versions
 echo -e "${BLUE}🔨 Rebuilding app bundle with new version...${NC}"
 echo ""
-if ! (cd "$ROOT_DIR" && ./build-appstore.sh); then
+if ! (cd "$ROOT_DIR" && CORA_SKIP_RELEASE_BUMP=1 ./build-appstore.sh); then
     echo ""
     echo -e "${RED}❌ Build failed${NC}"
     exit 1

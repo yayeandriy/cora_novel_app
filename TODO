@@ -17,8 +17,11 @@ Fixes:
 
 Features:
   ✔ Build number @done(26-02-01 14:57)
-  ☐ Export to PDF/TXT/DOCx
+  ✔ Export to PDF/TXT/DOCx @done(26-02-01 20:23)
   ☐ Refactor Commands.rs
+  
+  
+  
   ☐ Import from DOC
   ☐ Link to sync
 

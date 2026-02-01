@@ -5,7 +5,10 @@
 
 set -e
 
-./scripts/release-manager.sh --auto
+# Allow callers (like create-appstore-pkg.sh) to manage versioning themselves.
+if [ -z "$CORA_SKIP_RELEASE_BUMP" ]; then
+    ./scripts/release-manager.sh --auto
+fi
 
 # Colors for output
 GREEN='\033[0;32m'
