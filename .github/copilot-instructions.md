@@ -36,6 +36,24 @@
 - Commands delegate to modules in [src-tauri/src/services/](../src-tauri/src/services/) (SQL via `rusqlite` + pooled connections).
 - Schema changes live in [src-tauri/migrations/](../src-tauri/migrations/) and are applied (sometimes conditionally) in [src-tauri/src/db.rs](../src-tauri/src/db.rs).
 
+## State management patterns
+- **LocalStorage for UI state**: Selection, tree expansion, draft selection, panel visibility, layout widths.
+  - Keys pattern: `cora-*` (global), `project_{id}_*` (per-project).
+  - Example: `project_${projectId}_selection`, `cora-layout`, `cora-draft-${draftId}`.
+- **Auto-save pattern**: 2-second debounce for doc text/notes; 500ms for drafts.
+  - Cache writes to localStorage immediately; backend saves after debounce.
+- **Change detection for sync**: Every backend mutation calls `mark_project_changed()` to track DB changes for auto-sync.
+
+## Sync architecture (file ↔ DB)
+- `.cora` files are ZIP archives containing `metadata.json` + exported project structure.
+- [src-tauri/src/services/sync.rs](../src-tauri/src/services/sync.rs): handles bidirectional sync with:
+  - **Throttling** (5s default) to prevent excessive syncs.
+  - **Conflict resolution** via timestamp comparison (auto-resolves to newer version).
+  - **Retry logic** with exponential backoff for transient errors.
+  - **Permission handling** (macOS sandbox): prompts user to re-grant file access after app restart.
+- [src/app/services/sync.service.ts](../src/app/services/sync.service.ts): frontend wrapper with `performSync()` high-level API.
+- Auto-sync triggers: enabled by default, checks after every backend mutation via `checkAutoSync()`.
+
 ## Dev workflows (macOS)
 - Install: `pnpm install`
 - Run desktop app: `pnpm tauri:dev` (preferred)
@@ -46,3 +64,4 @@
 
 ## When adding backend features
 - If you change API shape: update Rust command + service + TS service wrapper + shared models; add a migration if the DB schema changes.
+- Add `mark_project_changed(pool, project_id)` call after mutations to enable auto-sync tracking.
