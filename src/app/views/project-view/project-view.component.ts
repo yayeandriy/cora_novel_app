@@ -2928,6 +2928,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       cached.text = nextText;
       this.docStateCache.set(this.selectedDoc.id, cached);
 
+      // Keep doc tree in sync so total stats update immediately
+      this.updateDocInTree({ ...this.selectedDoc });
+      this.changeDetector.markForCheck();
+
       // Auto-toggle the working doc marker once the user has typed 2+ meaningful characters.
       // This reuses the existing persistence logic (localStorage key: project_${projectId}_working_doc).
       if (this.currentWorkingDocId !== this.selectedDoc.id) {
