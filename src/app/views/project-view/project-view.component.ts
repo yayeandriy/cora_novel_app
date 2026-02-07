@@ -1896,6 +1896,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     } else {
       this.currentGroup = null;
     }
+
+    // Ensure storyline selection is seeded for doc view
+    if (this.currentGroup) {
+      this.projectHeaderSelectedGroupId = this.currentGroup.id;
+      await this.loadProjectHeaderFolderDocsMetadata(this.currentGroup);
+    } else {
+      this.projectHeaderSelectedGroupId = null;
+    }
     
   // Load drafts for this document
     this.selectedDraftId = null; // reset draft selection when switching docs
@@ -1997,7 +2005,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.loadDocGroupPlaces(group.id)
     ]);
 
-    // Load metadata for all docs in this group (for group-view doc cards)
+    // Load metadata for all docs in this group (for group-view + storyline doc cards)
+    this.projectHeaderSelectedGroupId = group.id;
     await this.loadProjectHeaderFolderDocsMetadata(group);
 
     // Always load folder drafts for group-view (Notes tab)
