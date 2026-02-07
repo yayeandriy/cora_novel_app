@@ -356,6 +356,7 @@
   /* Do not stretch to full width so slider-set width takes effect */
   flex: 1;
   padding: 2rem;
+  padding-bottom: 6rem;
   border: none;
   outline: none;
   font-family: var(--editor-font-family, "iA Writer DuoSpace", "Courier New", Courier, monospace);

@@ -1,12 +1,13 @@
 :host {
   position: fixed;
   bottom: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 1rem;
+  left: auto;
+  transform: none;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 1rem;
   font-size: 0.75rem;
   z-index: 60;
