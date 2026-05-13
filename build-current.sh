@@ -43,7 +43,7 @@ inject_profile_and_resign_bundle() {
 if [ "$CURRENT_ARCH" = "arm64" ]; then
     echo "📦 Detected Apple Silicon (arm64)"
     echo "Building for aarch64-apple-darwin..."
-    pnpm tauri build --target aarch64-apple-darwin
+    pnpm tauri build --target aarch64-apple-darwin --bundles app
     inject_profile_and_resign_bundle "src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Cora.app"
     echo ""
     echo "✅ Build complete!"
@@ -51,7 +51,7 @@ if [ "$CURRENT_ARCH" = "arm64" ]; then
 elif [ "$CURRENT_ARCH" = "x86_64" ]; then
     echo "📦 Detected Intel (x86_64)"
     echo "Building for x86_64-apple-darwin..."
-    pnpm tauri build --target x86_64-apple-darwin
+    pnpm tauri build --target x86_64-apple-darwin --bundles app
     sign_app "src-tauri/target/x86_64-apple-darwin/release/bundle/macos/Cora.app"
     echo ""
     echo "✅ Build complete!"

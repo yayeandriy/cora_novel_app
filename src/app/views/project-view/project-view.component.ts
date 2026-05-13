@@ -6,7 +6,7 @@ import { ProjectService } from '../../services/project.service';
 import { TimelineService } from '../../services/timeline.service';
 import { SyncService } from '../../services/sync.service';
 import { ICloudService } from '../../services/icloud.service';
-import { confirm, open, save, ask, message } from '@tauri-apps/plugin-dialog';
+import { confirm, open, ask, message } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile, readFile, writeFile } from '@tauri-apps/plugin-fs';
 import { tempDir, join } from '@tauri-apps/api/path';
 import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
@@ -252,11 +252,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   
   // Sync state
   currentSync: Sync | null = null;
-  showSyncDialog = false;
   showICloudSuccessDialog = false;
   iCloudSuccessFileName = '';
   iCloudSuccessFilePath = '';
-  pendingSyncFilePath: string | null = null;
   syncStatus: 'idle' | 'syncing' | 'synced' | 'error' | 'conflict' = 'idle';
   // Header notes expansion state
   projectHeaderExpanded = false;
@@ -1026,58 +1024,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  async exportToFolder() {
-    this.showExportOptionsDialog = false;
-    try {
-      const selected = await save({
-        title: 'Save project as...',
-        filters: [{ name: 'Cora Project', extensions: ['cora'] }],
-        defaultPath: `${this.projectName}.cora`
-      });
-      if (!selected) return;
-      
-      // Export the project
-      await this.projectService.exportProject(this.projectId, selected as string);
-      
-      // Normalize file path (ensure .cora extension)
-      const filePath = selected.endsWith('.cora') ? selected : `${selected}.cora`;
-      
-      // Check if project already has a sync configuration
-      const existingSync = await this.syncService.getSyncByProject(this.projectId);
-      
-      if (existingSync) {
-        // Project already has sync - ask what to do
-        if (existingSync.file_path === filePath) {
-          // Same file - just update sync and perform sync
-          await this.performSync();
-          alert('Project saved and synced successfully');
-        } else {
-          // Different file - show dialog
-          this.pendingSyncFilePath = filePath;
-          this.showSyncDialog = true;
-        }
-      } else {
-        // No sync exists - ask if user wants to enable sync
-        const enableSync = await ask('Would you like to keep this file synced with your project? Changes will be automatically saved to this file.', {
-          title: 'Enable Sync?',
-          kind: 'info',
-          okLabel: 'Enable Sync',
-          cancelLabel: 'No, just export'
-        });
-        
-        if (enableSync) {
-          await this.initializeSync(filePath);
-          alert('Project saved and sync enabled');
-        } else {
-          alert('Project saved successfully');
-        }
-      }
-    } catch (err) {
-      console.error('Export failed:', err);
-      alert('Export failed: ' + err);
-    }
-  }
-
   // ==================== Sync Methods ====================
 
   async initializeSync(filePath: string): Promise<void> {
@@ -1124,26 +1070,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // If a sync already exists, ask what to do.
-      if (this.currentSync) {
-        if (this.isICloudSync) {
-          await message('This project is already syncing with iCloud Drive.', {
-            title: 'Already Syncing with iCloud'
-          });
-          return;
-        }
-        const switchToICloud = await ask(
-          'This project is currently synced with a local file. ' +
-          'Switch to iCloud Drive sync instead?',
-          {
-            title: 'Switch to iCloud Drive',
-            okLabel: 'Switch to iCloud Drive',
-            cancelLabel: 'Keep local sync'
-          }
-        );
-        if (!switchToICloud) return;
-        await this.syncService.deleteSyncByProject(this.projectId);
-        this.currentSync = null;
+      // Already syncing with iCloud — nothing to do.
+      if (this.currentSync && this.isICloudSync) {
+        return;
       }
 
       const icloudPath = await this.iCloudService.getProjectPath(
@@ -1173,10 +1102,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   async revealICloudFileInFinder(): Promise<void> {
-    if (!this.iCloudSuccessFilePath) return;
+    const path = this.iCloudSuccessFilePath || this.currentSync?.file_path;
+    if (!path) return;
     try {
       const { Command } = await import('@tauri-apps/plugin-shell');
-      await Command.create('open', ['-R', this.iCloudSuccessFilePath]).execute();
+      await Command.create('open', ['-R', path]).execute();
     } catch (error) {
       console.error('Failed to reveal iCloud file in Finder:', error);
     }
@@ -1591,74 +1521,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Sync dialog handlers
-  cancelSyncDialog(): void {
-    this.showSyncDialog = false;
-    this.pendingSyncFilePath = null;
-  }
-
-  async keepOldSync(): Promise<void> {
-    this.showSyncDialog = false;
-    this.pendingSyncFilePath = null;
-    // Just perform sync with existing file
-    await this.performSync();
-    alert('Project exported. Existing sync maintained.');
-  }
-
-  async useNewSync(): Promise<void> {
-    if (!this.pendingSyncFilePath) return;
-    
-    this.showSyncDialog = false;
-    const newFilePath = this.pendingSyncFilePath;
-    this.pendingSyncFilePath = null;
-    
-    try {
-      // Delete old sync and create new one
-      await this.syncService.deleteSyncByProject(this.projectId);
-      await this.initializeSync(newFilePath);
-      alert('Project saved and now syncing with new file');
-    } catch (err) {
-      console.error('Failed to switch sync file:', err);
-      alert('Failed to switch sync file: ' + err);
-    }
-  }
-
-  async disableSync(): Promise<void> {
-    this.showSyncDialog = false;
-    this.pendingSyncFilePath = null;
-    
-    try {
-      await this.syncService.deleteSyncByProject(this.projectId);
-      this.currentSync = null;
-      this.syncStatus = 'idle';
-      alert('Project exported. Sync disabled.');
-    } catch (err) {
-      console.error('Failed to disable sync:', err);
-    }
-  }
-
-  getSyncFileName(): string {
-    if (!this.currentSync?.file_path) return '';
-    const path = this.currentSync.file_path;
-    return path.split('/').pop() || path.split('\\').pop() || path;
-  }
-
-  async revealSyncFileInFinder(): Promise<void> {
-    if (!this.currentSync?.file_path) return;
-    
-    try {
-      const { Command } = await import('@tauri-apps/plugin-shell');
-      await Command.create('open', ['-R', this.currentSync.file_path]).execute();
-    } catch (error) {
-      console.error('Failed to reveal file in Finder:', error);
-      await confirm(`Failed to reveal file in Finder: ${error}`, {
-        title: 'Error',
-        kind: 'error',
-        okLabel: 'OK'
-      });
-    }
-  }
-
   async exportToPdf() {
     this.showExportOptionsDialog = false;
     await this.onExportProjectToPdfRequested();
@@ -1780,11 +1642,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Load characters, events, and places
   await Promise.all([this.loadCharacters(), this.loadEvents(), this.loadPlaces()]);
 
-      // Load sync status and perform sync on project open if configured
+      // Load sync status; auto-enable iCloud if not yet configured
       await this.loadSyncStatus();
-      
-      // Sync on project open (non-blocking)
-      if (this.currentSync && this.currentSync.auto_sync_enabled) {
+      if (!this.currentSync) {
+        // First open — enable iCloud sync silently (shows success dialog)
+        this.enableICloudSync().catch(err => console.warn('Auto iCloud sync setup failed:', err));
+      } else if (this.currentSync.auto_sync_enabled) {
+        // Sync on project open (non-blocking)
         this.performSync().catch(err => console.warn('Sync on project open failed:', err));
       }
 

@@ -1,6 +1,6 @@
 [package]
 name = "cora"
-version = "0.6.21"
+version = "0.6.25"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"

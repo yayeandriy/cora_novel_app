@@ -712,51 +712,7 @@
     </div>
   }
 
-  <!-- Sync Confirmation Dialog -->
-  @if (showSyncDialog) {
-    <div class="modal-overlay" (click)="cancelSyncDialog()">
-      <div class="modal sync-dialog" (click)="$event.stopPropagation()">
-        <div class="modal-header">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block mr-2 text-blue-500">
-            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-          </svg>
-          Sync Configuration
-        </div>
-        <div class="modal-body">
-          <p class="text-sm text-gray-700 mb-3">
-            This project is already synced with:
-          </p>
-          <div class="sync-file-badge">
-            @if (isICloudSync) {
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
-              </svg>
-            } @else {
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                <polyline points="14 2 14 8 20 8"/>
-              </svg>
-            }
-            <span class="sync-file-name">{{ isICloudSync ? 'iCloud Drive' : getSyncFileName() }}</span>
-          </div>
-          <p class="text-sm text-gray-600 mt-3">
-            You exported to a different file. What would you like to do?
-          </p>
-        </div>
-        <div class="modal-footer sync-dialog-footer">
-          <button class="btn-secondary" (click)="keepOldSync()">
-            Keep existing sync
-          </button>
-          <button class="btn-primary" (click)="useNewSync()">
-            Sync with new file
-          </button>
-          <button class="btn-danger-outline" (click)="disableSync()">
-            Disable sync
-          </button>
-        </div>
-      </div>
-    </div>
-  }
+
 
   <!-- iCloud Drive Sync Enabled Dialog -->
   @if (showICloudSuccessDialog) {
@@ -856,45 +812,20 @@
       <!-- Project actions menu -->
       @if (projectMenuVisible) {
         <div class="project-menu" (click)="$event.stopPropagation()">
-          <button class="menu-item" (click)="exportToFolder(); projectMenuVisible = false">
-            <img class="menu-icon" src="assets/icons/folder.circle.fill.svg" alt="" />
-            <span>Save as .cora</span>
-          </button>
           <button class="menu-item" (click)="openExportOptionsDialog(); projectMenuVisible = false">
             <img class="menu-icon" src="assets/icons/square.and.arrow.up.svg" alt="" />
             <span>Export</span>
           </button>
           @if (currentSync) {
-            <button class="menu-item" (click)="performSync(); projectMenuVisible = false">
-              <img class="menu-icon" src="assets/icons/arrow.trianglehead.2.clockwise.rotate.90.circle.fill.svg" alt="" />
-              <span>Sync Now</span>
-              @if (syncStatus === 'syncing') {
-                <span class="sync-spinner">⟳</span>
-              }
+            <button class="menu-item" (click)="revealICloudFileInFinder(); projectMenuVisible = false">
+              <img class="menu-icon" src="assets/icons/finder.svg" alt="" />
+              <span>Reveal in Finder</span>
             </button>
-            @if (!isICloudSync) {
-              <button class="menu-item" (click)="revealSyncFileInFinder(); projectMenuVisible = false">
-                <img class="menu-icon" src="assets/icons/finder.svg" alt="" />
-                <span>Reveal in Finder</span>
-              </button>
-            }
-            @if (isICloudSync) {
-              <button class="menu-item menu-item--icloud" disabled>
-                <!-- iCloud Drive cloud icon -->
-                <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
-                </svg>
-                <span>Syncing with iCloud Drive</span>
-              </button>
-            }
-          }
-          @if (!currentSync) {
-            <button class="menu-item" (click)="enableICloudSync(); projectMenuVisible = false">
-              <!-- iCloud Drive cloud icon -->
+            <button class="menu-item menu-item--icloud" disabled>
               <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
               </svg>
-              <span>Sync with iCloud Drive</span>
+              <span>Syncing with iCloud Drive</span>
             </button>
           }
           <div class="menu-separator"></div>
