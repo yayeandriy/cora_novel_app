@@ -6,8 +6,7 @@ Header:
 
 Sync:  
   ✔ Export/Import @done(26-01-17 12:24)
-  ☐ .cora file icon
-  ☐ sync
+ 
 
 
 
@@ -18,15 +17,10 @@ Fixes:
 Features:
   ✔ Build number @done(26-02-01 14:57)
   ✔ Export to PDF/TXT/DOCx @done(26-02-01 20:23)
-  ☐ Refactor Commands.rs
   
   
   
-  ☐ Import from DOC
-  ☐ Link to sync
-
-Dashboard:
-  ☐ Add export to context menu (dashboard)
-  ☐ Restore from archive button move to context menu
-  ☐ Add vertical ellipses as a way call context menu
-
+☐ iCloud sync support @started(26-05-13 14:47)
+☐ Drafts improvement: lets show all drafts under Part page (similar we for notes and timeline)
+☐ .cora file icon
+i can push the app into test flight — would be it running properly out there?

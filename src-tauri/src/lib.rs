@@ -13,6 +13,7 @@ mod services {
     pub mod timelines;
     pub mod archives;
     pub mod sync;
+    pub mod icloud;
 }
 mod commands;
 
@@ -163,6 +164,13 @@ pub fn run() {
             commands::sync_mark_db_changed_simple,
             commands::sync_calculate_hash,
             commands::sync_import_to_project,
+            // iCloud Drive commands
+            commands::icloud_is_available,
+            commands::icloud_get_project_path,
+            commands::icloud_check_file_status,
+            commands::icloud_trigger_download,
+            commands::icloud_read_file,
+            commands::icloud_write_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -313,3 +313,20 @@ textarea::selection {
 .backdrop-blur-sm { backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
 .top-3 { top: 0.75rem; }
 .right-3 { right: 0.75rem; }
+
+/* ── iCloud Drive Sync Success Dialog ─────────────────────────── */
+.icloud-success-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:1200;animation:icloud-ov-in 180ms ease}
+@keyframes icloud-ov-in{from{opacity:0}to{opacity:1}}
+.icloud-success-dialog{width:320px;background:rgba(30,30,32,.92);border:.5px solid rgba(255,255,255,.12);border-radius:18px;box-shadow:0 32px 64px rgba(0,0,0,.55);display:flex;flex-direction:column;align-items:center;padding:32px 28px 24px;animation:icloud-dlg-in 220ms cubic-bezier(.34,1.46,.64,1)}
+@keyframes icloud-dlg-in{from{opacity:0;transform:scale(.88) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.icloud-success-icon-wrap{position:relative;width:64px;height:64px;background:rgba(255,255,255,.07);border-radius:18px;display:flex;align-items:center;justify-content:center;margin-bottom:18px}
+.icloud-success-check{position:absolute;bottom:-5px;right:-5px;width:22px;height:22px;background:#30d158;border-radius:50%;border:2px solid rgba(30,30,32,.92);display:flex;align-items:center;justify-content:center}
+.icloud-success-title{font-size:17px;font-weight:600;color:rgba(255,255,255,.95);letter-spacing:-.2px;margin:0 0 8px;text-align:center}
+.icloud-success-body{font-size:13px;line-height:1.5;color:rgba(255,255,255,.5);text-align:center;margin:0 0 16px}
+.icloud-success-file-badge{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.07);border:.5px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 12px;font-size:12px;color:rgba(255,255,255,.45);max-width:100%;overflow:hidden;margin-bottom:24px}
+.icloud-success-file-badge span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.icloud-success-btn{width:100%;background:#007aff;color:#fff;border:none;border-radius:12px;padding:11px 0;font-size:15px;font-weight:500;cursor:pointer;letter-spacing:-.1px;transition:background 100ms,transform 80ms}
+.icloud-success-btn:hover{background:#0066e0}
+.icloud-success-btn:active{background:#0058c7;transform:scale(.98)}
+.icloud-success-reveal{background:none;border:none;color:rgba(255,255,255,.35);font-size:12px;cursor:pointer;margin-top:10px;padding:4px 8px;border-radius:6px;transition:color 120ms}
+.icloud-success-reveal:hover{color:rgba(255,255,255,.65)}

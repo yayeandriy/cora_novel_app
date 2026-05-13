@@ -5,7 +5,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ProjectService } from '../../services/project.service';
 import { TimelineService } from '../../services/timeline.service';
 import { SyncService } from '../../services/sync.service';
-import { confirm, open, save, ask } from '@tauri-apps/plugin-dialog';
+import { ICloudService } from '../../services/icloud.service';
+import { confirm, open, save, ask, message } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile, readFile, writeFile } from '@tauri-apps/plugin-fs';
 import { tempDir, join } from '@tauri-apps/api/path';
 import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
@@ -252,6 +253,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Sync state
   currentSync: Sync | null = null;
   showSyncDialog = false;
+  showICloudSuccessDialog = false;
+  iCloudSuccessFileName = '';
+  iCloudSuccessFilePath = '';
   pendingSyncFilePath: string | null = null;
   syncStatus: 'idle' | 'syncing' | 'synced' | 'error' | 'conflict' = 'idle';
   // Header notes expansion state
@@ -283,6 +287,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     private projectService: ProjectService,
     private timelineService: TimelineService,
     private syncService: SyncService,
+    private iCloudService: ICloudService,
     private changeDetector: ChangeDetectorRef
   ) {}
 
@@ -1089,6 +1094,94 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** True when the current sync file lives inside the Cora iCloud container. */
+  get isICloudSync(): boolean {
+    return this.currentSync
+      ? this.iCloudService.isICloudPath(this.currentSync.file_path)
+      : false;
+  }
+
+  /**
+   * Enable iCloud Drive sync for this project.
+   *
+   * Exports the project to the iCloud container Documents folder and
+   * configures the sync state machine to use that path going forward.
+   * If iCloud is unavailable (user not signed in, container not created)
+   * a clear error message is shown.
+   */
+  async enableICloudSync(): Promise<void> {
+    try {
+      const available = await this.iCloudService.isAvailable();
+      if (!available) {
+        await message(
+          'iCloud Drive is not available for this build.\n\n' +
+          'iCloud requires a signed build — run pnpm build:current and test ' +
+          'from the built .app bundle.\n\n' +
+          'In dev mode (pnpm tauri:dev) entitlements are not active so iCloud ' +
+          'cannot be accessed.',
+          { title: 'iCloud Not Available', kind: 'error' }
+        );
+        return;
+      }
+
+      // If a sync already exists, ask what to do.
+      if (this.currentSync) {
+        if (this.isICloudSync) {
+          await message('This project is already syncing with iCloud Drive.', {
+            title: 'Already Syncing with iCloud'
+          });
+          return;
+        }
+        const switchToICloud = await ask(
+          'This project is currently synced with a local file. ' +
+          'Switch to iCloud Drive sync instead?',
+          {
+            title: 'Switch to iCloud Drive',
+            okLabel: 'Switch to iCloud Drive',
+            cancelLabel: 'Keep local sync'
+          }
+        );
+        if (!switchToICloud) return;
+        await this.syncService.deleteSyncByProject(this.projectId);
+        this.currentSync = null;
+      }
+
+      const icloudPath = await this.iCloudService.getProjectPath(
+        this.projectName || `project-${this.projectId}`
+      );
+
+      // Export the project to the iCloud path.
+      await this.projectService.exportProject(this.projectId, icloudPath);
+
+      // Wire up the sync state machine.
+      await this.initializeSync(icloudPath);
+
+      this.iCloudSuccessFileName = icloudPath.split('/').pop() ?? icloudPath;
+      this.iCloudSuccessFilePath = icloudPath;
+      this.showICloudSuccessDialog = true;
+    } catch (err) {
+      console.error('Failed to enable iCloud sync:', err);
+      await message(
+        `Failed to enable iCloud Drive sync: ${err}`,
+        { title: 'Error', kind: 'error' }
+      );
+    }
+  }
+
+  closeICloudSuccessDialog(): void {
+    this.showICloudSuccessDialog = false;
+  }
+
+  async revealICloudFileInFinder(): Promise<void> {
+    if (!this.iCloudSuccessFilePath) return;
+    try {
+      const { Command } = await import('@tauri-apps/plugin-shell');
+      await Command.create('open', ['-R', this.iCloudSuccessFilePath]).execute();
+    } catch (error) {
+      console.error('Failed to reveal iCloud file in Finder:', error);
+    }
+  }
+
   async performSync(): Promise<void> {
     if (!this.currentSync) {
       this.currentSync = await this.syncService.getSyncByProject(this.projectId);
@@ -1149,7 +1242,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         // Get file content (returns Uint8Array)
         getFileContent: async () => {
           try {
-            return await readFile(this.currentSync!.file_path);
+            const filePath = this.currentSync!.file_path;
+            // iCloud paths need eviction-check + coordinated read.
+            if (this.iCloudService.isICloudPath(filePath)) {
+              await this.iCloudService.ensureDownloaded(filePath);
+              return await this.iCloudService.readFile(filePath);
+            }
+            return await readFile(filePath);
           } catch (err) {
             // Check if this is a permission error (macOS sandbox)
             if (this.isPermissionError(err)) {
@@ -1195,7 +1294,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         
         // Write to file (receives Uint8Array)
         writeFileContent: async (content: Uint8Array) => {
-          await writeFile(this.currentSync!.file_path, content);
+          const filePath = this.currentSync!.file_path;
+          // Use coordinated write for iCloud paths.
+          if (this.iCloudService.isICloudPath(filePath)) {
+            await this.iCloudService.writeFile(filePath, content);
+          } else {
+            await writeFile(filePath, content);
+          }
         }
       });
       

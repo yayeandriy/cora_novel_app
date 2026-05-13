@@ -2550,3 +2550,56 @@ pub async fn sync_import_to_project(state: State<'_, AppState>, project_id: i64,
     
     Ok(())
 }
+
+// ==================== iCloud Drive Commands ====================
+
+/// Returns `true` if the iCloud Drive container for Cora is accessible on this
+/// device (user is signed into iCloud and the container directory exists).
+#[tauri::command]
+pub async fn icloud_is_available() -> bool {
+    crate::services::icloud::is_available()
+}
+
+/// Returns the canonical `.cora` file path inside the iCloud Drive container
+/// for the given project name, creating the Documents folder if needed.
+#[tauri::command]
+pub async fn icloud_get_project_path(project_name: String) -> Result<String, String> {
+    crate::services::icloud::project_icloud_path(&project_name)
+        .map(|p| p.to_string_lossy().into_owned())
+        .map_err(|e| e.to_string())
+}
+
+/// Checks whether a `.cora` file in the iCloud container is available locally
+/// or has been evicted (only a placeholder exists).
+#[tauri::command]
+pub async fn icloud_check_file_status(
+    path: String,
+) -> Result<crate::services::icloud::ICloudFileStatus, String> {
+    Ok(crate::services::icloud::check_file_status(
+        std::path::Path::new(&path),
+    ))
+}
+
+/// Asks iCloud to download an evicted file back to local storage.
+/// Returns immediately — poll `icloud_check_file_status` to track progress.
+#[tauri::command]
+pub async fn icloud_trigger_download(path: String) -> Result<(), String> {
+    crate::services::icloud::trigger_download(std::path::Path::new(&path))
+        .map_err(|e| e.to_string())
+}
+
+/// Read a file using `NSFileCoordinator` (macOS) for safe concurrent iCloud
+/// access, or plain `std::fs::read` on other platforms.
+#[tauri::command]
+pub async fn icloud_read_file(path: String) -> Result<Vec<u8>, String> {
+    crate::services::icloud::read_file(std::path::Path::new(&path))
+        .map_err(|e| e.to_string())
+}
+
+/// Write a file using `NSFileCoordinator` (macOS) for safe concurrent iCloud
+/// access, or plain `std::fs::write` on other platforms.
+#[tauri::command]
+pub async fn icloud_write_file(path: String, content: Vec<u8>) -> Result<(), String> {
+    crate::services::icloud::write_file(std::path::Path::new(&path), &content)
+        .map_err(|e| e.to_string())
+}

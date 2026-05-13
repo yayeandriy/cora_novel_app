@@ -292,3 +292,16 @@ export interface ExportPdfOptions {
   rangeStart?: number | null;
   rangeEnd?: number | null;
 }
+
+// ─── iCloud Drive ──────────────────────────────────────────────────────────
+
+export interface ICloudFileStatus {
+  /** The path that was checked. */
+  path: string;
+  /** File is present on local disk. */
+  isLocal: boolean;
+  /** iCloud has evicted the file; only a `.icloud` placeholder exists. */
+  isPlaceholder: boolean;
+  /** Neither local file nor placeholder found. */
+  notFound: boolean;
+}
