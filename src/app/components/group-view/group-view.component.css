@@ -377,3 +377,151 @@ app-folder-drafts {
   font-size: 0.875rem;
   text-align: center;
 }
+
+/* Group drafts panel */
+.group-drafts-panel {
+  padding: 1.25rem 1.5rem;
+  overflow-y: auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.group-drafts-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 100%;
+  color: #9ca3af;
+  text-align: center;
+}
+.group-drafts-empty p {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  margin: 0;
+}
+.group-drafts-empty span { font-size: 0.75rem; color: #9ca3af; }
+
+.group-drafts-section { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.group-drafts-section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.group-drafts-chapter-name {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  flex: 1;
+}
+
+.group-drafts-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 120ms, background 120ms;
+}
+.group-drafts-add-btn:hover { color: #374151; background: #f3f4f6; }
+
+/* 3-per-row grid of draft cards */
+.group-drafts-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.group-draft-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background: white;
+  overflow: hidden;
+  height: 440px;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+.group-draft-card:focus-within {
+  border-color: #6b7280;
+  box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.15);
+}
+
+.group-draft-card-header {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.6rem;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  gap: 0.25rem;
+}
+
+.group-draft-name-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #374151;
+  border: 1px solid transparent;
+  background: transparent;
+  outline: none;
+  padding: 0.2rem 0.375rem;
+  border-radius: 0.25rem;
+  transition: all 150ms;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.group-draft-name-input:hover { background: #f3f4f6; border-color: #e5e7eb; }
+.group-draft-name-input:focus { background: white; border-color: #d1d5db; }
+
+.group-draft-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  background: transparent;
+  color: #d1d5db;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 150ms, background 120ms;
+}
+.group-draft-delete-btn:hover { color: #ef4444; background: #fef2f2; }
+
+.group-draft-textarea {
+  flex: 1;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: none;
+  font-size: 0.8125rem;
+  font-family: var(--editor-font-family, "iA Writer DuoSpace", "Courier New", Courier, monospace);
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.group-drafts-no-drafts {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  padding: 0.5rem 0;
+}

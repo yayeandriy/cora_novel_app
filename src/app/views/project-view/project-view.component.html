@@ -439,6 +439,7 @@
         [selectedGroup]="selectedGroup"
         [folderDrafts]="folderDrafts"
         [selectedFolderDraftId]="selectedFolderDraftId"
+        [groupDocDrafts]="groupDocDrafts"
         [characters]="characters"
         [events]="events"
         [places]="places"
@@ -473,7 +474,11 @@
         (placeCreate)="createAndAddPlaceToDoc($event.docId, $event.name)"
         (placeDelete)="onSidebarPlaceDelete($event)"
         (placeEdit)="onInlinePlaceEdit($event)"
-        (placeReorder)="reorderDocCardPlaces($event.docId, $event.orderIds)">
+        (placeReorder)="reorderDocCardPlaces($event.docId, $event.orderIds)"
+        (groupDocDraftCreate)="onGroupDocDraftCreate($event.docId)"
+        (groupDocDraftContentChange)="onGroupDocDraftContentChange($event)"
+        (groupDocDraftNameChange)="onGroupDocDraftNameChange($event)"
+        (groupDocDraftDelete)="onGroupDocDraftDelete($event)">
       </app-group-view>
       }
       

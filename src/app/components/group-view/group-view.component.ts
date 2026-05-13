@@ -1,8 +1,11 @@
-import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FolderDraftsComponent, FolderDraft } from '../folder-drafts/folder-drafts.component';
 import { MetadataChipsComponent } from '../metadata-chips/metadata-chips.component';
+import type { Draft } from '../../shared/models';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
 export interface DocGroup {
   id: number;
@@ -24,11 +27,12 @@ export interface DocGroup {
   styleUrls: ['./group-view.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class GroupViewComponent implements OnInit, OnChanges {
+export class GroupViewComponent implements OnInit, OnChanges, OnDestroy {
   constructor(private cdr: ChangeDetectorRef) {}
   @Input() selectedGroup: DocGroup | null = null;
   @Input() folderDrafts: FolderDraft[] = [];
   @Input() selectedFolderDraftId: number | null = null;
+  @Input() groupDocDrafts: Draft[] = [];
   
   // Metadata inputs
   @Input() characters: any[] = [];
@@ -49,6 +53,10 @@ export class GroupViewComponent implements OnInit, OnChanges {
   @Output() folderDraftMove = new EventEmitter<{ draftId: number; newIndex: number }>();
   @Output() folderDraftSelect = new EventEmitter<number>();
   @Output() docCardClick = new EventEmitter<any>();
+  @Output() groupDocDraftCreate = new EventEmitter<{ docId: number }>();
+  @Output() groupDocDraftContentChange = new EventEmitter<{ docId: number; draftId: number; content: string }>();
+  @Output() groupDocDraftNameChange = new EventEmitter<{ docId: number; draftId: number; name: string }>();
+  @Output() groupDocDraftDelete = new EventEmitter<{ docId: number; draftId: number }>();
   
   // Metadata outputs
   @Output() characterAdd = new EventEmitter<{ docId: number; characterId: number }>();
@@ -75,9 +83,26 @@ export class GroupViewComponent implements OnInit, OnChanges {
   @ViewChild('groupNameInput') groupNameInput?: ElementRef<HTMLInputElement>;
 
   notesExpanded: boolean = true;
-  activeTab: 'notes' | 'docs' = 'docs';
+  activeTab: 'notes' | 'docs' | 'drafts' = 'docs';
   private readonly NOTES_EXPANDED_KEY = 'cora-folder-notes-expanded';
   private readonly ACTIVE_TAB_KEY = 'cora-folder-active-tab';
+
+  private draftContentSubject = new Subject<{ docId: number; draftId: number; content: string }>();
+  private draftNameSubject = new Subject<{ docId: number; draftId: number; name: string }>();
+  private draftSubs = [
+    this.draftContentSubject.pipe(
+      debounceTime(500),
+      distinctUntilChanged((a, b) => a.draftId === b.draftId && a.content === b.content)
+    ).subscribe(e => this.groupDocDraftContentChange.emit(e)),
+    this.draftNameSubject.pipe(
+      debounceTime(500),
+      distinctUntilChanged((a, b) => a.draftId === b.draftId && a.name === b.name)
+    ).subscribe(e => this.groupDocDraftNameChange.emit(e))
+  ];
+
+  ngOnDestroy() {
+    this.draftSubs.forEach(s => s.unsubscribe());
+  }
 
   // Doc card metadata helpers - cache to avoid recreating arrays on each check
   private docCharactersResultCache = new Map<number, any[]>();
@@ -91,7 +116,7 @@ export class GroupViewComponent implements OnInit, OnChanges {
     // Restore active tab from localStorage
     try {
       const savedTab = localStorage.getItem(this.ACTIVE_TAB_KEY);
-      if (savedTab === 'notes' || savedTab === 'docs') {
+      if (savedTab === 'notes' || savedTab === 'docs' || savedTab === 'drafts') {
         this.activeTab = savedTab;
       }
     } catch {}
@@ -140,6 +165,14 @@ export class GroupViewComponent implements OnInit, OnChanges {
     this.cdr.markForCheck();
   }
 
+  toggleDrafts() {
+    this.activeTab = 'drafts';
+    try {
+      localStorage.setItem(this.ACTIVE_TAB_KEY, this.activeTab);
+    } catch {}
+    this.cdr.markForCheck();
+  }
+
   onNotesChange() {
     this.notesChanged.emit();
   }
@@ -180,6 +213,41 @@ export class GroupViewComponent implements OnInit, OnChanges {
 
   onDocCardClick(doc: any) {
     this.docCardClick.emit(doc);
+  }
+
+  getAllDocsInGroup(): { id: number; name: string }[] {
+    return (this.selectedGroup?.docs ?? []).map((d: any) => ({ id: d.id, name: d.name || 'Untitled' }));
+  }
+
+  getDraftsGroupedByDoc(): { docId: number; docName: string; drafts: Draft[] }[] {
+    if (!this.selectedGroup) return [];
+    return this.selectedGroup.docs.map((doc: any) => ({
+      docId: doc.id,
+      docName: doc.name || 'Untitled',
+      drafts: this.groupDocDrafts.filter(d => d.doc_id === doc.id)
+    }));
+  }
+
+  get groupDocDraftsCount(): number {
+    return this.groupDocDrafts.length;
+  }
+
+  onGroupDocDraftCreate(docId: number) {
+    this.groupDocDraftCreate.emit({ docId });
+  }
+
+  onGroupDocDraftContentChange(docId: number, draftId: number, content: string) {
+    this.draftContentSubject.next({ docId, draftId, content });
+  }
+
+  onGroupDocDraftNameChange(docId: number, draftId: number, event: Event) {
+    const name = (event.target as HTMLInputElement).value;
+    this.draftNameSubject.next({ docId, draftId, name });
+  }
+
+  onGroupDocDraftDelete(docId: number, draftId: number, event: MouseEvent) {
+    event.stopPropagation();
+    this.groupDocDraftDelete.emit({ docId, draftId });
   }
 
   // Folder drafts methods

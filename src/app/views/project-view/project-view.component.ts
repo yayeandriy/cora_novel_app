@@ -19,7 +19,7 @@ import { AppFooterComponent } from '../../components/app-footer/app-footer.compo
 import { FolderDraftsComponent } from '../../components/folder-drafts/folder-drafts.component';
 import { CommandPaletteComponent, CommandMode } from '../../components/command-palette/command-palette.component';
 import { NgClickOutsideDirective, NgClickOutsideExcludeDirective } from 'ng-click-outside2';
-import type { Timeline, FolderDraft, Sync } from '../../shared/models';
+import type { Timeline, FolderDraft, Sync, Draft } from '../../shared/models';
 
 interface DocGroup {
   id: number;
@@ -256,6 +256,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   iCloudSuccessFileName = '';
   iCloudSuccessFilePath = '';
   syncStatus: 'idle' | 'syncing' | 'synced' | 'error' | 'conflict' = 'idle';
+  // Group doc drafts (all chapter drafts for the selected Part)
+  groupDocDrafts: Draft[] = [];
   // Header notes expansion state
   projectHeaderExpanded = false;
   folderHeaderExpanded = false;
@@ -1099,6 +1101,46 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   closeICloudSuccessDialog(): void {
     this.showICloudSuccessDialog = false;
+  }
+
+  async onGroupDocDraftCreate(docId: number): Promise<void> {
+    try {
+      const draft = await this.projectService.createDraft(docId, 'New draft', '');
+      this.groupDocDrafts = [...this.groupDocDrafts, draft];
+      this.changeDetector.markForCheck();
+    } catch (err) {
+      console.error('Failed to create group doc draft:', err);
+    }
+  }
+
+  async onGroupDocDraftContentChange(event: { docId: number; draftId: number; content: string }): Promise<void> {
+    try {
+      const draft = this.groupDocDrafts.find(d => d.id === event.draftId);
+      const name = draft?.name ?? 'New draft';
+      await this.projectService.updateDraft(event.draftId, name, event.content);
+    } catch (err) {
+      console.error('Failed to save group doc draft content:', err);
+    }
+  }
+
+  async onGroupDocDraftNameChange(event: { docId: number; draftId: number; name: string }): Promise<void> {
+    try {
+      const draft = this.groupDocDrafts.find(d => d.id === event.draftId);
+      const content = draft?.content ?? '';
+      await this.projectService.updateDraft(event.draftId, event.name, content);
+    } catch (err) {
+      console.error('Failed to save group doc draft name:', err);
+    }
+  }
+
+  async onGroupDocDraftDelete(event: { docId: number; draftId: number }): Promise<void> {
+    try {
+      await this.projectService.deleteDraft(event.draftId);
+      this.groupDocDrafts = this.groupDocDrafts.filter(d => d.id !== event.draftId);
+      this.changeDetector.markForCheck();
+    } catch (err) {
+      console.error('Failed to delete group doc draft:', err);
+    }
   }
 
   async revealICloudFileInFinder(): Promise<void> {
@@ -1980,6 +2022,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
     // Always load folder drafts for group-view (Notes tab)
     await this.loadFolderDrafts(group.id);
+
+    // Load all chapter drafts for the Part (Drafts tab)
+    const allDrafts = await Promise.all(
+      group.docs.map((doc: any) =>
+        this.projectService.listDrafts(doc.id).catch(() => [] as Draft[])
+      )
+    );
+    this.groupDocDrafts = allDrafts.flat();
     
     this.changeDetector.detectChanges();
   }
