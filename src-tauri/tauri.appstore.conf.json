@@ -4,11 +4,11 @@
   "bundle": {
     "category": "Productivity",
     "macOS": {
-      "bundleVersion": "161",
+      "bundleVersion": "165",
       "minimumSystemVersion": "11.0",
       "entitlements": "./Entitlements.plist",
       "files": {
-        "embedded.provisionprofile": "./Cora.mobileprovision"
+        "embedded.provisionprofile": "./Cora.appstore.provisionprofile"
       },
       "exceptionDomain": null,
       "signingIdentity": "Apple Distribution: Andrii Ieroshevych (2JL868AT85)"

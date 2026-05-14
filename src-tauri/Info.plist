@@ -23,7 +23,7 @@
       <key>CFBundleTypeRole</key>
       <string>Editor</string>
       <key>CFBundleTypeIconFile</key>
-      <string>file.icns</string>
+      <string>file</string>
       <key>LSHandlerRank</key>
       <string>Owner</string>
     </dict>
