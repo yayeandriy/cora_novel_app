@@ -2330,6 +2330,23 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
     }
     
+    // Tab inside any textarea → insert spaces instead of shifting focus
+    if (event.key === 'Tab' && target.tagName === 'TEXTAREA') {
+      event.preventDefault();
+      const ta = target as HTMLTextAreaElement;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const indent = '  '; // 2 spaces
+      // Use execCommand for undo-stack compatibility (works in WebView/Electron)
+      if (!document.execCommand('insertText', false, indent)) {
+        // Fallback for environments where execCommand is unavailable
+        ta.value = ta.value.substring(0, start) + indent + ta.value.substring(end);
+        ta.selectionStart = ta.selectionEnd = start + indent.length;
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      return;
+    }
+
     // ESC always focuses the tree
     if (event.key === 'Escape') {
       event.preventDefault();
