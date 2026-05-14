@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { invoke } from '@tauri-apps/api/core';
-import type { ICloudFileStatus } from '../shared/models';
+import type { ICloudFileStatus, ICloudDocInfo } from '../shared/models';
 
 /** Max number of download-availability polls before giving up. */
 const ICLOUD_DOWNLOAD_POLL_ATTEMPTS = 20;
@@ -95,5 +95,34 @@ export class ICloudService {
       path,
       content: Array.from(content),
     });
+  }
+
+  // ─── Document scanning ────────────────────────────────────────────────────
+
+  /**
+   * Scans the iCloud container Documents folder for `.cora` files.
+   * Returns both locally-present files and iCloud-only placeholders.
+   * Returns an empty array when iCloud is not available.
+   */
+  scanDocuments(): Promise<ICloudDocInfo[]> {
+    return invoke<ICloudDocInfo[]>('icloud_scan_documents');
+  }
+
+  // ─── Delete / move ────────────────────────────────────────────────────────
+
+  /**
+   * Delete a `.cora` file from the iCloud container.
+   * Handles both locally-present files and evicted placeholders.
+   */
+  deleteFile(path: string): Promise<void> {
+    return invoke<void>('icloud_delete_file', { path });
+  }
+
+  /**
+   * Move a `.cora` file within the iCloud container (e.g. to `_Archived/`).
+   * Creates the destination directory if necessary.
+   */
+  moveFile(srcPath: string, destPath: string): Promise<void> {
+    return invoke<void>('icloud_move_file', { srcPath, destPath });
   }
 }

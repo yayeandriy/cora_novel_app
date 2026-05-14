@@ -1068,17 +1068,19 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
    * If iCloud is unavailable (user not signed in, container not created)
    * a clear error message is shown.
    */
-  async enableICloudSync(): Promise<void> {
+  async enableICloudSync(silent = false): Promise<void> {
     try {
       const available = await this.iCloudService.isAvailable();
       if (!available) {
-        await message(
-          'iCloud Drive is not available on this device.\n\n' +
-          'Please make sure you are signed in to iCloud and iCloud Drive is enabled. ' +
-          'If you have never enabled iCloud sync for Cora, run a signed build first ' +
-          '(pnpm build:current) to create the iCloud container.',
-          { title: 'iCloud Not Available', kind: 'error' }
-        );
+        if (!silent) {
+          await message(
+            'iCloud Drive is not available on this device.\n\n' +
+            'Please make sure you are signed in to iCloud and iCloud Drive is enabled. ' +
+            'If you have never enabled iCloud sync for Cora, run a signed build first ' +
+            '(pnpm build:current) to create the iCloud container.',
+            { title: 'iCloud Not Available', kind: 'error' }
+          );
+        }
         return;
       }
 
@@ -1097,15 +1099,19 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Wire up the sync state machine.
       await this.initializeSync(icloudPath);
 
-      this.iCloudSuccessFileName = icloudPath.split('/').pop() ?? icloudPath;
-      this.iCloudSuccessFilePath = icloudPath;
-      this.showICloudSuccessDialog = true;
+      if (!silent) {
+        this.iCloudSuccessFileName = icloudPath.split('/').pop() ?? icloudPath;
+        this.iCloudSuccessFilePath = icloudPath;
+        this.showICloudSuccessDialog = true;
+      }
     } catch (err) {
       console.error('Failed to enable iCloud sync:', err);
-      await message(
-        `Failed to enable iCloud Drive sync: ${err}`,
-        { title: 'Error', kind: 'error' }
-      );
+      if (!silent) {
+        await message(
+          `Failed to enable iCloud Drive sync: ${err}`,
+          { title: 'Error', kind: 'error' }
+        );
+      }
     }
   }
 
@@ -1697,8 +1703,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Load sync status; auto-enable iCloud if not yet configured
       await this.loadSyncStatus();
       if (!this.currentSync) {
-        // First open — enable iCloud sync silently (shows success dialog)
-        this.enableICloudSync().catch(err => console.warn('Auto iCloud sync setup failed:', err));
+        // First open — enable iCloud sync silently (no success dialog)
+        this.enableICloudSync(/* silent */ true).catch(err => console.warn('Auto iCloud sync setup failed:', err));
       } else if (this.currentSync.auto_sync_enabled) {
         // Sync on project open (non-blocking)
         this.performSync().catch(err => console.warn('Sync on project open failed:', err));

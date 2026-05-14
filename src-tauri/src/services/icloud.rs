@@ -385,3 +385,128 @@ pub fn write_file(path: &Path, content: &[u8]) -> Result<()> {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Document scanning
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Metadata about a `.cora` file found in the iCloud container.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ICloudDocInfo {
+    /// Full filesystem path to the `.cora` file (even if only a placeholder exists).
+    pub path: String,
+    /// Display name — filename without the `.cora` extension.
+    pub name: String,
+    /// File size in bytes. Zero for placeholders (file is not local).
+    pub size_bytes: u64,
+    /// Last-modified timestamp in RFC 3339. `None` for placeholders.
+    pub modified_at: Option<String>,
+    /// File is present on local disk.
+    pub is_local: bool,
+    /// Only an iCloud placeholder exists; the file must be downloaded first.
+    pub is_placeholder: bool,
+}
+
+/// Scans the iCloud container Documents folder for `.cora` files.
+///
+/// Returns both locally-present files and files represented only by an iCloud
+/// placeholder (`.name.cora.icloud`). Returns an empty list when iCloud is not
+/// available on this device.
+pub fn scan_documents() -> Vec<ICloudDocInfo> {
+    let Some(dir) = get_container_documents_path() else {
+        return vec![];
+    };
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return vec![];
+    };
+
+    let mut results = Vec::new();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let fname = entry.file_name();
+        let fname_str = fname.to_string_lossy();
+
+        // Local .cora file
+        if fname_str.ends_with(".cora") && !fname_str.starts_with('.') {
+            let meta = std::fs::metadata(&path).ok();
+            let size = meta.as_ref().map(|m| m.len()).unwrap_or(0);
+            let modified_at = meta
+                .as_ref()
+                .and_then(|m| m.modified().ok())
+                .and_then(|t| {
+                    t.duration_since(std::time::UNIX_EPOCH).ok().and_then(|dur| {
+                        use chrono::TimeZone;
+                        chrono::Utc
+                            .timestamp_opt(dur.as_secs() as i64, 0)
+                            .single()
+                            .map(|dt| dt.to_rfc3339())
+                    })
+                });
+            let name = fname_str.trim_end_matches(".cora").to_string();
+            results.push(ICloudDocInfo {
+                path: path.to_string_lossy().into_owned(),
+                name,
+                size_bytes: size,
+                modified_at,
+                is_local: true,
+                is_placeholder: false,
+            });
+        }
+        // iCloud placeholder: .<name>.cora.icloud  (starts with dot, ends with .cora.icloud)
+        else if fname_str.starts_with('.') && fname_str.ends_with(".cora.icloud") {
+            // Strip leading dot and trailing .icloud → "<name>.cora"
+            let inner = &fname_str[1..fname_str.len() - ".icloud".len()];
+            if inner.ends_with(".cora") {
+                let name = inner.trim_end_matches(".cora").to_string();
+                let real_path = dir.join(inner);
+                results.push(ICloudDocInfo {
+                    path: real_path.to_string_lossy().into_owned(),
+                    name,
+                    size_bytes: 0,
+                    modified_at: None,
+                    is_local: false,
+                    is_placeholder: true,
+                });
+            }
+        }
+    }
+
+    results
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Delete / move
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Delete a `.cora` file from the iCloud container.
+///
+/// Accepts the real file path (`.cora`). If only a placeholder exists
+/// (`.<name>.cora.icloud`), the placeholder is deleted instead so iCloud
+/// removes the cloud copy.
+pub fn delete_file(path: &Path) -> Result<()> {
+    if path.exists() {
+        return std::fs::remove_file(path).map_err(Into::into);
+    }
+    // Try the placeholder sibling.
+    if let (Some(parent), Some(name)) = (path.parent(), path.file_name()) {
+        let placeholder = parent.join(format!(".{}.icloud", name.to_string_lossy()));
+        if placeholder.exists() {
+            return std::fs::remove_file(placeholder).map_err(Into::into);
+        }
+    }
+    Err(anyhow!("iCloud file not found: {}", path.display()))
+}
+
+/// Move a `.cora` file within the iCloud container (e.g. to `_Archived/`).
+///
+/// Creates the destination parent directory if it does not exist.
+pub fn move_file_to(src: &Path, dst: &Path) -> Result<()> {
+    if let Some(parent) = dst.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| anyhow!("Failed to create destination directory: {}", e))?;
+    }
+    std::fs::rename(src, dst)
+        .map_err(|e| anyhow!("Failed to move iCloud file: {}", e))
+}
+

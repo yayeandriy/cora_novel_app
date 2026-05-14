@@ -33,9 +33,15 @@ Imporove Drafts:
 
 ✔ Fix: tab behavior in text editors @done(26-05-14 14:08)
 
-☐ Show progress on the page (where is now)
-☐ Phantom page: unrelated to anything, just for spontaneous writing 
+✔ lets imporve the stat bar: @done(26-05-14 14:24)
+✔ when we are in chapter, lets indicate when the current edit position is to ralation to full chapter length @done(26-05-14 14:24)
+✘ Phantom page: unrelated to anything, just for spontaneous writing @started(26-05-14 14:24) @cancelled(26-05-14 14:29) @wasted(5m47s)
 
-☐ iCloud improve:
-  - lets show all docs in dashboard which are we found in app's icloud folder
-  - also we need to imporve archiving and deleting of the docs in sync with iCloud
+✔ iCloud improve: @done(26-05-14 16:12)
+  ✔ lets show all docs in dashboard which are we found in app's icloud folder @done(26-05-14 16:12)
+  ✔ also we need to imporve archiving and deleting of the docs in sync with iCloud @done(26-05-14 16:12)
+
+in dashboard add to the book card ellipses with sub menu:
+- archive @started(26-05-14 16:12)
+- reveal in finder @started(26-05-14 16:12)
+with icons

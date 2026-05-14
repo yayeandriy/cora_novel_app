@@ -305,3 +305,18 @@ export interface ICloudFileStatus {
   /** Neither local file nor placeholder found. */
   notFound: boolean;
 }
+
+export interface ICloudDocInfo {
+  /** Full filesystem path to the `.cora` file. */
+  path: string;
+  /** Display name — filename without the `.cora` extension. */
+  name: string;
+  /** File size in bytes (0 for placeholders). */
+  sizeBytes: number;
+  /** Last-modified timestamp in RFC 3339. Null for placeholders. */
+  modifiedAt: string | null;
+  /** File is present on local disk. */
+  isLocal: boolean;
+  /** Only an iCloud placeholder exists. */
+  isPlaceholder: boolean;
+}

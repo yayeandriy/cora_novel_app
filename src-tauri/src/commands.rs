@@ -2639,3 +2639,29 @@ pub async fn icloud_write_file(path: String, content: Vec<u8>) -> Result<(), Str
     crate::services::icloud::write_file(std::path::Path::new(&path), &content)
         .map_err(|e| e.to_string())
 }
+
+/// Scans the iCloud container Documents folder for `.cora` files (both local
+/// and placeholder). Returns an empty list when iCloud is not available.
+#[tauri::command]
+pub async fn icloud_scan_documents() -> Vec<crate::services::icloud::ICloudDocInfo> {
+    crate::services::icloud::scan_documents()
+}
+
+/// Delete a `.cora` file from the iCloud container. Handles both locally-present
+/// files and evicted placeholders.
+#[tauri::command]
+pub async fn icloud_delete_file(path: String) -> Result<(), String> {
+    crate::services::icloud::delete_file(std::path::Path::new(&path))
+        .map_err(|e| e.to_string())
+}
+
+/// Move a `.cora` file within the iCloud container (e.g. to `_Archived/`).
+/// Creates the destination directory if necessary.
+#[tauri::command]
+pub async fn icloud_move_file(src_path: String, dest_path: String) -> Result<(), String> {
+    crate::services::icloud::move_file_to(
+        std::path::Path::new(&src_path),
+        std::path::Path::new(&dest_path),
+    )
+    .map_err(|e| e.to_string())
+}

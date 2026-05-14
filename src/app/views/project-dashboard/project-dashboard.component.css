@@ -52,7 +52,6 @@
   position: relative;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  transform-style: preserve-3d;
 }
 
 .book-card:hover {
@@ -458,7 +457,6 @@
   transform: scale(0.95);  
   transform-origin: bottom left;
 }
-}
 
 .card-info span,
 .card-pages span {
@@ -761,4 +759,133 @@
 
 .context-menu-item:active {
   background: #e5e7eb;
+}
+/* ── iCloud section ─────────────────────────────────────────────────────── */
+.icloud-section {
+  margin-top: 2rem;
+}
+
+.icloud-section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
+  margin-bottom: 0.75rem;
+  padding-left: 0.25rem;
+}
+
+.book-card-icloud {
+  cursor: pointer;
+  background: linear-gradient(135deg, #f0f7ff 0%, #e8f2ff 100%);
+  border: 1px dashed #bfdbfe;
+  opacity: 0.9;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.book-card-icloud:hover {
+  opacity: 1;
+  border-color: #93c5fd;
+}
+
+.book-card-icloud .book-spine {
+  background: #93c5fd;
+}
+
+.book-card-icloud.placeholder {
+  background: linear-gradient(135deg, #f8faff 0%, #f0f4ff 100%);
+}
+
+.icloud-icon {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #60a5fa;
+  margin-bottom: 0.5rem;
+  opacity: 0.8;
+}
+
+.icloud-download-icon {
+  color: #a5b4fc;
+}
+
+.icloud-status {
+  color: #93c5fd !important;
+  font-style: italic;
+}
+
+
+/* ── Card ellipsis menu button ───────────────────────────────────────────── */
+/* ── Card ellipsis menu button ───────────────────────────────────────────── */
+.card-menu-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  opacity: 1;
+  transition: color 0.1s ease;
+  padding: 0;
+  z-index: 9999;
+  pointer-events: all;
+}
+
+.card-menu-btn:hover,
+.card-menu-btn.active {
+  color: #374151;
+}
+
+/* ── Card ellipsis dropdown panel ───────────────────────────────────────── */
+.card-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+}
+
+.card-menu-dropdown {
+  position: fixed;
+  z-index: 9999;
+  min-width: 160px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  transform: translateX(-100%);
+}
+
+.card-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #374151;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s ease;
+}
+
+.card-menu-item:hover {
+  background: #f3f4f6;
+}
+
+.card-menu-item svg {
+  flex-shrink: 0;
+  opacity: 0.6;
 }

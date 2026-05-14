@@ -173,6 +173,9 @@ pub fn run() {
             commands::icloud_trigger_download,
             commands::icloud_read_file,
             commands::icloud_write_file,
+            commands::icloud_scan_documents,
+            commands::icloud_delete_file,
+            commands::icloud_move_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

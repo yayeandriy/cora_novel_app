@@ -3,8 +3,10 @@ import { CommonModule } from "@angular/common";
 import { ReactiveFormsModule, FormGroup, FormControl } from "@angular/forms";
 import { ProjectService } from "../../services/project.service";
 import { SyncService } from "../../services/sync.service";
-import type { Project, Doc, Archive } from "../../shared/models";
+import { ICloudService } from "../../services/icloud.service";
+import type { Project, Doc, Archive, ICloudDocInfo } from "../../shared/models";
 import { open, ask } from "@tauri-apps/plugin-dialog";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { Router, NavigationEnd } from "@angular/router";
 import { StartupViewComponent } from "../../components/startup-view/startup-view.component";
 import { filter } from "rxjs";
@@ -47,12 +49,18 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
   showArchivedProjects = signal(false);
   confirmingArchive = signal<number | null>(null);
   confirmingDelete = signal<number | null>(null);
+  icloudFiles = signal<ICloudDocInfo[]>([]);
   
-  // Context menu state
+  // Context menu state (right-click)
   showContextMenu = signal(false);
   contextMenuX = signal(0);
   contextMenuY = signal(0);
   contextMenuProjectId = signal<number | null>(null);
+
+  // Card ellipsis (⋯) menu state
+  cardMenuProjectId = signal<number | null>(null);
+  cardMenuX = signal(0);
+  cardMenuY = signal(0);
   
   // For inline editing
   nameControl = new FormControl('');
@@ -65,7 +73,7 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
   private nouns: string[] = [];
   
   // Computed values
-  hasProjects = computed(() => this.projects().length > 0);
+  hasProjects = computed(() => this.projects().length > 0 || this.icloudFiles().length > 0);
   projectsWithArchive = computed(() => {
     const archivesMap = this.archives();
     return this.projects().map(p => ({
@@ -105,6 +113,7 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
   constructor(
     private svc: ProjectService,
     private syncService: SyncService,
+    private icloudSvc: ICloudService,
     private router: Router
   ) {
     this.form = new FormGroup({
@@ -237,16 +246,37 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
       console.log('[Dashboard] Loaded projects:', projectList.length, projectList);
       this.projects.set(projectList);
       
-      // Fetch stats and archives for each project in parallel
+      // Fetch stats, archives, and iCloud files in parallel
       await Promise.all([
         this.loadAllProjectStats(projectList),
-        this.loadAllArchives(projectList)
+        this.loadAllArchives(projectList),
+        this.loadICloudFiles()
       ]);
     } catch (error) {
       console.error('[Dashboard] Failed to load projects:', error);
     } finally {
       this.isLoading.set(false);
       console.log('[Dashboard] isLoading:', this.isLoading(), 'hasProjects:', this.hasProjects(), 'projects count:', this.projects().length);
+    }
+  }
+
+  /** Scan iCloud container and keep only files not already linked via a sync record. */
+  private async loadICloudFiles() {
+    try {
+      const available = await this.icloudSvc.isAvailable();
+      if (!available) { this.icloudFiles.set([]); return; }
+
+      const [files, syncs] = await Promise.all([
+        this.icloudSvc.scanDocuments(),
+        this.syncService.listSyncs()
+      ]);
+
+      // Filter out .cora files that are already linked to a project via sync
+      const linkedPaths = new Set(syncs.map(s => s.file_path));
+      this.icloudFiles.set(files.filter(f => !linkedPaths.has(f.path)));
+    } catch (err) {
+      console.error('[Dashboard] Failed to load iCloud files:', err);
+      this.icloudFiles.set([]);
     }
   }
   
@@ -374,6 +404,12 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
     return n.toLocaleString();
   }
 
+  formatBytes(bytes: number): string {
+    if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(1)} MB`;
+    if (bytes >= 1_024) return `${(bytes / 1_024).toFixed(0)} KB`;
+    return `${bytes} B`;
+  }
+
   formatDate(dateStr: string | null | undefined): string {
     if (!dateStr) return '';
     try {
@@ -468,7 +504,18 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
   async confirmDeleteAction(id: number, event: Event) {
     event.stopPropagation();
     this.confirmingDelete.set(null);
-    
+
+    // If project has an iCloud sync file, delete it from iCloud too
+    try {
+      const allSyncs = await this.syncService.listSyncs();
+      const projectSync = allSyncs.find(s => s.project_id === id);
+      if (projectSync && this.icloudSvc.isICloudPath(projectSync.file_path)) {
+        await this.icloudSvc.deleteFile(projectSync.file_path);
+      }
+    } catch (err) {
+      console.warn('[Dashboard] Could not delete iCloud file on project delete:', err);
+    }
+
     await this.svc.deleteProject(id);
     await this.reload();
   }
@@ -510,6 +557,30 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
     this.router.navigate(['/project', p.id]);
   }
 
+  /**
+   * Import an iCloud .cora file that isn't linked to any local project yet.
+   * Automatically enables sync so future changes stay in iCloud.
+   */
+  async openICloudFile(file: ICloudDocInfo, event: Event) {
+    event.stopPropagation();
+    try {
+      if (file.isPlaceholder) {
+        // Trigger download and wait for it before importing
+        await this.icloudSvc.ensureDownloaded(file.path);
+      }
+      const imported = await this.svc.importProject(file.path);
+      // Link the imported project to the iCloud file via sync
+      await this.syncService.initializeSync(imported.id, file.path, {
+        syncDirection: 'db_to_file',
+        autoSyncEnabled: true
+      });
+      await this.reload();
+      this.openProject(imported);
+    } catch (err) {
+      console.error('[Dashboard] Failed to open iCloud file:', err);
+    }
+  }
+
   toggleImportMenu(event?: MouseEvent) {
     if (event) {
       event.stopPropagation();
@@ -530,6 +601,7 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
   closeAllMenus() {
     this.closeImportMenu();
     this.closeEmptyCellImportMenu();
+    this.closeCardMenu();
   }
 
   toggleEmptyCellImportMenu(cellIndex: number, event: MouseEvent) {
@@ -773,6 +845,24 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
         desc: null,
         archived_at: now
       });
+
+      // Move the iCloud .cora file into _Archived/ so it's still in iCloud but clearly archived
+      try {
+        const allSyncs = await this.syncService.listSyncs();
+        const projectSync = allSyncs.find(s => s.project_id === project.id);
+        if (projectSync && this.icloudSvc.isICloudPath(projectSync.file_path)) {
+          const srcPath = projectSync.file_path;
+          // Build destination: same directory + _Archived/<name>.cora
+          const srcDir = srcPath.substring(0, srcPath.lastIndexOf('/'));
+          const srcFile = srcPath.substring(srcPath.lastIndexOf('/') + 1);
+          const destPath = `${srcDir}/_Archived/${srcFile}`;
+          await this.icloudSvc.moveFile(srcPath, destPath);
+          // Update sync record to the new path
+          await this.syncService.updateSync(projectSync.id, { file_path: destPath });
+        }
+      } catch (err) {
+        console.warn('[Dashboard] Could not move iCloud file on archive:', err);
+      }
       await this.reload();
     } catch (err) {
       console.error('Failed to archive project:', err);
@@ -801,5 +891,62 @@ export class ProjectDashboardComponent implements AfterViewChecked, OnDestroy {
 
   isArchived(project: Project): boolean {
     return this.archives().has(project.id);
+  }
+
+  openCardMenu(projectId: number, event: MouseEvent) {
+    event.stopPropagation();
+    // Toggle off if already open for same card
+    if (this.cardMenuProjectId() === projectId) {
+      this.cardMenuProjectId.set(null);
+      return;
+    }
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    this.cardMenuX.set(rect.right);
+    this.cardMenuY.set(rect.bottom + 4);
+    this.cardMenuProjectId.set(projectId);
+    this.closeContextMenu();
+  }
+
+  closeCardMenu() {
+    this.cardMenuProjectId.set(null);
+  }
+
+  async cardMenuArchive(event: Event) {
+    event.stopPropagation();
+    const projectId = this.cardMenuProjectId();
+    this.closeCardMenu();
+    if (!projectId) return;
+
+    const project = this.projects().find(p => p.id === projectId);
+    if (!project) return;
+    const projectWithArchive: ProjectWithArchive = {
+      ...project,
+      isArchived: this.archives().has(projectId),
+      archiveId: this.archives().get(projectId)?.id
+    };
+    await this.archiveProject(projectWithArchive, event);
+  }
+
+  async cardMenuRevealInFinder(event: Event) {
+    event.stopPropagation();
+    const projectId = this.cardMenuProjectId();
+    this.closeCardMenu();
+    if (!projectId) return;
+
+    try {
+      const allSyncs = await this.syncService.listSyncs();
+      const projectSync = allSyncs.find(s => s.project_id === projectId);
+      if (projectSync?.file_path) {
+        await revealItemInDir(projectSync.file_path);
+      } else {
+        // No sync file — reveal the app data directory as fallback
+        const project = this.projects().find(p => p.id === projectId);
+        if (project?.path) {
+          await revealItemInDir(project.path);
+        }
+      }
+    } catch (err) {
+      console.error('[Dashboard] Reveal in Finder failed:', err);
+    }
   }
 }
