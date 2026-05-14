@@ -299,6 +299,16 @@ pub struct SyncStatus {
     pub is_db_newer: bool,
 }
 
+/// Snapshot of a single doc used for undo-of-deletion.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DocSnapshot {
+    pub name: String,
+    pub sort_order: i64,
+    pub text: String,
+    pub notes: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportPdfOptions {

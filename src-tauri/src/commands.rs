@@ -297,6 +297,42 @@ pub async fn doc_delete(state: State<'_, AppState>, id: i64) -> Result<(), Strin
     Ok(())
 }
 
+/// Restore a previously deleted chapter at its original sort position.
+#[tauri::command]
+pub async fn doc_restore(
+    state: State<'_, AppState>,
+    project_id: i64,
+    doc_group_id: Option<i64>,
+    name: String,
+    sort_order: i64,
+    text: String,
+    notes: String,
+) -> Result<serde_json::Value, String> {
+    let pool = &state.pool;
+    let doc = crate::services::docs::restore_doc(pool, project_id, doc_group_id, &name, sort_order, &text, &notes)
+        .map_err(|e| e.to_string())?;
+    mark_project_changed(pool, project_id);
+    serde_json::to_value(doc).map_err(|e| e.to_string())
+}
+
+/// Restore a previously deleted part (doc group) together with all its chapters.
+#[tauri::command]
+pub async fn doc_group_restore(
+    state: State<'_, AppState>,
+    project_id: i64,
+    parent_id: Option<i64>,
+    name: String,
+    sort_order: i64,
+    notes: String,
+    docs: Vec<crate::models::DocSnapshot>,
+) -> Result<serde_json::Value, String> {
+    let pool = &state.pool;
+    let group = crate::services::doc_groups::restore_doc_group(pool, project_id, parent_id, &name, sort_order, &notes, docs)
+        .map_err(|e| e.to_string())?;
+    mark_project_changed(pool, project_id);
+    serde_json::to_value(group).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn doc_reorder(state: State<'_, AppState>, id: i64, direction: String) -> Result<(), String> {
     let pool = &state.pool;

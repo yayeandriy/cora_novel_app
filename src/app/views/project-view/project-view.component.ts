@@ -6,6 +6,7 @@ import { ProjectService } from '../../services/project.service';
 import { TimelineService } from '../../services/timeline.service';
 import { SyncService } from '../../services/sync.service';
 import { ICloudService } from '../../services/icloud.service';
+import { UndoService } from '../../services/undo.service';
 import { confirm, open, ask, message } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile, readFile, writeFile } from '@tauri-apps/plugin-fs';
 import { tempDir, join } from '@tauri-apps/api/path';
@@ -256,6 +257,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   iCloudSuccessFileName = '';
   iCloudSuccessFilePath = '';
   syncStatus: 'idle' | 'syncing' | 'synced' | 'error' | 'conflict' = 'idle';
+
+  // Undo toast state
+  undoToastMessage: string | null = null;
+  private undoToastTimeout: any = null;
   // Group doc drafts (all chapter drafts for the selected Part)
   groupDocDrafts: Draft[] = [];
   // Header notes expansion state
@@ -288,6 +293,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     private timelineService: TimelineService,
     private syncService: SyncService,
     private iCloudService: ICloudService,
+    private undoService: UndoService,
     private changeDetector: ChangeDetectorRef
   ) {}
 
@@ -929,6 +935,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     if (this.autoSaveNotesTimeout) {
       clearTimeout(this.autoSaveNotesTimeout);
     }
+    if (this.undoToastTimeout) {
+      clearTimeout(this.undoToastTimeout);
+    }
+    this.undoService.clear();
   }
 
   // ========= Import .txt files =========
@@ -2428,6 +2438,16 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Cmd+Z to undo last creation/deletion
+    if ((event.key === 'z' || event.key === 'Z' || event.code === 'KeyZ') && event.metaKey && !event.shiftKey) {
+      // Let the browser/editor handle undo inside text fields
+      if (target.tagName !== 'TEXTAREA' && target.tagName !== 'INPUT' && this.undoService.canUndo()) {
+        event.preventDefault();
+        this.performUndo();
+        return;
+      }
+    }
+
     // Cmd+N to create new document (without shift)
     if ((event.key === 'N' || event.key === 'n' || event.code === 'KeyN') && event.metaKey && !event.shiftKey) {
       event.preventDefault();
@@ -2463,6 +2483,28 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Execute the most recent undoable operation and show a toast. */
+  async performUndo(): Promise<void> {
+    const op = this.undoService.pop();
+    if (!op) return;
+    try {
+      await op.undo();
+      this.showUndoToast(`Undone: ${op.label}`);
+    } catch (err) {
+      console.error('Undo failed:', err);
+    }
+  }
+
+  private showUndoToast(message: string): void {
+    if (this.undoToastTimeout) clearTimeout(this.undoToastTimeout);
+    this.undoToastMessage = message;
+    this.changeDetector.markForCheck();
+    this.undoToastTimeout = setTimeout(() => {
+      this.undoToastMessage = null;
+      this.changeDetector.markForCheck();
+    }, 3000);
+  }
+
   async deleteDoc(doc: Doc) {
     console.log('deleteDoc called for:', doc.name);
     // Show inline confirmation
@@ -2481,6 +2523,16 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
     console.log('Proceeding with deletion');
     try {
+      // Capture snapshot for undo BEFORE deleting
+      const snapshot = {
+        projectId: doc.project_id,
+        docGroupId: doc.doc_group_id ?? null,
+        name: doc.name ?? 'Untitled',
+        sortOrder: doc.sort_order ?? 0,
+        text: doc.text ?? '',
+        notes: doc.notes ?? '',
+      };
+
       // Preferred: keep selection inside the same folder
       // Determine parent group and choose next doc in that group (or first),
       // if none left then select the group itself
@@ -2514,6 +2566,18 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       console.log('Calling backend deleteDoc');
       await this.projectService.deleteDoc(doc.id);
       console.log('Backend deletion complete');
+
+      // Push undo op after successful deletion
+      const docSnapshot = snapshot;
+      const projectSvc = this.projectService;
+      const loadProjectFn = () => this.loadProject();
+      this.undoService.push({
+        label: `Chapter "${docSnapshot.name}"`,
+        undo: async () => {
+          await projectSvc.restoreDoc(docSnapshot);
+          await loadProjectFn();
+        }
+      });
       
       // Clear current selection
       this.selectedDoc = null;
@@ -2575,7 +2639,34 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         newSelection = items[currentIndex + 1];
       }
 
+      // Capture snapshot for undo BEFORE deleting
+      const groupSnapshot = {
+        projectId: group.project_id,
+        parentId: group.parent_id ?? null,
+        name: group.name,
+        sortOrder: group.sort_order ?? 0,
+        notes: group.notes ?? '',
+        docs: (group.docs ?? []).map(d => ({
+          name: d.name ?? 'Untitled',
+          sortOrder: d.sort_order ?? 0,
+          text: d.text ?? '',
+          notes: d.notes ?? '',
+        })),
+      };
+
       await this.projectService.deleteDocGroup(group.id);
+
+      // Push undo op after successful deletion
+      const groupSnap = groupSnapshot;
+      const projectSvc = this.projectService;
+      const loadProjectFn = () => this.loadProject();
+      this.undoService.push({
+        label: `Part "${groupSnap.name}"`,
+        undo: async () => {
+          await projectSvc.restoreDocGroup(groupSnap);
+          await loadProjectFn();
+        }
+      });
       
       // Clear current selection
       this.selectedGroup = null;
@@ -3139,6 +3230,22 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       
       console.log('Group created:', group);
       
+      // Register undo: deleting the created group undoes the creation
+      const createdGroupId = group.id;
+      const createdGroupName = name;
+      this.undoService.push({
+        label: `Part "${createdGroupName}"`,
+        undo: async () => {
+          await this.projectService.deleteDocGroup(createdGroupId);
+          await this.loadProject();
+          // Clear selection if it was the deleted group
+          if (this.selectedGroup?.id === createdGroupId) {
+            this.selectedGroup = null;
+            this.currentGroup = null;
+          }
+        }
+      });
+
       // Reload the project - SKIP automatic restore so we can manually set selection
       await this.loadProject(false, true);
       
@@ -3202,6 +3309,20 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
       
       console.log('Doc created:', doc);
+
+      // Register undo: deleting the created doc undoes the creation
+      const createdDocId = doc.id;
+      const createdDocName = name;
+      this.undoService.push({
+        label: `Chapter "${createdDocName}"`,
+        undo: async () => {
+          await this.projectService.deleteDoc(createdDocId);
+          await this.loadProject();
+          if (this.selectedDoc?.id === createdDocId) {
+            this.selectedDoc = null;
+          }
+        }
+      });
       
       // Reload the project - SKIP automatic restore so we can manually set selection
       await this.loadProject(false, true);
@@ -3265,6 +3386,20 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
       
       console.log('Doc created:', doc);
+
+      // Register undo: deleting the created doc undoes the creation
+      const createdDocIdInGroup = doc.id;
+      const createdDocNameInGroup = name;
+      this.undoService.push({
+        label: `Chapter "${createdDocNameInGroup}"`,
+        undo: async () => {
+          await this.projectService.deleteDoc(createdDocIdInGroup);
+          await this.loadProject();
+          if (this.selectedDoc?.id === createdDocIdInGroup) {
+            this.selectedDoc = null;
+          }
+        }
+      });
       
       // Reload the project - SKIP automatic restore so we can manually set selection
       await this.loadProject(false, true);

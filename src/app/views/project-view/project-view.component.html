@@ -804,6 +804,11 @@
     (editorWidthChange)="setEditorWidth($event)"
   ></app-footer>
 
+  <!-- Undo toast -->
+  @if (undoToastMessage) {
+    <div class="undo-toast">{{ undoToastMessage }}</div>
+  }
+
   <!-- Floating command + tree toggle -->
   <div class="floating-command-controls">
     <button class="sidebar-control-button" [class.active]="!leftCollapsed" title="Toggle tree (⌘1)" (click)="toggleLeftSidebar()">

@@ -248,6 +248,46 @@ pub fn rename_doc(pool: &DbPool, id: i64, new_name: &str) -> anyhow::Result<()> 
     Ok(())
 }
 
+/// Restore a deleted doc at its original sort_order position.
+/// Shifts existing docs at >= sort_order up by one to make space.
+pub fn restore_doc(pool: &DbPool, project_id: i64, doc_group_id: Option<i64>, name: &str, sort_order: i64, text: &str, notes: &str) -> anyhow::Result<Doc> {
+    let conn = get_conn(pool)?;
+
+    // Make space at the target position
+    conn.execute(
+        "UPDATE docs SET sort_order = sort_order + 1 \
+         WHERE project_id = ?1 AND doc_group_id IS ?2 AND sort_order >= ?3",
+        rusqlite::params![project_id, doc_group_id, sort_order],
+    )?;
+
+    conn.execute(
+        "INSERT INTO docs (project_id, name, doc_group_id, sort_order, path, text, notes) \
+         VALUES (?1, ?2, ?3, ?4, '', ?5, ?6)",
+        rusqlite::params![project_id, name, doc_group_id, sort_order, text, notes],
+    ).context("restoring doc")?;
+
+    let id = conn.last_insert_rowid();
+    let mut stmt = conn.prepare(
+        "SELECT id, project_id, path, name, timeline_id, text, notes, doc_group_id, sort_order \
+         FROM docs WHERE id = ?1",
+    )?;
+    let doc = stmt.query_row(rusqlite::params![id], |row| {
+        Ok(Doc {
+            id: row.get(0)?,
+            project_id: row.get(1)?,
+            path: row.get(2)?,
+            name: row.get(3)?,
+            timeline_id: row.get(4)?,
+            text: row.get(5)?,
+            notes: row.get(6)?,
+            doc_group_id: row.get(7)?,
+            sort_order: row.get(8)?,
+        })
+    }).context("querying restored doc")?;
+
+    Ok(doc)
+}
+
 // Legacy create function for backward compatibility
 pub fn create(pool: &DbPool, project_id: i64, path: &str, name: Option<String>, timeline_id: Option<i64>, text: Option<String>) -> anyhow::Result<Doc> {
     let conn = get_conn(pool)?;

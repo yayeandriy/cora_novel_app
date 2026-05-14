@@ -147,3 +147,58 @@ pub fn update_doc_group_notes(pool: &DbPool, id: i64, notes: &str) -> Result<()>
     conn.execute("UPDATE doc_groups SET notes = ?1 WHERE id = ?2", rusqlite::params![notes, id])?;
     Ok(())
 }
+
+/// Restore a deleted doc group at its original sort_order position and
+/// re-insert all its child docs (in order) from the provided snapshots.
+pub fn restore_doc_group(
+    pool: &DbPool,
+    project_id: i64,
+    parent_id: Option<i64>,
+    name: &str,
+    sort_order: i64,
+    notes: &str,
+    docs: Vec<crate::models::DocSnapshot>,
+) -> Result<DocGroup> {
+    // --- Restore the group ---
+    let group_id = {
+        let conn = get_conn(pool)?;
+
+        // Make space at the target sort_order
+        conn.execute(
+            "UPDATE doc_groups SET sort_order = sort_order + 1 \
+             WHERE project_id = ?1 AND parent_id IS ?2 AND sort_order >= ?3",
+            rusqlite::params![project_id, parent_id, sort_order],
+        )?;
+
+        let notes_opt: Option<&str> = if notes.is_empty() { None } else { Some(notes) };
+        conn.execute(
+            "INSERT INTO doc_groups (project_id, name, parent_id, sort_order, notes) \
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![project_id, name, parent_id, sort_order, notes_opt],
+        )?;
+
+        conn.last_insert_rowid()
+    }; // connection returned to pool
+
+    // --- Restore each child doc ---
+    for snap in docs {
+        crate::services::docs::restore_doc(
+            pool,
+            project_id,
+            Some(group_id),
+            &snap.name,
+            snap.sort_order,
+            &snap.text,
+            &snap.notes,
+        )?;
+    }
+
+    Ok(DocGroup {
+        id: group_id,
+        project_id,
+        name: name.to_string(),
+        parent_id,
+        sort_order: Some(sort_order),
+        notes: if notes.is_empty() { None } else { Some(notes.to_string()) },
+    })
+}

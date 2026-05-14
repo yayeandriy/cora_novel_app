@@ -57,6 +57,17 @@ export class ProjectService {
     return invoke<void>("doc_group_delete", { id });
   }
 
+  async restoreDocGroup(payload: {
+    projectId: number;
+    parentId: number | null;
+    name: string;
+    sortOrder: number;
+    notes: string;
+    docs: Array<{ name: string; sortOrder: number; text: string; notes: string }>;
+  }): Promise<any> {
+    return invoke<any>("doc_group_restore", payload);
+  }
+
   async reorderDocGroup(id: number, direction: 'up' | 'down'): Promise<void> {
     return invoke<void>("doc_group_reorder", { id, direction });
   }
@@ -96,6 +107,17 @@ export class ProjectService {
 
   async deleteDoc(id: number): Promise<void> {
     return invoke<void>("doc_delete", { id });
+  }
+
+  async restoreDoc(payload: {
+    projectId: number;
+    docGroupId: number | null;
+    name: string;
+    sortOrder: number;
+    text: string;
+    notes: string;
+  }): Promise<Doc> {
+    return invoke<Doc>("doc_restore", payload);
   }
 
   async reorderDoc(id: number, direction: 'up' | 'down'): Promise<void> {
