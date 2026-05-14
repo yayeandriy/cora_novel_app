@@ -65,7 +65,7 @@
   background: transparent;
 }
 
-.button-group .toolbar-button:first-child {
+.button-group .toolbar-button:not(:last-child) {
   border-right: 1px solid #e5e7eb;
 }
 
@@ -405,6 +405,23 @@ app-folder-drafts {
   margin: 0;
 }
 .group-drafts-empty span { font-size: 0.75rem; color: #9ca3af; }
+
+.empty-add-chapter-btn {
+  margin-top: 0.5rem;
+  padding: 6px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: white;
+  color: #374151;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 0.1s ease, border-color 0.1s ease;
+}
+
+.empty-add-chapter-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
 
 .group-drafts-section { display: flex; flex-direction: column; gap: 0.75rem; }
 

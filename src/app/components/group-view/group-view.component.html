@@ -146,7 +146,7 @@
               <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
             </svg>
             <p>No chapters in this Part yet</p>
-            <span>Add chapters to start writing drafts.</span>
+            <button class="empty-add-chapter-btn" (click)="createDocRequested.emit()">Add chapter</button>
           </div>
         } @else {
           @for (section of getDraftsGroupedByDoc(); track section.docId) {
