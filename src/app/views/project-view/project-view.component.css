@@ -197,7 +197,7 @@
   background: transparent;
 }
 
-.floating-doc-tools .button-group .toolbar-button:first-child {
+.floating-doc-tools .button-group .toolbar-button:not(:last-child) {
   border-right: 1px solid #e5e7eb;
 }
 
