@@ -3455,15 +3455,25 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.saveTreeState();
   }
 
-  async createDraft() {
+  async createDraft(mode: 'empty' | 'from-buffer' | 'copy-chapter' = 'empty') {
     if (!this.selectedDoc) {
       console.warn('No document selected');
       return;
     }
 
+    let draftContent = '';
+    if (mode === 'from-buffer') {
+      try {
+        draftContent = await navigator.clipboard.readText();
+      } catch {
+        draftContent = '';
+      }
+    } else if (mode === 'copy-chapter') {
+      draftContent = this.selectedDoc.text || '';
+    }
+
     const draftNumber = this.drafts.length + 1;
     const draftName = `#${draftNumber}`;
-    const draftContent = ''; // Start with empty content, not the doc's current text
     
     try {
       console.log('Creating draft for doc:', this.selectedDoc.id);
@@ -3479,12 +3489,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Select the newly created draft to open split view
   this.selectedDraftId = draft.id;
   try { localStorage.setItem(this.getDraftSelectionKey(this.selectedDoc.id), String(draft.id)); } catch {}
-      // Ensure brand-new draft starts with EMPTY content in UI and local cache
-      this.draftLocalContent.set(draft.id, '');
-      this.setLocalDraftContent(draft.id, '');
+      // Ensure brand-new draft starts with correct content in UI and local cache
+      this.draftLocalContent.set(draft.id, draftContent);
+      this.setLocalDraftContent(draft.id, draftContent);
       const idx = this.drafts.findIndex(d => d.id === draft.id);
       if (idx !== -1) {
-        this.drafts[idx] = { ...this.drafts[idx], content: '' };
+        this.drafts[idx] = { ...this.drafts[idx], content: draftContent };
       }
       // Mark as pending so a blur will sync the empty content if user doesn't type
       this.draftSyncStatus[draft.id] = 'pending';
@@ -5518,8 +5528,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   // ==================== DOCUMENT EDITOR DRAFT HANDLERS ====================
-  onDocumentDraftAdd(): void {
-    this.createDraft();
+  onDocumentDraftAdd(mode: 'empty' | 'from-buffer' | 'copy-chapter'): void {
+    this.createDraft(mode);
   }
 
   onDocumentDraftSelect(draftId: number | null): void {

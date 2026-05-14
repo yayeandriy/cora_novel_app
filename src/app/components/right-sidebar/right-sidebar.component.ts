@@ -105,7 +105,7 @@ export class RightSidebarComponent {
   @Output() docNotesChanged = new EventEmitter<void>();
   @Output() docGroupNotesChanged = new EventEmitter<void>();
   @Output() projectNotesChanged = new EventEmitter<void>();
-  @Output() draftCreated = new EventEmitter<void>();
+  @Output() draftCreated = new EventEmitter<'empty' | 'from-buffer' | 'copy-chapter'>();
   @Output() draftChanged = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();
   @Output() draftBlurred = new EventEmitter<number>();
   @Output() draftDeleted = new EventEmitter<number>();
@@ -164,8 +164,8 @@ export class RightSidebarComponent {
     this.draftsExpandedChange.emit(expanded);
   }
 
-  onDraftCreated() {
-    this.draftCreated.emit();
+  onDraftCreated(mode: 'empty' | 'from-buffer' | 'copy-chapter') {
+    this.draftCreated.emit(mode);
   }
 
   onDraftChanged(event: { draftId: number; content: string; cursorPosition: number }) {

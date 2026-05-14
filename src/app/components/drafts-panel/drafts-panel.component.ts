@@ -1,6 +1,8 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+
+export type DraftCreateMode = 'empty' | 'from-buffer' | 'copy-chapter';
 
 export interface Draft {
   id: number;
@@ -23,7 +25,7 @@ export class DraftsPanelComponent {
   @Input() expanded: boolean = true;
   
   @Output() expandedChange = new EventEmitter<boolean>();
-  @Output() draftCreated = new EventEmitter<void>();
+  @Output() draftCreated = new EventEmitter<DraftCreateMode>();
   @Output() draftChanged = new EventEmitter<{ draftId: number; content: string; cursorPosition: number }>();
   @Output() draftBlurred = new EventEmitter<number>();
   @Output() draftDeleted = new EventEmitter<number>();
@@ -33,8 +35,25 @@ export class DraftsPanelComponent {
     this.expandedChange.emit(!this.expanded);
   }
 
+  addMenuOpen = false;
+
+  toggleAddMenu(event: MouseEvent) {
+    event.stopPropagation();
+    this.addMenuOpen = !this.addMenuOpen;
+  }
+
+  selectAddMode(mode: DraftCreateMode) {
+    this.addMenuOpen = false;
+    this.draftCreated.emit(mode);
+  }
+
+  @HostListener('document:click')
+  onDocumentClick() {
+    this.addMenuOpen = false;
+  }
+
   createDraft() {
-    this.draftCreated.emit();
+    this.draftCreated.emit('empty');
   }
 
   getDraftContent(draftId: number): string {

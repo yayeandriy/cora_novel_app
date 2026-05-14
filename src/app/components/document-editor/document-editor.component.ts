@@ -54,7 +54,7 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   // Right sidebar state
   @Input() rightSidebarCollapsed: boolean = false;
   
-  @Output() draftAdd = new EventEmitter<void>();
+  @Output() draftAdd = new EventEmitter<'empty' | 'from-buffer' | 'copy-chapter'>();
   @Output() rightSidebarToggle = new EventEmitter<void>();
   @Output() draftSelect = new EventEmitter<number | null>();
   @Output() draftRenamed = new EventEmitter<{ id: number; name: string }>();
@@ -77,11 +77,17 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
   @ViewChild('draftTextarea') draftTextarea?: ElementRef<HTMLTextAreaElement>;
   @ViewChild('draftNameInput') draftNameInput?: ElementRef<HTMLInputElement>;
   @ViewChild('splitContainer') splitContainer?: ElementRef<HTMLDivElement>;
+  @ViewChild('addDraftBtn') addDraftBtn?: ElementRef<HTMLButtonElement>;
 
   // Inline rename state
   editingDraftId: number | null = null;
   draftNameEdit: string = '';
   private clickTimer: any;
+
+  // Draft add dropdown
+  addDraftMenuOpen = false;
+  addDraftMenuX = 0;
+  addDraftMenuY = 0;
 
   // Draft tab context menu
   draftContextMenuOpen = false;
@@ -234,6 +240,12 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
 
   @HostListener('document:click', ['$event'])
   onDocumentClickForDraftContextMenu(event: MouseEvent) {
+    if (this.addDraftMenuOpen) {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest('.add-draft-dropdown-wrapper')) {
+        this.addDraftMenuOpen = false;
+      }
+    }
     if (!this.draftContextMenuOpen) return;
     const target = event.target as HTMLElement | null;
     if (!target) return;
@@ -323,8 +335,23 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
     return this.drafts.find(d => d.id === this.selectedDraftId) || null;
   }
 
+  toggleAddDraftMenu(event: MouseEvent) {
+    event.stopPropagation();
+    if (!this.addDraftMenuOpen && this.addDraftBtn) {
+      const rect = this.addDraftBtn.nativeElement.getBoundingClientRect();
+      this.addDraftMenuX = rect.right;
+      this.addDraftMenuY = rect.bottom + 4;
+    }
+    this.addDraftMenuOpen = !this.addDraftMenuOpen;
+  }
+
+  selectAddDraftMode(mode: 'empty' | 'from-buffer' | 'copy-chapter') {
+    this.addDraftMenuOpen = false;
+    this.draftAdd.emit(mode);
+  }
+
   addDraft() {
-    this.draftAdd.emit();
+    this.draftAdd.emit('empty');
   }
 
   selectDraft(id: number) {
