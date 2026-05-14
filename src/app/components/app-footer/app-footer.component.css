@@ -310,3 +310,8 @@
   background: #000000;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
+
+/* Cursor position — shown as progress gradient on the dock background */
+.dock-stats {
+  transition: background 120ms ease;
+}

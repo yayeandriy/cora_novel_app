@@ -64,6 +64,7 @@ interface SelectionStats {
   charCount: number;
   wordCount: number;
   pageCount: number;
+  cursorOffset?: number;
 }
 
 @Component({

@@ -8,6 +8,7 @@ export interface SelectionStats {
   charCount: number;
   wordCount: number;
   pageCount: number;
+  cursorOffset?: number; // char offset of cursor in the full doc
 }
 
 export interface Doc {
@@ -678,9 +679,12 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
     const start = el.selectionStart ?? 0;
     const end = el.selectionEnd ?? 0;
     if (start === end) {
-      if (force || this.lastEmittedSelection !== null) {
-        this.lastEmittedSelection = null;
-        this.selectionStatsChange.emit(null);
+      // No selection — emit cursor position only
+      const cursorOnly: SelectionStats = { charCount: 0, wordCount: 0, pageCount: 0, cursorOffset: start };
+      const prev = this.lastEmittedSelection;
+      if (force || prev == null || prev.cursorOffset !== start || prev.charCount !== 0) {
+        this.lastEmittedSelection = cursorOnly;
+        this.selectionStatsChange.emit(cursorOnly);
       }
       return;
     }
@@ -692,7 +696,7 @@ export class DocumentEditorComponent implements OnInit, OnDestroy, OnChanges, Af
     const wordCount = selectedText.split(/\s+/).filter(w => w.trim().length > 0).length;
     const pageCount = Math.ceil(charCount / 1800);
 
-    const next: SelectionStats = { charCount, wordCount, pageCount };
+    const next: SelectionStats = { charCount, wordCount, pageCount, cursorOffset: start };
     const prev = this.lastEmittedSelection;
     const changed =
       force ||

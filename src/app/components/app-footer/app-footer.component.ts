@@ -18,6 +18,7 @@ export interface SelectionStats {
   charCount: number;
   wordCount: number;
   pageCount: number;
+  cursorOffset?: number;
 }
 
 export type FontFamily = 'mono' | 'serif' | 'sans';
@@ -194,13 +195,32 @@ export class AppFooterComponent implements OnInit {
   get docPageCount(): number { return Math.ceil(this.docCharCount / 1800); }
 
   get effectiveDocCharCount(): number {
-    return this.selectionStats?.charCount ?? this.docCharCount;
+    const sel = this.selectionStats;
+    if (!sel || sel.charCount === 0) return this.docCharCount;
+    return sel.charCount;
   }
   get effectiveDocWordCount(): number {
-    return this.selectionStats?.wordCount ?? this.docWordCount;
+    const sel = this.selectionStats;
+    if (!sel || sel.charCount === 0) return this.docWordCount;
+    return sel.wordCount;
   }
   get effectiveDocPageCount(): number {
-    return this.selectionStats?.pageCount ?? this.docPageCount;
+    const sel = this.selectionStats;
+    if (!sel || sel.charCount === 0) return this.docPageCount;
+    return sel.pageCount;
+  }
+
+  /** True when text is actively selected (vs cursor only / no focus) */
+  get hasSelection(): boolean {
+    return (this.selectionStats?.charCount ?? 0) > 0;
+  }
+
+  /** Cursor position as 0-100 percentage through the chapter, or null when not focused */
+  get cursorPercent(): number | null {
+    const offset = this.selectionStats?.cursorOffset;
+    const total = this.docCharCount;
+    if (offset == null || total === 0) return null;
+    return Math.round((offset / total) * 100);
   }
 
   get projectCharCount(): number {

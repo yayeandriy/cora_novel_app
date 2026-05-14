@@ -1,5 +1,8 @@
 <!-- Dock 1: project stats (center) -->
-<div class="dock dock-stats dock-center" *ngIf="allDocs.length">
+<div class="dock dock-stats dock-center" *ngIf="allDocs.length"
+     [style.background]="selectedDoc && cursorPercent != null
+       ? 'linear-gradient(to right, rgba(0,0,0,0.07) 0%, rgba(0,0,0,0.07) ' + cursorPercent + '%, rgba(255,255,255,0.85) ' + cursorPercent + '%, rgba(255,255,255,0.85) 100%)'
+       : null">
   <div class="stats-container">
     <span class="stat-item">
       <span class="stat-label">C:</span>
