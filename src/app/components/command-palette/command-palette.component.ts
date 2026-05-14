@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output, OnInit, OnDestroy, ElementRef, 
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
-export type CommandMode = 'commands' | 'search-doc' | 'search-project' | 'search-replace';
+export type CommandMode = 'commands' | 'search-doc' | 'search-project' | 'search-replace' | 'shortcuts';
 
 export interface CommandItem {
   id: string;
@@ -67,6 +67,46 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
     { id: 'search-project', label: 'Search in All Chapters', shortcut: '⌘⇧F', icon: '📁', mode: 'search-project' },
     { id: 'search-replace', label: 'Search and Replace', shortcut: '⌘H', icon: '🔄', mode: 'search-replace' },
     { id: 'goto-doc', label: 'Go to Chapter...', shortcut: '⌘P', icon: '📄' },
+    { id: 'shortcuts', label: 'Keyboard Shortcuts', shortcut: '⌘/', icon: '⌨', mode: 'shortcuts' },
+  ];
+
+  /** All app shortcuts, grouped by category.
+   * Single source of truth — keep in sync with handleKeyDown in project-view.component.ts. */
+  readonly shortcutGroups: Array<{ group: string; items: Array<{ keys: string; description: string }> }> = [
+    {
+      group: 'Navigation',
+      items: [
+        { keys: '⌘K', description: 'Open command palette' },
+        { keys: '⌘/', description: 'Show keyboard shortcuts' },
+        { keys: '⌘P', description: 'Go to Chapter…' },
+        { keys: '⌘1', description: 'Toggle Document Navigator' },
+        { keys: '⌘2', description: 'Toggle all sidebars (full width)' },
+        { keys: '⌘3', description: 'Toggle Metadata Sidebar' },
+        { keys: '↑ / ↓', description: 'Move up / down in tree' },
+        { keys: '→ / ←', description: 'Expand / collapse Part' },
+        { keys: 'Enter', description: 'Focus editor / toggle Part' },
+      ],
+    },
+    {
+      group: 'Editing',
+      items: [
+        { keys: '⌘N', description: 'New Chapter' },
+        { keys: '⌘⇧N', description: 'New Part' },
+        { keys: '⌘S', description: 'Save' },
+        { keys: '⌘Z', description: 'Undo last Part / Chapter create or delete' },
+        { keys: '⇧R', description: 'Rename selected Part or Chapter' },
+        { keys: '⌫ / Delete', description: 'Delete selected item (when tree is focused)' },
+        { keys: '⌥↑ / ⌥↓', description: 'Reorder selected item up / down' },
+      ],
+    },
+    {
+      group: 'Search',
+      items: [
+        { keys: '⌘F', description: 'Search in current Chapter' },
+        { keys: '⌘⇧F', description: 'Search in all Chapters' },
+        { keys: '⌘H', description: 'Search & Replace' },
+      ],
+    },
   ];
 
   filteredCommands: CommandItem[] = [];
@@ -317,6 +357,8 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
         return this.currentDocMatches.length - 1;
       case 'search-project':
         return this.searchResults.reduce((acc, r) => acc + r.matches.length, 0) - 1;
+      case 'shortcuts':
+        return -1; // no keyboard navigation in shortcuts view
       default:
         return -1;
     }
@@ -515,6 +557,8 @@ export class CommandPaletteComponent implements OnInit, OnDestroy {
         return 'Search in Story';
       case 'search-replace':
         return 'Search and Replace';
+      case 'shortcuts':
+        return 'Keyboard Shortcuts';
       default:
         return 'Search';
     }

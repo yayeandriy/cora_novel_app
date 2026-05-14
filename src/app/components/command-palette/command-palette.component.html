@@ -18,8 +18,8 @@
         </button>
       </div>
 
-      <!-- Search input (only shown in search modes, not in commands mode) -->
-      @if (mode !== 'commands') {
+      <!-- Search input (only shown in search modes, not in commands/shortcuts mode) -->
+      @if (mode !== 'commands' && mode !== 'shortcuts') {
         <div class="command-palette-input-row">
           <div class="search-input-wrapper">
             <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -161,6 +161,21 @@
           }
           @if (!searchQuery) {
             <div class="no-results hint">Type to search across all chapters</div>
+          }
+        }
+
+        <!-- Keyboard shortcuts mode -->
+        @if (mode === 'shortcuts') {
+          @for (grp of shortcutGroups; track grp.group) {
+            <div class="results-section">
+              <div class="section-label">{{ grp.group }}</div>
+              @for (item of grp.items; track item.keys) {
+                <div class="shortcut-row">
+                  <span class="shortcut-description">{{ item.description }}</span>
+                  <span class="shortcut-keys">{{ item.keys }}</span>
+                </div>
+              }
+            </div>
           }
         }
       </div>

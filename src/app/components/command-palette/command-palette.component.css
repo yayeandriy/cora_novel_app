@@ -396,3 +396,29 @@
 .command-palette-results::-webkit-scrollbar-thumb:hover {
   background: #a0a0a0;
 }
+
+/* Keyboard shortcuts view */
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 12px;
+  gap: 16px;
+}
+
+.shortcut-description {
+  font-size: 13px;
+  color: #3c3c3c;
+  flex: 1;
+}
+
+.shortcut-keys {
+  font-size: 12px;
+  color: #6e6e6e;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Mono', ui-monospace, monospace;
+  white-space: nowrap;
+  background: #f0f0f0;
+  border: 1px solid #d8d8d8;
+  border-radius: 4px;
+  padding: 1px 6px;
+}

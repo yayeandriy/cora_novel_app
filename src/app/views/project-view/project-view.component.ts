@@ -2374,6 +2374,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Cmd+/ to open keyboard shortcuts
+    if ((event.key === '/' || event.code === 'Slash') && event.metaKey) {
+      event.preventDefault();
+      this.openCommandPalette('shortcuts');
+      return;
+    }
+
     // Cmd+F to search in current document
     if ((event.key === 'F' || event.key === 'f' || event.code === 'KeyF') && event.metaKey && !event.shiftKey) {
       event.preventDefault();
