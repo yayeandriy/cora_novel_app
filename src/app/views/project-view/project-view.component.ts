@@ -1062,11 +1062,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       const available = await this.iCloudService.isAvailable();
       if (!available) {
         await message(
-          'iCloud Drive is not available for this build.\n\n' +
-          'iCloud requires a signed build — run pnpm build:current and test ' +
-          'from the built .app bundle.\n\n' +
-          'In dev mode (pnpm tauri:dev) entitlements are not active so iCloud ' +
-          'cannot be accessed.',
+          'iCloud Drive is not available on this device.\n\n' +
+          'Please make sure you are signed in to iCloud and iCloud Drive is enabled. ' +
+          'If you have never enabled iCloud sync for Cora, run a signed build first ' +
+          '(pnpm build:current) to create the iCloud container.',
           { title: 'iCloud Not Available', kind: 'error' }
         );
         return;

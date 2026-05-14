@@ -36,17 +36,15 @@ pub fn get_container_documents_path() -> Option<PathBuf> {
 
 /// Returns `true` if the iCloud Drive container for Cora is available.
 ///
-/// Uses `NSFileManager.URLForUbiquitousContainerIdentifier()` on macOS —
-/// the only API that correctly checks whether the app has the iCloud
-/// entitlement active AND iCloud Drive is enabled. Returns `nil` in dev/
-/// unsigned builds where entitlements are not enforced.
-///
-/// **Requires a fully signed build** (`pnpm build:current`). Always returns
-/// `false` in `pnpm tauri:dev` because that mode runs without sandbox/
-/// entitlements.
+/// First tries `NSFileManager.URLForUbiquitousContainerIdentifier()` (the
+/// authoritative API, requires a signed build with entitlements). If that
+/// returns `nil` (dev mode, unsigned build, or iCloud API temporarily
+/// unavailable), falls back to checking whether the well-known container
+/// path exists on disk — this allows dev-mode use when the user has iCloud
+/// Drive set up for a signed build of the app.
 #[cfg(target_os = "macos")]
 pub fn is_available() -> bool {
-    resolve_container_url().is_some()
+    resolve_container_url().is_some() || get_container_documents_path().is_some()
 }
 
 #[cfg(not(target_os = "macos"))]
@@ -78,18 +76,37 @@ fn resolve_container_url() -> Option<PathBuf> {
     }
 }
 
-/// Creates the Documents folder inside the iCloud container and returns its
-/// path. Uses `URLForUbiquitousContainerIdentifier` on macOS (requires a
-/// signed build with entitlements). Falls back to the well-known path on
-/// non-macOS platforms.
+/// Returns the Documents folder inside the iCloud container, creating it if
+/// needed.
+///
+/// Resolution order on macOS:
+/// 1. `URLForUbiquitousContainerIdentifier` (authoritative, signed builds)
+/// 2. Well-known filesystem path `~/Library/Mobile Documents/<id>/Documents/`
+///    — works in dev mode when the user has previously enabled iCloud sync
+///    via a signed build.
+///
+/// Returns an error only when neither path resolves, which means iCloud Drive
+/// is not set up for this app on this device at all.
 pub fn ensure_container_documents_path() -> Result<PathBuf> {
     #[cfg(target_os = "macos")]
     {
-        resolve_container_url().ok_or_else(|| anyhow!(
-            "iCloud Drive container is not available. \
-             This feature requires a signed build (pnpm build:current). \
-             In dev mode (pnpm tauri:dev) iCloud entitlements are not active."
-        ))
+        // Try authoritative ObjC API first.
+        if let Some(path) = resolve_container_url() {
+            return Ok(path);
+        }
+        // Fallback: check whether the container directory already exists on
+        // disk. This happens in dev mode (no entitlements) when iCloud was
+        // previously enabled via a signed build.
+        get_container_documents_path()
+            .map(|path| {
+                let _ = std::fs::create_dir_all(&path);
+                path
+            })
+            .ok_or_else(|| anyhow!(
+                "iCloud Drive container folder not found on this device. \
+                 Please sign in to iCloud and enable iCloud Drive, then \
+                 enable iCloud sync from a signed build of Cora first."
+            ))
     }
     #[cfg(not(target_os = "macos"))]
     {
