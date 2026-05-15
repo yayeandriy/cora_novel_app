@@ -822,6 +822,10 @@
       <!-- Project actions menu -->
       @if (projectMenuVisible) {
         <div class="project-menu" (click)="$event.stopPropagation()">
+          <button class="menu-item" (click)="onSaveAs(); projectMenuVisible = false">
+            <img class="menu-icon" src="assets/icons/square.and.arrow.down.svg" alt="" />
+            <span>Save As…</span>
+          </button>
           <button class="menu-item" (click)="openExportOptionsDialog(); projectMenuVisible = false">
             <img class="menu-icon" src="assets/icons/square.and.arrow.up.svg" alt="" />
             <span>Export</span>

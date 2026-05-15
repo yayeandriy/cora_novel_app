@@ -24,6 +24,20 @@ use printpdf::*;
 pub struct OpenProject {
     pub path: String,
     pub pool: DbPool,
+    /// Security-scoped URL kept alive while the project is open so the sandbox
+    /// continues granting access. Dropped (and `stopAccessingSecurityScopedResource`
+    /// called) when this struct is dropped.
+    #[cfg(target_os = "macos")]
+    pub _scoped_url: Option<objc2::rc::Retained<objc2_foundation::NSURL>>,
+}
+
+impl Drop for OpenProject {
+    fn drop(&mut self) {
+        #[cfg(target_os = "macos")]
+        if let Some(url) = &self._scoped_url {
+            crate::services::recents::stop_bookmark_access(url);
+        }
+    }
 }
 
 /// Global app state.  `project` is `None` on the dashboard (no file open).
@@ -93,6 +107,8 @@ pub async fn file_new_project(
     *state.project.lock().map_err(|e| e.to_string())? = Some(OpenProject {
         path: path.clone(),
         pool,
+        #[cfg(target_os = "macos")]
+        _scoped_url: None, // new file — sandbox access granted via Save dialog
     });
 
     Ok(OpenProjectInfo { path, project_id: 1, name })
@@ -105,37 +121,97 @@ pub async fn file_open_project(
     state: State<'_, AppState>,
     path: String,
 ) -> Result<OpenProjectInfo, String> {
-    let project_path = std::path::Path::new(&path);
-    if !project_path.exists() {
-        // File not found — remove from recents.
-        let _ = crate::services::recents::remove(&state.recents_pool, &path);
-        return Err(format!("File not found: {}", path));
+    let project_path_buf = std::path::PathBuf::from(&path);
+
+    // Check for iCloud placeholder: when a file is evicted, macOS creates a
+    // hidden `.<name>.icloud` sibling and removes the real file. If the real
+    // path is missing but the placeholder exists, trigger a download and wait.
+    if !project_path_buf.exists() {
+        let placeholder = project_path_buf
+            .parent()
+            .zip(project_path_buf.file_name())
+            .map(|(parent, name)| parent.join(format!(".{}.icloud", name.to_string_lossy())));
+
+        if placeholder.as_ref().map_or(false, |p| p.exists()) {
+            // Trigger iCloud download and poll until available (max 30s).
+            let _ = crate::services::icloud::trigger_download(&project_path_buf);
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+            loop {
+                std::thread::sleep(std::time::Duration::from_millis(500));
+                if project_path_buf.exists() { break; }
+                if std::time::Instant::now() >= deadline {
+                    return Err(
+                        "The project file is downloading from iCloud but is taking too long. \
+                         Please wait for it to finish downloading in Finder, then try again.".into()
+                    );
+                }
+            }
+        } else {
+            let _ = crate::services::recents::remove(&state.recents_pool, &path);
+            return Err(format!("File not found: {}", path));
+        }
     }
 
-    // Detect and migrate legacy ZIP-based .cora files before opening as SQLite.
-    if let Err(e) = crate::services::legacy_migrate::migrate_if_legacy(project_path) {
-        return Err(format!("Failed to migrate legacy .cora file: {e:#}"));
-    }
-
-    let pool = crate::db::open_project_pool(project_path).map_err(|e| e.to_string())?;
-
-    // Read the project name.
-    let name: String = {
-        let conn = crate::db::get_conn(&pool).map_err(|e| e.to_string())?;
-        conn.query_row(
-            "SELECT name FROM projects WHERE id = 1",
-            [],
-            |r| r.get(0),
-        ).unwrap_or_else(|_| {
-            project_path
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("Untitled")
-                .to_string()
-        })
+    // All blocking I/O runs in spawn_blocking so it never stalls the async runtime.
+    // A 10-second timeout catches any remaining stall (e.g. partially downloaded file).
+    // On macOS with App Sandbox, files chosen via a dialog have temporary access
+    // which is lost on restart. Resolve the stored security-scoped bookmark to
+    // regain access before any file I/O.
+    #[cfg(target_os = "macos")]
+    let scoped_url = {
+        let bookmark_bytes = crate::services::recents::get_bookmark(&state.recents_pool, &path)
+            .unwrap_or(None);
+        if let Some(bytes) = bookmark_bytes {
+            crate::services::recents::start_bookmark_access(&bytes)
+        } else {
+            None
+        }
     };
 
-    // Record in recents.
+    let path_for_task = path.clone();
+    let open_result = tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        tokio::task::spawn_blocking(move || -> Result<(DbPool, String), String> {
+            let project_path = std::path::Path::new(&path_for_task);
+
+            // migrate_if_legacy returns the open pool on migration so we don't
+            // re-open immediately after creation (which races with iCloud locking
+            // the new file for upload). Returns None if already SQLite.
+            let pool = match crate::services::legacy_migrate::migrate_if_legacy(project_path)
+                .map_err(|e| format!("Failed to migrate legacy .cora file: {e:#}"))?
+            {
+                Some(migrated_pool) => migrated_pool,
+                None => crate::db::open_project_pool(project_path).map_err(|e| format!("{e:#}"))?,
+            };
+
+            let name: String = {
+                let conn = crate::db::get_conn(&pool).map_err(|e| format!("{e:#}"))?;
+                conn.query_row("SELECT name FROM projects WHERE id = 1", [], |r| r.get(0))
+                    .unwrap_or_else(|_| {
+                        project_path
+                            .file_stem()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("Untitled")
+                            .to_string()
+                    })
+            };
+
+            Ok((pool, name))
+        }),
+    )
+    .await;
+
+    let (pool, name) = match open_result {
+        Err(_elapsed) => return Err(
+            "The file took too long to open. It may still be downloading from iCloud. \
+             Open Finder, wait for the file to download, then try again.".into()
+        ),
+        Ok(Err(join_err)) => return Err(format!("Internal error: {join_err}")),
+        Ok(Ok(Err(e))) => return Err(e),
+        Ok(Ok(Ok(v))) => v,
+    };
+
+    // Record in recents (also refreshes the bookmark).
     crate::services::recents::touch(&state.recents_pool, &path, &name)
         .map_err(|e| e.to_string())?;
 
@@ -143,6 +219,8 @@ pub async fn file_open_project(
     *state.project.lock().map_err(|e| e.to_string())? = Some(OpenProject {
         path: path.clone(),
         pool,
+        #[cfg(target_os = "macos")]
+        _scoped_url: scoped_url,
     });
 
     Ok(OpenProjectInfo { path, project_id: 1, name })
@@ -180,6 +258,63 @@ pub async fn file_checkpoint(state: State<'_, AppState>) -> Result<(), String> {
     conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// Save the current project to a new location (Save As…).
+/// Copies the SQLite file, then reopens the project from the new path.
+/// The old file is left untouched.
+#[tauri::command]
+pub async fn file_save_as(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<OpenProjectInfo, String> {
+    // Ensure path ends with .cora
+    let dest = if path.ends_with(".cora") {
+        path.clone()
+    } else {
+        format!("{}.cora", path)
+    };
+    let dest_path = std::path::Path::new(&dest);
+
+    // Get current project info while still holding the pool open.
+    let (src_path, name) = {
+        let guard = state.project.lock().map_err(|e| e.to_string())?;
+        let open = guard.as_ref().ok_or("No project is currently open.")?;
+        let conn = crate::db::get_conn(&open.pool).map_err(|e| e.to_string())?;
+        let name: String = conn
+            .query_row("SELECT name FROM projects WHERE id = 1", [], |r| r.get(0))
+            .unwrap_or_else(|_| "Untitled".to_string());
+        (open.path.clone(), name)
+    };
+
+    // Checkpoint first so the SQLite file is up-to-date (no pending WAL).
+    {
+        let pool = state.get_project_pool()?;
+        let conn = crate::db::get_conn(&pool).map_err(|e| e.to_string())?;
+        let _ = conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);");
+    }
+
+    // Copy to destination.
+    if let Some(parent) = dest_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| format!("Cannot create destination directory: {e}"))?;
+    }
+    std::fs::copy(&src_path, dest_path)
+        .map_err(|e| format!("Failed to copy project file: {e}"))?;
+
+    // Open the new copy as the current project.
+    let new_pool = crate::db::open_project_pool(dest_path).map_err(|e| e.to_string())?;
+    *state.project.lock().map_err(|e| e.to_string())? = Some(OpenProject {
+        path: dest.clone(),
+        pool: new_pool,
+        #[cfg(target_os = "macos")]
+        _scoped_url: None, // Save As path was chosen via dialog — access is active
+    });
+
+    // Add to recents.
+    crate::services::recents::touch(&state.recents_pool, &dest, &name)
+        .map_err(|e| e.to_string())?;
+
+    Ok(OpenProjectInfo { path: dest, project_id: 1, name })
 }
 
 // ─── Recents commands ─────────────────────────────────────────────────────────

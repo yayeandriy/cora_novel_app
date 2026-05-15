@@ -29,17 +29,18 @@ pub fn is_legacy_zip(path: &Path) -> bool {
 // ─── Migration ───────────────────────────────────────────────────────────────
 
 /// If `path` is a legacy ZIP-based `.cora` file, migrate it to SQLite in-place
-/// and return `true`.  Returns `false` if the file is already SQLite.
+/// and return the open `DbPool` ready for use.  Returns `None` if the file is
+/// already in the current SQLite format — the caller should open the pool itself.
 /// The original ZIP is kept as `<path>.bak` so the user can recover it.
-pub fn migrate_if_legacy(path: &Path) -> anyhow::Result<bool> {
+pub fn migrate_if_legacy(path: &Path) -> anyhow::Result<Option<crate::db::DbPool>> {
     if !is_legacy_zip(path) {
-        return Ok(false);
+        return Ok(None);
     }
-    do_migrate(path)?;
-    Ok(true)
+    let pool = do_migrate(path)?;
+    Ok(Some(pool))
 }
 
-fn do_migrate(zip_path: &Path) -> anyhow::Result<()> {
+fn do_migrate(zip_path: &Path) -> anyhow::Result<crate::db::DbPool> {
     // ── 1. Read ZIP bytes into memory (keeps them for recovery) ──────────
     let zip_bytes = std::fs::read(zip_path).context("reading legacy .cora ZIP")?;
     let cursor = std::io::Cursor::new(&zip_bytes);
@@ -55,43 +56,34 @@ fn do_migrate(zip_path: &Path) -> anyhow::Result<()> {
     let raw = std::fs::read_to_string(&meta_path).context("reading metadata.json")?;
     let payload: LegacyExport = serde_json::from_str(&raw).context("parsing metadata.json")?;
 
-    // ── 3. Write new SQLite to a temp file (system temp — always writable) 
-    let tmp_sqlite = tempfile::NamedTempFile::new().context("creating temp SQLite file")?;
-    let tmp_sqlite_path = tmp_sqlite.path().to_path_buf();
-    // persist() keeps the file alive after we drop the handle
-    let tmp_sqlite_persistent = tmp_sqlite.into_temp_path();
-
-    write_sqlite(&tmp_sqlite_path, &payload).context("writing new SQLite database")?;
-
-    // ── 4. Save a .bak copy of the original ZIP (best-effort, never fatal)
+    // ── 3. Save a .bak copy of the original ZIP (best-effort, never fatal)
     let orig_name = zip_path.file_name().and_then(|n| n.to_str()).unwrap_or("project.cora");
     let mut bak_path = zip_path.to_path_buf();
     bak_path.set_file_name(format!("{orig_name}.bak"));
-    // Overwrite any stale .bak from a previous attempt.
     let _ = std::fs::remove_file(&bak_path);
     let _ = std::fs::write(&bak_path, &zip_bytes);
 
-    // ── 5. Replace the original file with the new SQLite ─────────────────
-    // Try atomic rename first; fall back to copy+delete if cross-device.
-    let replace_result = std::fs::rename(&tmp_sqlite_path, zip_path).or_else(|_| {
-        std::fs::copy(&tmp_sqlite_path, zip_path).map(|_| ())
-    });
+    // ── 4. Delete the ZIP so SQLite can create a fresh file at the same path.
+    // Writing SQLite directly to zip_path (rather than temp + copy) avoids
+    // the cross-filesystem copy that causes iCloud Drive to briefly mark the
+    // file read-only during upload, breaking subsequent writes.
+    std::fs::remove_file(zip_path)
+        .context("removing legacy ZIP before writing SQLite")?;
 
-    match replace_result {
-        Ok(()) => {
-            // Clean up the temp path handle (file is already moved/copied).
-            let _ = tmp_sqlite_persistent.close();
-            Ok(())
-        }
+    // ── 5. Write new SQLite directly to zip_path and return the open pool ──
+    // Returning the pool avoids a second open() call immediately after file
+    // creation, which races with iCloud Drive locking the file for upload.
+    match write_sqlite(zip_path, &payload).context("writing new SQLite database") {
+        Ok(pool) => Ok(pool),
         Err(e) => {
-            // Restore original from bytes we kept in memory.
+            // Restore the original ZIP from memory so the user isn't left with nothing.
             let _ = std::fs::write(zip_path, &zip_bytes);
-            Err(anyhow!("could not replace original file with new SQLite: {e:#}"))
+            Err(e)
         }
     }
 }
 
-fn write_sqlite(path: &Path, payload: &LegacyExport) -> anyhow::Result<()> {
+fn write_sqlite(path: &Path, payload: &LegacyExport) -> anyhow::Result<crate::db::DbPool> {
     let pool = crate::db::open_project_pool(path).context("creating new SQLite project")?;
     let conn = crate::db::get_conn(&pool).context("getting DB connection")?;
     let now = chrono::Utc::now().to_rfc3339();
@@ -246,7 +238,7 @@ fn write_sqlite(path: &Path, payload: &LegacyExport) -> anyhow::Result<()> {
     })();
 
     match result {
-        Ok(()) => { conn.execute_batch("COMMIT").context("commit")?; Ok(()) }
+        Ok(()) => { conn.execute_batch("COMMIT").context("commit")?; Ok(pool) }
         Err(e) => { let _ = conn.execute_batch("ROLLBACK"); Err(e) }
     }
 }

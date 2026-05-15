@@ -93,6 +93,7 @@ export class ProjectDashboardComponent implements OnInit, OnDestroy {
   }
 
   async openByPath(path: string) {
+    if (this.isOpening()) return; // prevent concurrent open calls
     this.openError.set(null);
     this.isOpening.set(true);
     try {
@@ -100,9 +101,10 @@ export class ProjectDashboardComponent implements OnInit, OnDestroy {
       this.navigateToProject();
     } catch (e: any) {
       const msg = String(e);
-      if (msg.includes('not found')) {
+      if (msg.includes('not found') || msg.includes('File not found')) {
         await this.projectService.recentsRemove(path);
         await this.loadRecents();
+        this.openError.set(`File not found: ${path}`);
       } else {
         this.openError.set(msg);
         console.error('Failed to open project:', e);

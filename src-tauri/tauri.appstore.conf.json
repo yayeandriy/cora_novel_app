@@ -4,7 +4,7 @@
   "bundle": {
     "category": "Productivity",
     "macOS": {
-      "bundleVersion": "175",
+      "bundleVersion": "182",
       "minimumSystemVersion": "11.0",
       "entitlements": "./Entitlements.plist",
       "files": {

@@ -33,6 +33,8 @@ pub fn init_recents_pool() -> anyhow::Result<DbPool> {
              last_opened  TEXT NOT NULL
          );"
     ).context("initialising recents.db")?;
+    // Add bookmark column idempotently (ALTER TABLE fails if column exists — ignore that error).
+    let _ = conn.execute_batch("ALTER TABLE recent_files ADD COLUMN bookmark BLOB;");
 
     Ok(pool)
 }
@@ -44,7 +46,14 @@ pub fn open_project_pool(path: &Path) -> anyhow::Result<DbPool> {
         fs::create_dir_all(parent).context("creating project directory")?;
     }
 
-    let pool = Pool::new(SqliteConnectionManager::file(path))
+    // Use a small pool (3 connections). journal_mode=DELETE serialises writers
+    // via busy_timeout, but we still need multiple connections for concurrent
+    // reads that the Angular frontend issues in parallel (Promise.all calls).
+    // Set connection_timeout short so pool.get() fails fast instead of hanging.
+    let pool = Pool::builder()
+        .max_size(3)
+        .connection_timeout(std::time::Duration::from_secs(5))
+        .build(SqliteConnectionManager::file(path))
         .context("creating project r2d2 pool")?;
 
     let conn = pool.get().context("getting project connection")?;

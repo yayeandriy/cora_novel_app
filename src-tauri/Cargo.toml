@@ -1,6 +1,6 @@
 [package]
 name = "cora"
-version = "0.12.13"
+version = "0.12.20"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -39,15 +39,18 @@ zip = "0.6"
 docx-rs = "0.4.3"
 notify = "6"
 tempfile = "3"
+tokio = { version = "1", features = ["time", "rt"] }
 
 # macOS-only: iCloud Drive integration via Objective-C runtime
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.5"
 objc2-foundation = { version = "0.2", features = [
+    "NSArray",
+    "NSData",
+    "NSError",
     "NSFileManager",
     "NSString",
     "NSURL",
-    "NSError",
     "NSPathUtilities",
 ] }
 block2 = "0.5"

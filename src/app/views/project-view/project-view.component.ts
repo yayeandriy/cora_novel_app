@@ -7,7 +7,7 @@ import { TimelineService } from '../../services/timeline.service';
 import { SyncService } from '../../services/sync.service';
 import { ICloudService } from '../../services/icloud.service';
 import { UndoService } from '../../services/undo.service';
-import { confirm, open, ask, message } from '@tauri-apps/plugin-dialog';
+import { confirm, open, save, ask, message } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile, readFile, writeFile } from '@tauri-apps/plugin-fs';
 import { tempDir, join } from '@tauri-apps/api/path';
 import { listen } from '@tauri-apps/api/event';
@@ -1030,6 +1030,20 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   // Show export options dialog
+  async onSaveAs() {
+    const dest = await save({
+      title: 'Save Project As…',
+      filters: [{ name: 'Cora Project', extensions: ['cora'] }],
+    });
+    if (!dest) return;
+    try {
+      await this.projectService.fileSaveAs(dest);
+    } catch (e) {
+      console.error('Save As failed:', e);
+      await message(String(e), { title: 'Save As failed', kind: 'error' });
+    }
+  }
+
   openExportOptionsDialog() {
     this.showExportOptionsDialog = true;
     if (this.exportRangePartId == null && this.docGroups.length > 0) {
