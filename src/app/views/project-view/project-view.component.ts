@@ -10,6 +10,7 @@ import { UndoService } from '../../services/undo.service';
 import { confirm, open, ask, message } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile, readFile, writeFile } from '@tauri-apps/plugin-fs';
 import { tempDir, join } from '@tauri-apps/api/path';
+import { listen } from '@tauri-apps/api/event';
 import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
 import { DocumentEditorComponent } from '../../components/document-editor/document-editor.component';
 import { GroupViewComponent } from '../../components/group-view/group-view.component';
@@ -133,6 +134,10 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private saveStatusTimeout: any;
   private autoSaveTimeout: any;
   private autoSaveNotesTimeout: any;
+  /** Unlisten function for the `cora://icloud-file-changed` event. */
+  private unlistenICloudChange: (() => void) | null = null;
+  /** Debounce timer for iCloud push — only push after 12s of inactivity. */
+  private pushDebounceTimer: any = null;
   
   // Local doc state cache
   private docStateCache: Map<number, {text?: string | null, notes?: string | null}> = new Map();
@@ -896,7 +901,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.projectNameEdit = this.projectName;
       
       // Trigger auto-sync check (non-blocking)
-      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      this.schedulePushToICloud();
     } catch (error) {
       console.error('Failed to rename project:', error);
       alert('Failed to rename project: ' + error);
@@ -917,8 +922,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // In the per-file architecture each project file has exactly one project
+    // with id = 1.  The route param is kept for historical reasons but always
+    // resolves to 1 for new files.
     this.route.params.subscribe((params: any) => {
-      this.projectId = +params['id'];
+      this.projectId = +params['id'] || 1;
       this.loadProject();
     });
     
@@ -938,6 +946,19 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
     if (this.undoToastTimeout) {
       clearTimeout(this.undoToastTimeout);
+    }
+    // Stop listening for iCloud file changes and unregister the background watcher.
+    this.unlistenICloudChange?.();
+    this.unlistenICloudChange = null;
+    // Flush any pending debounced checkpoint immediately before the component tears down.
+    if (this.pushDebounceTimer) {
+      clearTimeout(this.pushDebounceTimer);
+      this.pushDebounceTimer = null;
+      this.projectService.fileCheckpoint().catch(() => {});
+    }
+    if (this.projectId) {
+      this.projectService.icloudUnwatchProject(this.projectId)
+        .catch(err => console.warn('icloud_unwatch_project failed:', err));
     }
     this.undoService.clear();
   }
@@ -1167,6 +1188,42 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await Command.create('open', ['-R', path]).execute();
     } catch (error) {
       console.error('Failed to reveal iCloud file in Finder:', error);
+    }
+  }
+
+  // ─── iCloud / file sync (new per-file architecture) ──────────────────────
+
+  /**
+   * Schedule a WAL checkpoint 8s after the last edit.
+   * The checkpoint copies WAL data into the main .cora file so iCloud Drive
+   * picks up the change as a single file update (no -wal/-shm sidecar files).
+   */
+  private schedulePushToICloud(): void {
+    if (this.pushDebounceTimer) clearTimeout(this.pushDebounceTimer);
+    this.pushDebounceTimer = setTimeout(async () => {
+      this.pushDebounceTimer = null;
+      try {
+        await this.projectService.fileCheckpoint();
+      } catch (err) {
+        console.warn('[iCloud] Checkpoint failed:', err);
+      }
+    }, 8_000);
+  }
+
+  /**
+   * Called when FSEvents detects the open .cora file was modified by iCloud
+   * (i.e. another device wrote a newer version).
+   * We reopen the project pool and reload the UI transparently.
+   */
+  private async onRemoteICloudChange(filePath: string): Promise<void> {
+    console.log('[iCloud] Remote change detected, reloading project…');
+    try {
+      await this.projectService.fileOpenProject(filePath);
+      await this.loadProject(/*preserveSelection*/ true, /*skipRestore*/ false, /*skipSync*/ true);
+      this.syncStatus = 'synced';
+    } catch (err) {
+      console.error('[iCloud] Failed to reload after remote change:', err);
+      this.syncStatus = 'error';
     }
   }
 
@@ -1409,13 +1466,32 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   async loadSyncStatus(): Promise<void> {
+    // In the per-file architecture the project file IS the sync unit.
+    // Just register an FSEvents listener for the open project file.
+    this.unlistenICloudChange?.();
+    this.unlistenICloudChange = null;
+
     try {
-      this.currentSync = await this.syncService.getSyncByProject(this.projectId);
-      if (this.currentSync) {
-        this.syncStatus = this.currentSync.sync_status as any || 'idle';
-      }
+      const info = await this.projectService.fileGetOpenProject();
+      if (!info) return;
+      const filePath = info.path;
+
+      // Register the Rust FSEvents watcher for this file.
+      this.projectService
+        .icloudWatchProject(this.projectId, filePath)
+        .catch(err => console.warn('icloud_watch_project failed:', err));
+
+      // React when iCloud delivers a remote change.
+      listen<{ projectId: number; path: string }>('cora://icloud-file-changed', async event => {
+        if (event.payload.projectId !== this.projectId) return;
+        await this.onRemoteICloudChange(event.payload.path);
+      }).then(unlisten => {
+        this.unlistenICloudChange = unlisten;
+      }).catch(err => console.warn('Failed to subscribe to iCloud file changes:', err));
+
+      this.syncStatus = 'synced';
     } catch (err) {
-      console.error('Failed to load sync status:', err);
+      console.warn('[iCloud] loadSyncStatus skipped:', err);
     }
   }
 
@@ -1560,25 +1636,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
    * This is called after data modification operations (saves, updates, deletes).
    * Non-blocking - won't interrupt user workflow if sync fails.
    */
-  private async checkAutoSync(): Promise<void> {
-    try {
-      // Mark that database was changed (for sync tracking)
-      await this.syncService.markDbChangedSimple(this.projectId);
-      
-      // Check if auto-sync should run (checks: sync exists, enabled, not throttled, not syncing)
-      const shouldSync = await this.syncService.shouldAutoSync(this.projectId);
-      
-      if (shouldSync) {
-        console.log('[Auto-Sync] Conditions met, triggering sync...');
-        // Trigger sync asynchronously without blocking
-        await this.performSync();
-      }
-    } catch (err) {
-      // Don't throw - auto-sync failures shouldn't interrupt user workflow
-      console.warn('[Auto-Sync] Failed:', err);
-    }
-  }
-
   async exportToPdf() {
     this.showExportOptionsDialog = false;
     await this.onExportProjectToPdfRequested();
@@ -1660,7 +1717,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     return items;
   }
 
-  async loadProject(preserveSelection: boolean = false, skipRestore: boolean = false) {
+  async loadProject(preserveSelection: boolean = false, skipRestore: boolean = false, skipSync: boolean = false) {
     try {
       // Save current selection if we want to preserve it
       const currentDocId = preserveSelection ? this.selectedDoc?.id : null;
@@ -1706,8 +1763,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         // First open — enable iCloud sync silently (no success dialog)
         this.enableICloudSync(/* silent */ true).catch(err => console.warn('Auto iCloud sync setup failed:', err));
       } else if (this.currentSync.auto_sync_enabled) {
-        // Sync on project open (non-blocking)
-        this.performSync().catch(err => console.warn('Sync on project open failed:', err));
+        // Do NOT push on open — pushing from both machines on startup causes
+        // iCloud version conflicts.  Pushes are only triggered by user edits.
+        // (loadSyncStatus still registers the FSEvents watcher below.)
       }
 
       // Restore draft tool expansion states from localStorage
@@ -3051,7 +3109,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }, 3000);
       
       // Trigger auto-sync check (non-blocking)
-      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      this.schedulePushToICloud();
     } catch (error) {
       console.error('Failed to save doc:', error);
       alert('Failed to save document: ' + error);
@@ -3149,7 +3207,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.loadProject(true);
       
       // Trigger auto-sync check (non-blocking)
-      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      this.schedulePushToICloud();
     } catch (error) {
       console.error('Failed to save doc notes:', error);
     }
@@ -3179,7 +3237,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.loadProject(true);
       
       // Trigger auto-sync check (non-blocking)
-      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      this.schedulePushToICloud();
     } catch (error) {
       console.error('Failed to save doc group notes:', error);
     }
@@ -3205,7 +3263,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       console.log('Project notes saved successfully');
       
       // Trigger auto-sync check (non-blocking)
-      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      this.schedulePushToICloud();
     } catch (error) {
       console.error('Failed to save project notes:', error);
     }
@@ -4054,7 +4112,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.projectDraftSyncedClearTimeouts.set(draftId, clearTimer);
       
       // Trigger auto-sync check (non-blocking)
-      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      this.schedulePushToICloud();
       if (wasFocused && cursorPosition !== undefined) {
         // caret restoration handled by browser for now
       }
@@ -4189,7 +4247,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.folderDraftSyncedClearTimeouts.set(draftId, clearTimer);
       
       // Trigger auto-sync check (non-blocking)
-      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      this.schedulePushToICloud();
       if (wasFocused && cursorPosition !== undefined) {
         // caret restoration handled by browser for now
       }
@@ -4432,7 +4490,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
       
       // Trigger auto-sync check (non-blocking)
-      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      this.schedulePushToICloud();
     } catch (error) {
       console.error('Failed to update character name:', error);
     }
@@ -4448,7 +4506,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
       
       // Trigger auto-sync check (non-blocking)
-      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      this.schedulePushToICloud();
     } catch (error) {
       console.error('Failed to update character description:', error);
     }
@@ -4472,7 +4530,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
       
       // Trigger auto-sync check (non-blocking)
-      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      this.schedulePushToICloud();
       
       this.changeDetector.markForCheck();
     } catch (error) {
@@ -4550,7 +4608,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
       
       // Trigger auto-sync check (non-blocking)
-      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      this.schedulePushToICloud();
       
       this.changeDetector.markForCheck();
     } catch (error) {
@@ -4571,7 +4629,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.events = this.events.filter(e => e.id !== id);
       
       // Trigger auto-sync check (non-blocking)
-      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      this.schedulePushToICloud();
       
       // Track if we need to refresh folder list
       const wasInDocEvents = this.docEventIds.has(id);
@@ -5169,7 +5227,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.loadProject(true);
       
       // Trigger auto-sync check (non-blocking)
-      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      this.schedulePushToICloud();
     } else {
       alert('No matches found');
     }
@@ -5424,7 +5482,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       await this.projectService.updateDraft(draftId, draft.name, content);
       
       // Trigger auto-sync check (non-blocking)
-      this.checkAutoSync().catch(err => console.warn('Auto-sync check failed:', err));
+      this.schedulePushToICloud();
       
       // Update the draft metadata from backend without overwriting content being edited
       const updated = await this.projectService.getDraft(draftId);

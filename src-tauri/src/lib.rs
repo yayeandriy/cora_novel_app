@@ -14,29 +14,37 @@ mod services {
     pub mod archives;
     pub mod sync;
     pub mod icloud;
+    pub mod icloud_watcher;
+    pub mod recents;
+    pub mod legacy_migrate;
 }
 mod commands;
 
-use crate::db::init_pool;
-use commands::{AppState};
-use tauri::Manager;
+use commands::AppState;
+use std::sync::{Arc, Mutex};
+use tauri::{Manager, Emitter};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // initialize DB pool and run migrations
-    let pool = init_pool().expect("failed to init db pool");
-    let app_state = AppState { pool };
+    let recents_pool = crate::db::init_recents_pool().expect("failed to init recents db");
+    let app_state = AppState {
+        project: Arc::new(Mutex::new(None)),
+        recents_pool,
+        pending_open_file: Arc::new(Mutex::new(None)),
+        icloud_watcher: crate::services::icloud_watcher::ICloudWatcher::new(),
+    };
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
-        // Persisted scope MUST come after fs plugin - it saves/restores file access permissions
-        // across app restarts (security-scoped bookmarks on macOS)
         .plugin(tauri_plugin_persisted_scope::init())
         .setup(|app| {
-            // Open the main window maximized by default (not macOS fullscreen space)
+            let state = app.state::<AppState>();
+            let watcher = state.icloud_watcher.clone();
+            watcher.start_watching(app.handle().clone());
+
             if let Some(win) = app.get_webview_window("main") {
                 let _ = win.maximize();
                 let _ = win.set_focus();
@@ -176,7 +184,40 @@ pub fn run() {
             commands::icloud_scan_documents,
             commands::icloud_delete_file,
             commands::icloud_move_file,
+            // iCloud watcher commands
+            commands::icloud_watch_project,
+            commands::icloud_unwatch_project,
+            // Per-file project lifecycle
+            commands::file_new_project,
+            commands::file_open_project,
+            commands::file_close_project,
+            commands::file_get_open_project,
+            commands::file_checkpoint,
+            // Recents
+            commands::recents_list,
+            commands::recents_remove,
+            commands::get_pending_open_file,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            if let tauri::RunEvent::Opened { urls } = event {
+                // Filter for .cora file URLs (macOS file association open events)
+                let cora_path = urls.iter().find_map(|url| {
+                    url.to_file_path().ok()
+                        .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("cora"))
+                        .and_then(|p| p.to_str().map(String::from))
+                });
+                if let Some(path) = cora_path {
+                    // Store for frontend to pick up on init (handles startup case)
+                    if let Some(state) = app_handle.try_state::<AppState>() {
+                        if let Ok(mut pending) = state.pending_open_file.lock() {
+                            *pending = Some(path.clone());
+                        }
+                    }
+                    // Also emit event for the "app already running" case
+                    let _ = app_handle.emit("cora://open-file", path);
+                }
+            }
+        });
 }

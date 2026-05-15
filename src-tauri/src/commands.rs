@@ -1,4 +1,5 @@
 use crate::db::DbPool;
+use std::sync::{Arc, Mutex};
 use crate::models::{
     ProjectCreate, Project,
     Character, Event, Place,
@@ -8,7 +9,8 @@ use crate::models::{
     Timeline, TimelineCreate, TimelineUpdate,
     Archive, ArchiveCreate, ArchiveUpdate,
     ExportPdfOptions,
-    Sync, SyncCreate, SyncUpdate, SyncStatus
+    Sync, SyncCreate, SyncUpdate, SyncStatus,
+    RecentFile, OpenProjectInfo,
 };
 use std::io::Cursor;
 use crate::services::projects as project_service;
@@ -18,9 +20,187 @@ use std::path::Path;
 use std::fs;
 use printpdf::*;
 
+/// Currently open project file — swapped when the user opens a new project.
+pub struct OpenProject {
+    pub path: String,
+    pub pool: DbPool,
+}
+
+/// Global app state.  `project` is `None` on the dashboard (no file open).
 #[derive(Clone)]
 pub struct AppState {
-    pub pool: DbPool,
+    /// Per-project pool for the currently open `.cora` file.
+    /// `None` when on the dashboard with no project open.
+    pub project: Arc<Mutex<Option<OpenProject>>>,
+    /// Tiny recents.db — only `recent_files` table.
+    pub recents_pool: DbPool,
+    /// Pending file path from macOS `RunEvent::Opened` (Finder double-click).
+    pub pending_open_file: Arc<Mutex<Option<String>>>,
+    /// FSEvents watcher for iCloud Drive changes.
+    pub icloud_watcher: crate::services::icloud_watcher::ICloudWatcher,
+}
+
+impl AppState {
+    /// Returns the DbPool for the currently open project, or an error if none is open.
+    pub fn get_project_pool(&self) -> Result<DbPool, String> {
+        self.project
+            .lock()
+            .map_err(|e| e.to_string())?
+            .as_ref()
+            .map(|p| p.pool.clone())
+            .ok_or_else(|| "No project is currently open. Please open or create a project.".to_string())
+    }
+
+    /// Returns the path of the currently open project file.
+    pub fn get_project_path(&self) -> Result<String, String> {
+        self.project
+            .lock()
+            .map_err(|e| e.to_string())?
+            .as_ref()
+            .map(|p| p.path.clone())
+            .ok_or_else(|| "No project is currently open.".to_string())
+    }
+}
+
+// ─── File / project lifecycle commands ───────────────────────────────────────
+
+/// Create a new project file at `path` (absolute path including .cora extension).
+/// Opens the DB, runs migrations, inserts a single project row, adds to recents.
+/// Returns the new project info.
+#[tauri::command]
+pub async fn file_new_project(
+    state: State<'_, AppState>,
+    path: String,
+    name: String,
+) -> Result<OpenProjectInfo, String> {
+    let project_path = std::path::Path::new(&path);
+    let pool = crate::db::open_project_pool(project_path).map_err(|e| e.to_string())?;
+
+    // Insert the single project row.
+    let conn = crate::db::get_conn(&pool).map_err(|e| e.to_string())?;
+    let now = chrono::Utc::now().to_rfc3339();
+    conn.execute(
+        "INSERT OR IGNORE INTO projects (id, name, created_at, updated_at) VALUES (1, ?1, ?2, ?2)",
+        rusqlite::params![name, now],
+    ).map_err(|e| e.to_string())?;
+    drop(conn);
+
+    // Record in recents.
+    crate::services::recents::touch(&state.recents_pool, &path, &name)
+        .map_err(|e| e.to_string())?;
+
+    // Set as current project.
+    *state.project.lock().map_err(|e| e.to_string())? = Some(OpenProject {
+        path: path.clone(),
+        pool,
+    });
+
+    Ok(OpenProjectInfo { path, project_id: 1, name })
+}
+
+/// Open an existing `.cora` project file.
+/// Runs migrations (safe to run on already-migrated files), adds to recents.
+#[tauri::command]
+pub async fn file_open_project(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<OpenProjectInfo, String> {
+    let project_path = std::path::Path::new(&path);
+    if !project_path.exists() {
+        // File not found — remove from recents.
+        let _ = crate::services::recents::remove(&state.recents_pool, &path);
+        return Err(format!("File not found: {}", path));
+    }
+
+    // Detect and migrate legacy ZIP-based .cora files before opening as SQLite.
+    if let Err(e) = crate::services::legacy_migrate::migrate_if_legacy(project_path) {
+        return Err(format!("Failed to migrate legacy .cora file: {e:#}"));
+    }
+
+    let pool = crate::db::open_project_pool(project_path).map_err(|e| e.to_string())?;
+
+    // Read the project name.
+    let name: String = {
+        let conn = crate::db::get_conn(&pool).map_err(|e| e.to_string())?;
+        conn.query_row(
+            "SELECT name FROM projects WHERE id = 1",
+            [],
+            |r| r.get(0),
+        ).unwrap_or_else(|_| {
+            project_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("Untitled")
+                .to_string()
+        })
+    };
+
+    // Record in recents.
+    crate::services::recents::touch(&state.recents_pool, &path, &name)
+        .map_err(|e| e.to_string())?;
+
+    // Set as current project.
+    *state.project.lock().map_err(|e| e.to_string())? = Some(OpenProject {
+        path: path.clone(),
+        pool,
+    });
+
+    Ok(OpenProjectInfo { path, project_id: 1, name })
+}
+
+/// Close the currently open project (return to dashboard).
+#[tauri::command]
+pub async fn file_close_project(state: State<'_, AppState>) -> Result<(), String> {
+    *state.project.lock().map_err(|e| e.to_string())? = None;
+    Ok(())
+}
+
+/// Return info about the currently open project (if any).
+#[tauri::command]
+pub async fn file_get_open_project(
+    state: State<'_, AppState>,
+) -> Result<Option<OpenProjectInfo>, String> {
+    let guard = state.project.lock().map_err(|e| e.to_string())?;
+    let Some(open) = guard.as_ref() else { return Ok(None); };
+    let path = open.path.clone();
+    let name: String = {
+        let conn = crate::db::get_conn(&open.pool).map_err(|e| e.to_string())?;
+        conn.query_row("SELECT name FROM projects WHERE id = 1", [], |r| r.get(0))
+            .unwrap_or_else(|_| "Untitled".to_string())
+    };
+    Ok(Some(OpenProjectInfo { path, project_id: 1, name }))
+}
+
+/// Force a WAL checkpoint on the current project file.
+/// Call this after a batch of edits to make sure iCloud picks up the changes.
+#[tauri::command]
+pub async fn file_checkpoint(state: State<'_, AppState>) -> Result<(), String> {
+    let pool = state.get_project_pool()?;
+    let conn = crate::db::get_conn(&pool).map_err(|e| e.to_string())?;
+    conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+// ─── Recents commands ─────────────────────────────────────────────────────────
+
+/// List recent project files (most-recently opened first).
+#[tauri::command]
+pub async fn recents_list(state: State<'_, AppState>) -> Result<Vec<RecentFile>, String> {
+    crate::services::recents::list(&state.recents_pool).map_err(|e| e.to_string())
+}
+
+/// Remove a path from the recents list (e.g. when the file was deleted).
+#[tauri::command]
+pub async fn recents_remove(state: State<'_, AppState>, path: String) -> Result<(), String> {
+    crate::services::recents::remove(&state.recents_pool, &path).map_err(|e| e.to_string())
+}
+
+/// Returns and clears the file path that was opened via macOS file association.
+#[tauri::command]
+pub async fn get_pending_open_file(state: State<'_, AppState>) -> Result<Option<String>, String> {
+    let mut pending = state.pending_open_file.lock().map_err(|e| e.to_string())?;
+    Ok(pending.take())
 }
 
 /// Helper to mark a project as having DB changes for auto-sync.
@@ -141,7 +321,8 @@ fn get_project_id_for_timeline(pool: &DbPool, timeline_id: i64) -> Option<i64> {
 
 #[tauri::command]
 pub async fn project_create(state: State<'_, AppState>, payload: ProjectCreate) -> Result<Project, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let project = project_service::create(pool, payload).map_err(|e| e.to_string())?;
     
     // Automatically create first folder "Part I" and first doc "Chapter One"
@@ -155,19 +336,22 @@ pub async fn project_create(state: State<'_, AppState>, payload: ProjectCreate) 
 
 #[tauri::command]
 pub async fn project_get(state: State<'_, AppState>, id: i64) -> Result<Option<Project>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     project_service::get(pool, id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn project_list(state: State<'_, AppState>) -> Result<Vec<Project>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     project_service::list(pool).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn project_update(state: State<'_, AppState>, id: i64, changes: Option<serde_json::Value>) -> Result<Project, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     // changes may contain name/desc/path
     let name = changes.as_ref().and_then(|c| c.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let desc = changes.as_ref().and_then(|c| c.get("desc").and_then(|v| v.as_str()).map(|s| s.to_string()));
@@ -180,21 +364,24 @@ pub async fn project_update(state: State<'_, AppState>, id: i64, changes: Option
 
 #[tauri::command]
 pub async fn project_delete(state: State<'_, AppState>, id: i64) -> Result<bool, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     project_service::delete(pool, id).map_err(|e| e.to_string())
 }
 
 // Doc Groups Commands
 #[tauri::command]
 pub async fn doc_group_list(state: State<'_, AppState>, project_id: i64) -> Result<serde_json::Value, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let groups = crate::services::doc_groups::list_doc_groups(pool, project_id).map_err(|e| e.to_string())?;
     serde_json::to_value(groups).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn doc_group_create(state: State<'_, AppState>, project_id: i64, name: String, parent_id: Option<i64>) -> Result<serde_json::Value, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let group = crate::services::doc_groups::create_doc_group(pool, project_id, &name, parent_id).map_err(|e| e.to_string())?;
     mark_project_changed(pool, project_id);
     serde_json::to_value(group).map_err(|e| e.to_string())
@@ -202,7 +389,8 @@ pub async fn doc_group_create(state: State<'_, AppState>, project_id: i64, name:
 
 #[tauri::command]
 pub async fn doc_group_create_after(state: State<'_, AppState>, project_id: i64, name: String, parent_id: Option<i64>, after_sort_order: i64) -> Result<serde_json::Value, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let group = crate::services::doc_groups::create_doc_group_after(pool, project_id, &name, parent_id, after_sort_order).map_err(|e| e.to_string())?;
     mark_project_changed(pool, project_id);
     serde_json::to_value(group).map_err(|e| e.to_string())
@@ -210,7 +398,8 @@ pub async fn doc_group_create_after(state: State<'_, AppState>, project_id: i64,
 
 #[tauri::command]
 pub async fn doc_group_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let project_id = get_project_id_for_doc_group(pool, id);
     let result = crate::services::doc_groups::delete_doc_group(pool, id).map_err(|e| e.to_string())?;
     if let Some(pid) = project_id { mark_project_changed(pool, pid); }
@@ -219,7 +408,8 @@ pub async fn doc_group_delete(state: State<'_, AppState>, id: i64) -> Result<(),
 
 #[tauri::command]
 pub async fn doc_group_reorder(state: State<'_, AppState>, id: i64, direction: String) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::doc_groups::reorder_doc_group(pool, id, &direction).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc_group(pool, id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -227,7 +417,8 @@ pub async fn doc_group_reorder(state: State<'_, AppState>, id: i64, direction: S
 
 #[tauri::command]
 pub async fn doc_group_rename(state: State<'_, AppState>, id: i64, new_name: String) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::doc_groups::rename_doc_group(pool, id, &new_name).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc_group(pool, id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -235,7 +426,8 @@ pub async fn doc_group_rename(state: State<'_, AppState>, id: i64, new_name: Str
 
 #[tauri::command]
 pub async fn doc_group_update_notes(state: State<'_, AppState>, id: i64, notes: String) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::doc_groups::update_doc_group_notes(pool, id, &notes).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc_group(pool, id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -244,21 +436,24 @@ pub async fn doc_group_update_notes(state: State<'_, AppState>, id: i64, notes: 
 // Docs Commands
 #[tauri::command]
 pub async fn doc_list(state: State<'_, AppState>, project_id: i64) -> Result<serde_json::Value, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let docs = crate::services::docs::list_docs(pool, project_id).map_err(|e| e.to_string())?;
     serde_json::to_value(docs).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn doc_get(state: State<'_, AppState>, id: i64) -> Result<serde_json::Value, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let doc = crate::services::docs::get_doc(pool, id).map_err(|e| e.to_string())?;
     serde_json::to_value(doc).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn doc_create_new(state: State<'_, AppState>, project_id: i64, name: String, doc_group_id: Option<i64>) -> Result<serde_json::Value, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let doc = crate::services::docs::create_doc(pool, project_id, &name, doc_group_id).map_err(|e| e.to_string())?;
     mark_project_changed(pool, project_id);
     serde_json::to_value(doc).map_err(|e| e.to_string())
@@ -266,7 +461,8 @@ pub async fn doc_create_new(state: State<'_, AppState>, project_id: i64, name: S
 
 #[tauri::command]
 pub async fn doc_create_after(state: State<'_, AppState>, project_id: i64, name: String, doc_group_id: Option<i64>, after_sort_order: i64) -> Result<serde_json::Value, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let doc = crate::services::docs::create_doc_after(pool, project_id, &name, doc_group_id, after_sort_order).map_err(|e| e.to_string())?;
     mark_project_changed(pool, project_id);
     serde_json::to_value(doc).map_err(|e| e.to_string())
@@ -274,7 +470,8 @@ pub async fn doc_create_after(state: State<'_, AppState>, project_id: i64, name:
 
 #[tauri::command]
 pub async fn doc_update_text(state: State<'_, AppState>, id: i64, text: String) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::docs::update_doc(pool, id, &text).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc(pool, id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -282,7 +479,8 @@ pub async fn doc_update_text(state: State<'_, AppState>, id: i64, text: String) 
 
 #[tauri::command]
 pub async fn doc_update_notes(state: State<'_, AppState>, id: i64, notes: String) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::docs::update_doc_notes(pool, id, &notes).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc(pool, id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -290,7 +488,8 @@ pub async fn doc_update_notes(state: State<'_, AppState>, id: i64, notes: String
 
 #[tauri::command]
 pub async fn doc_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let project_id = get_project_id_for_doc(pool, id);
     crate::services::docs::delete_doc(pool, id).map_err(|e| e.to_string())?;
     if let Some(pid) = project_id { mark_project_changed(pool, pid); }
@@ -308,7 +507,8 @@ pub async fn doc_restore(
     text: String,
     notes: String,
 ) -> Result<serde_json::Value, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let doc = crate::services::docs::restore_doc(pool, project_id, doc_group_id, &name, sort_order, &text, &notes)
         .map_err(|e| e.to_string())?;
     mark_project_changed(pool, project_id);
@@ -326,7 +526,8 @@ pub async fn doc_group_restore(
     notes: String,
     docs: Vec<crate::models::DocSnapshot>,
 ) -> Result<serde_json::Value, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let group = crate::services::doc_groups::restore_doc_group(pool, project_id, parent_id, &name, sort_order, &notes, docs)
         .map_err(|e| e.to_string())?;
     mark_project_changed(pool, project_id);
@@ -335,7 +536,8 @@ pub async fn doc_group_restore(
 
 #[tauri::command]
 pub async fn doc_reorder(state: State<'_, AppState>, id: i64, direction: String) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::docs::reorder_doc(pool, id, &direction).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc(pool, id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -343,7 +545,8 @@ pub async fn doc_reorder(state: State<'_, AppState>, id: i64, direction: String)
 
 #[tauri::command]
 pub async fn doc_move_to_group(state: State<'_, AppState>, doc_id: i64, new_group_id: Option<i64>) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::docs::move_doc_to_group(pool, doc_id, new_group_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -351,7 +554,8 @@ pub async fn doc_move_to_group(state: State<'_, AppState>, doc_id: i64, new_grou
 
 #[tauri::command]
 pub async fn doc_rename(state: State<'_, AppState>, id: i64, new_name: String) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::docs::rename_doc(pool, id, &new_name).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc(pool, id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -360,7 +564,8 @@ pub async fn doc_rename(state: State<'_, AppState>, id: i64, new_name: String) -
 // Legacy doc_create for backward compatibility
 #[tauri::command]
 pub async fn doc_create(state: State<'_, AppState>, project_id: i64, path: String, name: Option<String>, text: Option<String>) -> Result<serde_json::Value, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let doc = crate::services::docs::create(pool, project_id, &path, name, None, text).map_err(|e| e.to_string())?;
     mark_project_changed(pool, project_id);
     serde_json::to_value(doc).map_err(|e| e.to_string())
@@ -368,7 +573,8 @@ pub async fn doc_create(state: State<'_, AppState>, project_id: i64, path: Strin
 
 #[tauri::command]
 pub async fn character_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>) -> Result<Character, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let result = crate::services::characters::create(pool, project_id, &name, desc).map_err(|e| e.to_string())?;
     mark_project_changed(pool, project_id);
     Ok(result)
@@ -376,13 +582,15 @@ pub async fn character_create(state: State<'_, AppState>, project_id: i64, name:
 
 #[tauri::command]
 pub async fn character_list(state: State<'_, AppState>, project_id: i64) -> Result<Vec<Character>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::characters::list(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn character_update(state: State<'_, AppState>, id: i64, changes: Option<serde_json::Value>) -> Result<Character, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let name = changes.as_ref().and_then(|c| c.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let desc = changes.as_ref().and_then(|c| c.get("desc").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let result = crate::services::characters::update(pool, id, name, desc).map_err(|e| e.to_string())?;
@@ -392,7 +600,8 @@ pub async fn character_update(state: State<'_, AppState>, id: i64, changes: Opti
 
 #[tauri::command]
 pub async fn character_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let project_id = get_project_id_for_character(pool, id);
     crate::services::characters::delete_(pool, id).map_err(|e| e.to_string())?;
     if let Some(pid) = project_id { mark_project_changed(pool, pid); }
@@ -401,13 +610,15 @@ pub async fn character_delete(state: State<'_, AppState>, id: i64) -> Result<(),
 
 #[tauri::command]
 pub async fn doc_character_list(state: State<'_, AppState>, doc_id: i64) -> Result<Vec<i64>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::characters::list_for_doc(pool, doc_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn doc_character_attach(state: State<'_, AppState>, doc_id: i64, character_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::characters::attach_to_doc(pool, doc_id, character_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -415,7 +626,8 @@ pub async fn doc_character_attach(state: State<'_, AppState>, doc_id: i64, chara
 
 #[tauri::command]
 pub async fn doc_character_detach(state: State<'_, AppState>, doc_id: i64, character_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::characters::detach_from_doc(pool, doc_id, character_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -423,19 +635,22 @@ pub async fn doc_character_detach(state: State<'_, AppState>, doc_id: i64, chara
 
 #[tauri::command]
 pub async fn doc_group_character_list(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<i64>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::characters::list_for_doc_group(pool, doc_group_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn doc_group_characters_from_docs(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<i64>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::characters::list_from_docs_in_group(pool, doc_group_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn doc_group_character_attach(state: State<'_, AppState>, doc_group_id: i64, character_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::characters::attach_to_doc_group(pool, doc_group_id, character_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -443,7 +658,8 @@ pub async fn doc_group_character_attach(state: State<'_, AppState>, doc_group_id
 
 #[tauri::command]
 pub async fn doc_group_character_detach(state: State<'_, AppState>, doc_group_id: i64, character_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::characters::detach_from_doc_group(pool, doc_group_id, character_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -451,7 +667,8 @@ pub async fn doc_group_character_detach(state: State<'_, AppState>, doc_group_id
 
 #[tauri::command]
 pub async fn event_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>, start_date: Option<String>, end_date: Option<String>, date: Option<String>) -> Result<Event, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let result = crate::services::events::create(pool, project_id, &name, desc, start_date, end_date, date).map_err(|e| e.to_string())?;
     mark_project_changed(pool, project_id);
     Ok(result)
@@ -459,13 +676,15 @@ pub async fn event_create(state: State<'_, AppState>, project_id: i64, name: Str
 
 #[tauri::command]
 pub async fn event_list(state: State<'_, AppState>, project_id: i64) -> Result<Vec<Event>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::events::list(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn event_update(state: State<'_, AppState>, id: i64, changes: Option<serde_json::Value>) -> Result<Event, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let name = changes.as_ref().and_then(|c| c.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let desc = changes.as_ref().and_then(|c| c.get("desc").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let start_date = changes.as_ref().and_then(|c| c.get("start_date").and_then(|v| v.as_str()).map(|s| s.to_string()));
@@ -477,7 +696,8 @@ pub async fn event_update(state: State<'_, AppState>, id: i64, changes: Option<s
 
 #[tauri::command]
 pub async fn event_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let project_id = get_project_id_for_event(pool, id);
     crate::services::events::delete_(pool, id).map_err(|e| e.to_string())?;
     if let Some(pid) = project_id { mark_project_changed(pool, pid); }
@@ -486,13 +706,15 @@ pub async fn event_delete(state: State<'_, AppState>, id: i64) -> Result<(), Str
 
 #[tauri::command]
 pub async fn doc_event_list(state: State<'_, AppState>, doc_id: i64) -> Result<Vec<i64>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::events::list_for_doc(pool, doc_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn doc_event_attach(state: State<'_, AppState>, doc_id: i64, event_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::events::attach_to_doc(pool, doc_id, event_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -500,7 +722,8 @@ pub async fn doc_event_attach(state: State<'_, AppState>, doc_id: i64, event_id:
 
 #[tauri::command]
 pub async fn doc_event_detach(state: State<'_, AppState>, doc_id: i64, event_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::events::detach_from_doc(pool, doc_id, event_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -508,19 +731,22 @@ pub async fn doc_event_detach(state: State<'_, AppState>, doc_id: i64, event_id:
 
 #[tauri::command]
 pub async fn doc_group_event_list(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<i64>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::events::list_for_doc_group(pool, doc_group_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn doc_group_events_from_docs(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<i64>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::events::list_from_docs_in_group(pool, doc_group_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn doc_group_event_attach(state: State<'_, AppState>, doc_group_id: i64, event_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::events::attach_to_doc_group(pool, doc_group_id, event_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -528,7 +754,8 @@ pub async fn doc_group_event_attach(state: State<'_, AppState>, doc_group_id: i6
 
 #[tauri::command]
 pub async fn doc_group_event_detach(state: State<'_, AppState>, doc_group_id: i64, event_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::events::detach_from_doc_group(pool, doc_group_id, event_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -536,7 +763,8 @@ pub async fn doc_group_event_detach(state: State<'_, AppState>, doc_group_id: i6
 
 #[tauri::command]
 pub async fn place_create(state: State<'_, AppState>, project_id: i64, name: String, desc: Option<String>) -> Result<Place, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let result = crate::services::places::create(pool, project_id, &name, desc).map_err(|e| e.to_string())?;
     mark_project_changed(pool, project_id);
     Ok(result)
@@ -544,13 +772,15 @@ pub async fn place_create(state: State<'_, AppState>, project_id: i64, name: Str
 
 #[tauri::command]
 pub async fn place_list(state: State<'_, AppState>, project_id: i64) -> Result<Vec<Place>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::places::list(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn place_update(state: State<'_, AppState>, id: i64, changes: Option<serde_json::Value>) -> Result<Place, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let name = changes.as_ref().and_then(|c| c.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let desc = changes.as_ref().and_then(|c| c.get("desc").and_then(|v| v.as_str()).map(|s| s.to_string()));
     let result = crate::services::places::update(pool, id, name, desc).map_err(|e| e.to_string())?;
@@ -560,7 +790,8 @@ pub async fn place_update(state: State<'_, AppState>, id: i64, changes: Option<s
 
 #[tauri::command]
 pub async fn place_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let project_id = get_project_id_for_place(pool, id);
     crate::services::places::delete_(pool, id).map_err(|e| e.to_string())?;
     if let Some(pid) = project_id { mark_project_changed(pool, pid); }
@@ -569,13 +800,15 @@ pub async fn place_delete(state: State<'_, AppState>, id: i64) -> Result<(), Str
 
 #[tauri::command]
 pub async fn doc_place_list(state: State<'_, AppState>, doc_id: i64) -> Result<Vec<i64>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::places::list_for_doc(pool, doc_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn doc_place_attach(state: State<'_, AppState>, doc_id: i64, place_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::places::attach_to_doc(pool, doc_id, place_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -583,7 +816,8 @@ pub async fn doc_place_attach(state: State<'_, AppState>, doc_id: i64, place_id:
 
 #[tauri::command]
 pub async fn doc_place_detach(state: State<'_, AppState>, doc_id: i64, place_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::places::detach_from_doc(pool, doc_id, place_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -591,19 +825,22 @@ pub async fn doc_place_detach(state: State<'_, AppState>, doc_id: i64, place_id:
 
 #[tauri::command]
 pub async fn doc_group_place_list(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<i64>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::places::list_for_doc_group(pool, doc_group_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn doc_group_places_from_docs(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<i64>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::places::list_from_docs_in_group(pool, doc_group_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn doc_group_place_attach(state: State<'_, AppState>, doc_group_id: i64, place_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::places::attach_to_doc_group(pool, doc_group_id, place_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -611,7 +848,8 @@ pub async fn doc_group_place_attach(state: State<'_, AppState>, doc_group_id: i6
 
 #[tauri::command]
 pub async fn doc_group_place_detach(state: State<'_, AppState>, doc_group_id: i64, place_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::places::detach_from_doc_group(pool, doc_group_id, place_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -621,7 +859,8 @@ pub async fn doc_group_place_detach(state: State<'_, AppState>, doc_group_id: i6
 
 #[tauri::command]
 pub async fn archive_create(state: State<'_, AppState>, project_id: i64, payload: ArchiveCreate) -> Result<Archive, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let result = crate::services::archives::create(pool, project_id, payload).map_err(|e| e.to_string())?;
     mark_project_changed(pool, project_id);
     Ok(result)
@@ -629,19 +868,22 @@ pub async fn archive_create(state: State<'_, AppState>, project_id: i64, payload
 
 #[tauri::command]
 pub async fn archive_list(state: State<'_, AppState>, project_id: i64) -> Result<Vec<Archive>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::archives::list(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn archive_get(state: State<'_, AppState>, id: i64) -> Result<Option<Archive>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::archives::get(pool, id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn archive_update(state: State<'_, AppState>, id: i64, payload: ArchiveUpdate) -> Result<Archive, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let result = crate::services::archives::update(pool, id, payload).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_archive(pool, id) { mark_project_changed(pool, pid); }
     Ok(result)
@@ -649,7 +891,8 @@ pub async fn archive_update(state: State<'_, AppState>, id: i64, payload: Archiv
 
 #[tauri::command]
 pub async fn archive_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let project_id = get_project_id_for_archive(pool, id);
     crate::services::archives::delete(pool, id).map_err(|e| e.to_string())?;
     if let Some(pid) = project_id { mark_project_changed(pool, pid); }
@@ -659,7 +902,8 @@ pub async fn archive_delete(state: State<'_, AppState>, id: i64) -> Result<(), S
 // Draft Commands
 #[tauri::command]
 pub async fn draft_create(state: State<'_, AppState>, doc_id: i64, payload: DraftCreate) -> Result<Draft, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let result = crate::services::drafts::create_draft(pool, doc_id, payload).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
     Ok(result)
@@ -667,19 +911,22 @@ pub async fn draft_create(state: State<'_, AppState>, doc_id: i64, payload: Draf
 
 #[tauri::command]
 pub async fn draft_get(state: State<'_, AppState>, id: i64) -> Result<Option<Draft>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::drafts::get_draft(pool, id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn draft_list(state: State<'_, AppState>, doc_id: i64) -> Result<Vec<Draft>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::drafts::list_drafts(pool, doc_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn draft_update(state: State<'_, AppState>, id: i64, payload: DraftUpdate) -> Result<Draft, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let result = crate::services::drafts::update_draft(pool, id, payload).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_draft(pool, id) { mark_project_changed(pool, pid); }
     Ok(result)
@@ -687,7 +934,8 @@ pub async fn draft_update(state: State<'_, AppState>, id: i64, payload: DraftUpd
 
 #[tauri::command]
 pub async fn draft_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let project_id = get_project_id_for_draft(pool, id);
     crate::services::drafts::delete_draft(pool, id).map_err(|e| e.to_string())?;
     if let Some(pid) = project_id { mark_project_changed(pool, pid); }
@@ -696,7 +944,8 @@ pub async fn draft_delete(state: State<'_, AppState>, id: i64) -> Result<(), Str
 
 #[tauri::command]
 pub async fn draft_restore(state: State<'_, AppState>, draft_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::drafts::restore_draft_to_doc(pool, draft_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_draft(pool, draft_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -704,7 +953,8 @@ pub async fn draft_restore(state: State<'_, AppState>, draft_id: i64) -> Result<
 
 #[tauri::command]
 pub async fn draft_delete_all(state: State<'_, AppState>, doc_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::drafts::delete_all_drafts_for_doc(pool, doc_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc(pool, doc_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -713,7 +963,8 @@ pub async fn draft_delete_all(state: State<'_, AppState>, doc_id: i64) -> Result
 // Project Draft Commands
 #[tauri::command]
 pub async fn project_draft_create(state: State<'_, AppState>, project_id: i64, payload: ProjectDraftCreate) -> Result<ProjectDraft, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let result = crate::services::project_drafts::create(pool, project_id, payload).map_err(|e| e.to_string())?;
     mark_project_changed(pool, project_id);
     Ok(result)
@@ -721,19 +972,22 @@ pub async fn project_draft_create(state: State<'_, AppState>, project_id: i64, p
 
 #[tauri::command]
 pub async fn project_draft_get(state: State<'_, AppState>, id: i64) -> Result<Option<ProjectDraft>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::project_drafts::get(pool, id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn project_draft_list(state: State<'_, AppState>, project_id: i64) -> Result<Vec<ProjectDraft>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::project_drafts::list(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn project_draft_update(state: State<'_, AppState>, id: i64, payload: ProjectDraftUpdate) -> Result<ProjectDraft, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let result = crate::services::project_drafts::update(pool, id, payload).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_project_draft(pool, id) { mark_project_changed(pool, pid); }
     Ok(result)
@@ -741,7 +995,8 @@ pub async fn project_draft_update(state: State<'_, AppState>, id: i64, payload: 
 
 #[tauri::command]
 pub async fn project_draft_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let project_id = get_project_id_for_project_draft(pool, id);
     crate::services::project_drafts::delete(pool, id).map_err(|e| e.to_string())?;
     if let Some(pid) = project_id { mark_project_changed(pool, pid); }
@@ -750,7 +1005,8 @@ pub async fn project_draft_delete(state: State<'_, AppState>, id: i64) -> Result
 
 #[tauri::command]
 pub async fn project_draft_delete_all(state: State<'_, AppState>, project_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::project_drafts::delete_all_for_project(pool, project_id).map_err(|e| e.to_string())?;
     mark_project_changed(pool, project_id);
     Ok(())
@@ -759,7 +1015,8 @@ pub async fn project_draft_delete_all(state: State<'_, AppState>, project_id: i6
 // Folder (Doc Group) Draft Commands
 #[tauri::command]
 pub async fn folder_draft_create(state: State<'_, AppState>, doc_group_id: i64, payload: FolderDraftCreate) -> Result<FolderDraft, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let result = crate::services::folder_drafts::create(pool, doc_group_id, payload).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
     Ok(result)
@@ -767,19 +1024,22 @@ pub async fn folder_draft_create(state: State<'_, AppState>, doc_group_id: i64, 
 
 #[tauri::command]
 pub async fn folder_draft_get(state: State<'_, AppState>, id: i64) -> Result<Option<FolderDraft>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::folder_drafts::get(pool, id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn folder_draft_list(state: State<'_, AppState>, doc_group_id: i64) -> Result<Vec<FolderDraft>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::folder_drafts::list(pool, doc_group_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn folder_draft_update(state: State<'_, AppState>, id: i64, payload: FolderDraftUpdate) -> Result<FolderDraft, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let result = crate::services::folder_drafts::update(pool, id, payload).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_folder_draft(pool, id) { mark_project_changed(pool, pid); }
     Ok(result)
@@ -787,7 +1047,8 @@ pub async fn folder_draft_update(state: State<'_, AppState>, id: i64, payload: F
 
 #[tauri::command]
 pub async fn folder_draft_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let project_id = get_project_id_for_folder_draft(pool, id);
     crate::services::folder_drafts::delete(pool, id).map_err(|e| e.to_string())?;
     if let Some(pid) = project_id { mark_project_changed(pool, pid); }
@@ -796,7 +1057,8 @@ pub async fn folder_draft_delete(state: State<'_, AppState>, id: i64) -> Result<
 
 #[tauri::command]
 pub async fn folder_draft_delete_all(state: State<'_, AppState>, doc_group_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::folder_drafts::delete_all_for_group(pool, doc_group_id).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_doc_group(pool, doc_group_id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -804,7 +1066,8 @@ pub async fn folder_draft_delete_all(state: State<'_, AppState>, doc_group_id: i
 
 #[tauri::command]
 pub async fn folder_draft_reorder(state: State<'_, AppState>, id: i64, direction: String) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::folder_drafts::reorder(pool, id, &direction).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_folder_draft(pool, id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -812,7 +1075,8 @@ pub async fn folder_draft_reorder(state: State<'_, AppState>, id: i64, direction
 
 #[tauri::command]
 pub async fn folder_draft_move(state: State<'_, AppState>, id: i64, new_index: usize) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::folder_drafts::move_to_index(pool, id, new_index).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_folder_draft(pool, id) { mark_project_changed(pool, pid); }
     Ok(())
@@ -821,7 +1085,8 @@ pub async fn folder_draft_move(state: State<'_, AppState>, id: i64, new_index: u
 // Timeline Commands
 #[tauri::command]
 pub async fn timeline_create(state: State<'_, AppState>, payload: TimelineCreate) -> Result<Timeline, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     // Extract entity info before consuming payload
     let entity_type = payload.entity_type.clone();
     let entity_id = payload.entity_id;
@@ -834,25 +1099,29 @@ pub async fn timeline_create(state: State<'_, AppState>, payload: TimelineCreate
 
 #[tauri::command]
 pub async fn timeline_get(state: State<'_, AppState>, id: i64) -> Result<Option<Timeline>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::timelines::get(pool, id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn timeline_get_by_entity(state: State<'_, AppState>, entity_type: String, entity_id: i64) -> Result<Option<Timeline>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::timelines::get_by_entity(pool, &entity_type, entity_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn timeline_list(state: State<'_, AppState>) -> Result<Vec<Timeline>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::timelines::list(pool).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn timeline_update(state: State<'_, AppState>, id: i64, payload: TimelineUpdate) -> Result<Timeline, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let result = crate::services::timelines::update(pool, id, payload).map_err(|e| e.to_string())?;
     if let Some(pid) = get_project_id_for_timeline(pool, id) { mark_project_changed(pool, pid); }
     Ok(result)
@@ -860,7 +1129,8 @@ pub async fn timeline_update(state: State<'_, AppState>, id: i64, payload: Timel
 
 #[tauri::command]
 pub async fn timeline_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let project_id = get_project_id_for_timeline(pool, id);
     crate::services::timelines::delete(pool, id).map_err(|e| e.to_string())?;
     if let Some(pid) = project_id { mark_project_changed(pool, pid); }
@@ -869,7 +1139,8 @@ pub async fn timeline_delete(state: State<'_, AppState>, id: i64) -> Result<(), 
 
 #[tauri::command]
 pub async fn timeline_delete_by_entity(state: State<'_, AppState>, entity_type: String, entity_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let project_id = get_project_id_for_timeline_entity(pool, &entity_type, entity_id);
     crate::services::timelines::delete_by_entity(pool, &entity_type, entity_id).map_err(|e| e.to_string())?;
     if let Some(pid) = project_id { mark_project_changed(pool, pid); }
@@ -882,7 +1153,8 @@ pub async fn timeline_delete_by_entity(state: State<'_, AppState>, entity_type: 
 ///   Only the folder's immediate .txt files are imported into that new group. Nested subfolders are ignored.
 #[tauri::command]
 pub async fn import_txt_files(state: State<'_, AppState>, project_id: i64, doc_group_id: i64, files: Vec<String>) -> Result<usize, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let mut imported = 0usize;
 
     for p in files {
@@ -958,7 +1230,8 @@ fn find_next_grid_position(pool: &crate::db::DbPool) -> Result<i64, String> {
 /// - For immediate .txt files in the root: creates a doc group named "UNSORTED" (created last) and imports them there
 #[tauri::command]
 pub async fn import_project(state: State<'_, AppState>, folder_path: String) -> Result<serde_json::Value, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
 
     let base_path = Path::new(&folder_path);
     
@@ -1274,7 +1547,8 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
     use std::io::Write;
     use zip::write::FileOptions;
     
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
 
     // Ensure dest_path ends with .cora (which is a ZIP file)
     let zip_path = if dest_path.ends_with(".cora") {
@@ -1462,7 +1736,8 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
 
 #[tauri::command]
 pub async fn export_project_to_pdf(state: State<'_, AppState>, project_id: i64, dest_path: String, options: Option<ExportPdfOptions>) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let conn = pool.get().map_err(|e| e.to_string())?;
     
     // Get project
@@ -1822,7 +2097,8 @@ pub async fn export_project_to_pdf(state: State<'_, AppState>, project_id: i64, 
 
 #[tauri::command]
 pub async fn export_project_to_word(state: State<'_, AppState>, project_id: i64, dest_path: String, options: Option<ExportPdfOptions>) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let conn = pool.get().map_err(|e| e.to_string())?;
 
     // Get project
@@ -2037,7 +2313,8 @@ pub async fn export_project_to_word(state: State<'_, AppState>, project_id: i64,
 
 #[tauri::command]
 pub async fn export_project_to_text(state: State<'_, AppState>, project_id: i64, dest_path: String, options: Option<ExportPdfOptions>) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     let conn = pool.get().map_err(|e| e.to_string())?;
 
     // Get project
@@ -2155,127 +2432,148 @@ pub async fn export_project_to_text(state: State<'_, AppState>, project_id: i64,
 
 #[tauri::command]
 pub async fn sync_create(state: State<'_, AppState>, payload: SyncCreate) -> Result<Sync, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::create(pool, payload).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_get(state: State<'_, AppState>, id: i64) -> Result<Option<Sync>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::get(pool, id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_get_by_project(state: State<'_, AppState>, project_id: i64) -> Result<Option<Sync>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::get_by_project(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_list(state: State<'_, AppState>) -> Result<Vec<Sync>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::list(pool).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_update(state: State<'_, AppState>, id: i64, payload: SyncUpdate) -> Result<Sync, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::update(pool, id, payload).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_delete(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::delete(pool, id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_delete_by_project(state: State<'_, AppState>, project_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::delete_by_project(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_get_status(state: State<'_, AppState>, project_id: i64) -> Result<Option<SyncStatus>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::get_status(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_mark_started(state: State<'_, AppState>, project_id: i64) -> Result<Sync, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::mark_sync_started(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_mark_completed(state: State<'_, AppState>, project_id: i64, db_hash: String, file_hash: String) -> Result<Sync, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::mark_sync_completed(pool, project_id, db_hash, file_hash).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_mark_failed(state: State<'_, AppState>, project_id: i64, error: String) -> Result<Sync, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::mark_sync_failed(pool, project_id, error).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_mark_conflict(state: State<'_, AppState>, project_id: i64, conflict_data: String) -> Result<Sync, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::mark_sync_conflict(pool, project_id, conflict_data).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_resolve_conflict(state: State<'_, AppState>, project_id: i64, resolution: String) -> Result<Sync, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::resolve_conflict(pool, project_id, resolution).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_reset_retries(state: State<'_, AppState>, project_id: i64) -> Result<Sync, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::reset_retries(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_mark_db_changed(state: State<'_, AppState>, project_id: i64) -> Result<Option<Sync>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::mark_db_changed(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_mark_file_changed(state: State<'_, AppState>, project_id: i64) -> Result<Option<Sync>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::mark_file_changed(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_get_pending_retries(state: State<'_, AppState>) -> Result<Vec<Sync>, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::get_pending_retries(pool).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_pause(state: State<'_, AppState>, project_id: i64) -> Result<Sync, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::pause_sync(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_resume(state: State<'_, AppState>, project_id: i64) -> Result<Sync, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::resume_sync(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_should_auto_sync(state: State<'_, AppState>, project_id: i64) -> Result<bool, String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::should_auto_sync(pool, project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn sync_mark_db_changed_simple(state: State<'_, AppState>, project_id: i64) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     crate::services::sync::mark_db_changed_simple(pool, project_id).map_err(|e| e.to_string())
 }
 
@@ -2289,7 +2587,8 @@ pub async fn sync_calculate_hash(content: Vec<u8>) -> Result<String, String> {
 /// Unlike import_project which creates a new project, this updates an existing one.
 #[tauri::command]
 pub async fn sync_import_to_project(state: State<'_, AppState>, project_id: i64, file_path: String) -> Result<(), String> {
-    let pool = &state.pool;
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
     
     let base_path = Path::new(&file_path);
     
@@ -2664,4 +2963,112 @@ pub async fn icloud_move_file(src_path: String, dest_path: String) -> Result<(),
         std::path::Path::new(&dest_path),
     )
     .map_err(|e| e.to_string())
+}
+
+// ─── iCloud push-sync commands ───────────────────────────────────────────────
+
+/// Register a project's iCloud file for background change detection.
+///
+/// The watcher polls every 5 s; when the file's mtime changes and the change
+/// was not caused by our own write, it emits `cora://icloud-file-changed`
+/// (`{ projectId, path }`) to the frontend.
+#[tauri::command]
+pub async fn icloud_watch_project(
+    state: State<'_, AppState>,
+    project_id: i64,
+    file_path: String,
+) -> Result<(), String> {
+    state
+        .icloud_watcher
+        .watch(project_id, std::path::PathBuf::from(file_path));
+    Ok(())
+}
+
+/// Unregister a project's iCloud file from change detection.
+#[tauri::command]
+pub async fn icloud_unwatch_project(
+    state: State<'_, AppState>,
+    project_id: i64,
+) -> Result<(), String> {
+    state.icloud_watcher.unwatch(project_id);
+    Ok(())
+}
+
+/// Write an already-exported `.cora` file to the project's iCloud sync path
+/// via `NSFileCoordinator`, then update the change-watcher so the next poll
+/// does not emit a spurious "file changed" event for our own write.
+///
+/// The frontend handles the export step; this command handles the coordinated
+/// write and bookkeeping.
+///
+/// `temp_path` — absolute path to the exported `.cora` file (includes the
+/// `.cora` extension).  The file is deleted by this command after the write.
+#[tauri::command]
+pub async fn icloud_sync_write(
+    state: State<'_, AppState>,
+    project_id: i64,
+    temp_path: String,
+) -> Result<(), String> {
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
+
+    // Resolve the sync record to get the iCloud destination path.
+    let sync = crate::services::sync::get_by_project(pool, project_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "No sync record for project".to_string())?;
+
+    if !sync.auto_sync_enabled {
+        // Sync disabled — still clean up the temp file.
+        let _ = std::fs::remove_file(&temp_path);
+        return Ok(());
+    }
+
+    // Read the exported bytes.
+    let content = std::fs::read(&temp_path)
+        .map_err(|e| format!("Failed to read exported file: {}", e))?;
+
+    // Clean up temp file before the (potentially slow) iCloud write.
+    let _ = std::fs::remove_file(&temp_path);
+
+    // Resolve any pre-existing iCloud version conflicts before writing,
+    // so we don't compound them with our new version.
+    crate::services::icloud::resolve_conflicts(std::path::Path::new(&sync.file_path))
+        .unwrap_or_else(|e| eprintln!("[icloud_sync_write] resolve_conflicts: {}", e));
+
+    // Write to iCloud via NSFileCoordinator.
+    crate::services::icloud::write_file(std::path::Path::new(&sync.file_path), &content)
+        .map_err(|e| format!("iCloud coordinated write failed: {}", e))?;
+
+    // Suppress false-positive change event for our own write.
+    state.icloud_watcher.record_write(project_id);
+
+    // Stamp last_sync_attempt_at so the throttle logic won't fire again immediately.
+    let conn = crate::db::get_conn(pool).map_err(|e| e.to_string())?;
+    let now = chrono::Utc::now().to_rfc3339();
+    conn.execute(
+        "UPDATE sync SET last_sync_attempt_at = ?1, sync_status = 'synced', updated_at = ?1 WHERE id = ?2",
+        rusqlite::params![now, sync.id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Auto-resolve any iCloud version conflicts for the project's sync file.
+/// Call this before importing a remote change so we always use the newest version.
+#[tauri::command]
+pub async fn icloud_resolve_conflicts(
+    state: State<'_, AppState>,
+    project_id: i64,
+) -> Result<(), String> {
+    let owned_pool = state.get_project_pool()?;
+    let pool = &owned_pool;
+    let sync = crate::services::sync::get_by_project(pool, project_id)
+        .map_err(|e| e.to_string())?;
+
+    if let Some(sync) = sync {
+        crate::services::icloud::resolve_conflicts(std::path::Path::new(&sync.file_path))
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }

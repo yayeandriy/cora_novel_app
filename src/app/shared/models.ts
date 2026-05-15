@@ -320,3 +320,15 @@ export interface ICloudDocInfo {
   /** Only an iCloud placeholder exists. */
   isPlaceholder: boolean;
 }
+
+export interface RecentFile {
+  path: string;
+  name: string;
+  lastOpened: string;
+}
+
+export interface OpenProjectInfo {
+  path: string;
+  projectId: number;
+  name: string;
+}

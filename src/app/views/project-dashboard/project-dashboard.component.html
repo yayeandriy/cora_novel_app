@@ -1,340 +1,73 @@
-<!-- Startup View (replaces everything when no projects exist) -->
 @if (isLoading()) {
-<main class="dashboard-main">
-  <div class="loading-container">
-    <div class="animate-spin h-8 w-8 border-b-2 border-gray-900"></div>
+  <div class="dashboard-loading">
+    <div class="spinner"></div>
   </div>
-</main>
-} @else if (!hasProjects()) {
-<app-startup-view (createProject)="onStartupCreateProject($event)"></app-startup-view>
 } @else {
-<main class="dashboard-main" (click)="closeAllMenus()">
-<section class="dashboard-section">
-  <!-- Flexible card layout with book-like proportions -->
-  <div class="dashboard-cards">
-    @for (cell of getGridCells(); track cell.index) {
-      @if (cell.project) {
-        <!-- Project Card (Book Cover) -->
-        <div class="book-card"
-             [class.archived]="isArchived(cell.project)"
-             [class.confirming]="confirmingArchive() === cell.project.id"
-             (click)="openProject(cell.project)"
-             (contextmenu)="onProjectContextMenu(cell.project, $event)">
-          <div class="book-spine" [class.has-content]="getStats(cell.project.id).wordCount > 0"></div>
-          <div class="book-cover">
+  <div class="dashboard">
+    <!-- Header -->
+    <header class="dashboard-header">
+      <div class="dashboard-logo">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="32" height="32" rx="8" fill="currentColor"/>
+          <path d="M8 8h10a6 6 0 0 1 0 12H8V8z" fill="white"/>
+        </svg>
+      </div>
+      <div class="dashboard-actions">
+        <button class="btn-secondary" (click)="onOpenProject()" [disabled]="isOpening()">Open…</button>
+        <button class="btn-primary" (click)="onNewProject()" [disabled]="isCreating() || isOpening()">
+          {{ isCreating() ? 'Creating…' : 'New Project' }}
+        </button>
+      </div>
+    </header>
 
-          @if (confirmingArchive() === cell.project.id) {
-            <!-- Inline Archive Confirmation -->
-            <div class="confirm-overlay" (click)="$event.stopPropagation()">
-              <div class="confirm-message">
-                <span>Archive "{{ cell.project.name }}"?</span>
-                <div class="confirm-actions">
-                  <button class="confirm-btn confirm-yes" (click)="confirmArchiveAction(cell.project, $event)">Archive</button>
-                  <button class="confirm-btn confirm-no" (click)="cancelArchive($event)">Cancel</button>
-                </div>
-              </div>
-            </div>
-          } @else if (confirmingDelete() === cell.project.id) {
-            <!-- Inline Delete Confirmation -->
-            <div class="confirm-overlay" (click)="$event.stopPropagation()">
-              <div class="confirm-message">
-                <span>Delete "{{ cell.project.name }}"?</span>
-                <div class="confirm-actions">
-                  <button class="confirm-btn confirm-yes" (click)="confirmDeleteAction(cell.project.id, $event)">Delete</button>
-                  <button class="confirm-btn confirm-no" (click)="cancelDelete($event)">Cancel</button>
-                </div>
-              </div>
-            </div>
-          }
-          
-          <div class="card-title">
-            <h3>{{ cell.project.name }}</h3>
-            @if (isArchived(cell.project)) {
-              <span class="archived-badge">Archived</span>
-            }
-          </div>
-          @if (cell.project.created_at || cell.project.updated_at) {
-            <div class="card-dates">
-              @if (cell.project.created_at) {
-                <span class="date-item" title="Created: {{ cell.project.created_at }}">
-                  <span class="date-label">started</span> {{ formatDate(cell.project.created_at) }}
-                </span>
-              }
-              @if (cell.project.updated_at && cell.project.updated_at !== cell.project.created_at) {
-                <span class="date-item" title="Last updated: {{ cell.project.updated_at }}">
-                  <span class="date-label">updated</span> {{ formatDate(cell.project.updated_at) }}
-                </span>
-              }
-            </div>
-          }
-          <div class="card-pages">
-            @if (getStats(cell.project.id).pageCount > 0 || getStats(cell.project.id).wordCount > 0) {
-              @if (isArchived(cell.project) && showArchivedProjects()) {
-                <!-- Archived project in show archived mode -->
-                <div class="card-info">
-                  <div class="book-stats">
-                    <div class="stats-row">
-                      <div class="stat-item">
-                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).pageCount) }}</span>
-                        <span class="stat-label">{{ getStats(cell.project.id).pageCount === 1 ? 'PAGE' : 'PAGES' }}</span>
-                      </div>
-                      <div class="stat-item">
-                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).wordCount) }}</span>
-                        <span class="stat-label">WORDS</span>
-                      </div>
-                      <div class="stat-item">
-                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).charCount) }}</span>
-                        <span class="stat-label">CHARS</span>
-                      </div>
-                    </div>
-                    <div class="stats-row">
-                      <div class="stat-item">
-                        <span class="stat-value">{{ getStats(cell.project.id).folderCount === 1 ? 'One' : formatNumber(getStats(cell.project.id).folderCount) }}</span>
-                        <span class="stat-label">{{ getStats(cell.project.id).folderCount === 1 ? 'PART' : 'PARTS' }}</span>
-                      </div>
-                      <div class="stat-item">
-                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).docCount) }}</span>
-                        <span class="stat-label">{{ getStats(cell.project.id).docCount === 1 ? 'CHAPTER' : 'CHAPTERS' }}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <button class="archive-action-btn"
-                          (click)="unarchiveProject(cell.project, $event)"
-                          title="Unarchive project">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="17 1 21 5 17 9"/>
-                      <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                      <polyline points="7 23 3 19 7 15"/>
-                      <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-                    </svg>
-                  </button>
-                </div>
-              } @else {
-                <!-- Project info - use context menu for actions -->
-                <div class="card-info">
-                  <div class="book-stats">
-                    <div class="stats-row">
-                      <div class="stat-item">
-                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).pageCount) }}</span>
-                        <span class="stat-label">{{ getStats(cell.project.id).pageCount === 1 ? 'PAGE' : 'PAGES' }}</span>
-                      </div>
-                      <div class="stat-item">
-                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).wordCount) }}</span>
-                        <span class="stat-label">WORDS</span>
-                      </div>
-                      <div class="stat-item">
-                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).charCount) }}</span>
-                        <span class="stat-label">CHARS</span>
-                      </div>
-                    </div>
-                    <div class="stats-row">
-                      <div class="stat-item">
-                        <span class="stat-value">{{ getStats(cell.project.id).folderCount === 1 ? 'One' : formatNumber(getStats(cell.project.id).folderCount) }}</span>
-                        <span class="stat-label">{{ getStats(cell.project.id).folderCount === 1 ? 'PART' : 'PARTS' }}</span>
-                      </div>
-                      <div class="stat-item">
-                        <span class="stat-value">{{ formatNumber(getStats(cell.project.id).docCount) }}</span>
-                        <span class="stat-label">{{ getStats(cell.project.id).docCount === 1 ? 'CHAPTER' : 'CHAPTERS' }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              }
-            }
-          </div>
-          </div>
-          <!-- Ellipsis menu button (bottom-right, vertical dots) -->
-          <button class="card-menu-btn"
-                  (click)="openCardMenu(cell.project.id, $event)"
-                  [class.active]="cardMenuProjectId() === cell.project.id"
-                  title="More options">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="5" r="2.5"/><circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="19" r="2.5"/>
-            </svg>
-          </button>
-        </div>
-      } @else if (showCreate() && cell.index === editingCellIndex()) {
-        <!-- New Project Card (inline edit) -->
-        <div class="book-card book-card-editing">
-          <div class="book-spine"></div>
-          <div class="book-cover">
-          <div class="card-title">
-            <div class="inline-edit-wrapper">
-              <textarea #newProjectInput
-                     [formControl]="nameControl"
-                     class="inline-title-input"
-                     placeholder="Title of the story"
-                     (input)="adjustTextareaHeight()"
-                     (keydown.enter)="$event.preventDefault(); createQuick()"
-                     (keydown.escape)="cancelEdit()"
-                     (blur)="onInputBlur()"
-                     rows="1"></textarea>
-            </div>
-          </div>
-          <div class="card-pages">
-            <span>No pages</span>
-          </div>
+    @if (isOpening()) {
+      <div class="open-progress">
+        <div class="spinner"></div>
+        <span>Opening project…</span>
+      </div>
+    }
+
+    @if (openError()) {
+      <div class="open-error">
+        <strong>Could not open file:</strong> {{ openError() }}
+        <button class="error-dismiss" (click)="openError.set(null)">✕</button>
+      </div>
+    }
+
+    <!-- Recents -->
+    <main class="dashboard-main">
+      @if (recents().length === 0) {
+        <div class="empty-state">
+          <p class="empty-title">No recent projects</p>
+          <p class="empty-sub">Create a new project or open an existing <code>.cora</code> file.</p>
+          <div class="empty-actions">
+            <button class="btn-primary" (click)="onNewProject()">New Project</button>
+            <button class="btn-secondary" (click)="onOpenProject()">Open…</button>
           </div>
         </div>
       } @else {
-        <!-- Empty Card -->
-        <div class="book-card book-card-empty">
-          @if (importingCellIndex() === cell.index) {
-            <!-- Inline Import Options -->
-            <div class="import-overlay" (click)="$event.stopPropagation()">
-              <div class="import-message">
-                <div class="import-options">
-                  <button class="import-option-btn" (click)="importFromExport()">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                      <line x1="16" y1="13" x2="8" y2="13"/>
-                      <line x1="16" y1="17" x2="8" y2="17"/>
-                    </svg>
-                    <span class="import-option-title">Open</span>
-                  </button>
-                  <button class="import-option-btn" (click)="importFromFolder()">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                    </svg>
-                    <span class="import-option-title">Import</span>
-                  </button>
-                </div>
-                <button class="import-cancel-btn" (click)="cancelImport($event)">Cancel</button>
-              </div>
-            </div>
-          }
-          <div class="empty-cell-actions">
-            <button class="empty-cell-btn" (click)="startCreateAt(cell.index)" title="Create new project">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-            </button>
-            <button class="empty-cell-btn" (click)="toggleEmptyCellImportMenu(cell.index, $event)" title="Add project">
-              <img src="assets/icons/square.and.arrow.down.svg" alt="Import" width="24" height="24" />
-            </button>
-          </div>
-        </div>
-      }
-    }
-  </div>
-
-  <!-- iCloud files: .cora files in iCloud container not yet linked to a local project -->
-  @if (icloudFiles().length > 0) {
-    <div class="icloud-section">
-      <div class="icloud-section-label">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
-        </svg>
-        In iCloud
-      </div>
-      <div class="dashboard-cards icloud-cards">
-        @for (file of icloudFiles(); track file.path) {
-          <div class="book-card book-card-icloud"
-               [class.placeholder]="file.isPlaceholder"
-               (click)="openICloudFile(file, $event)"
-               [title]="file.isPlaceholder ? 'Click to download and open from iCloud' : 'Click to open from iCloud'">
-            <div class="book-spine"></div>
-            <div class="book-cover">
-              <div class="icloud-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
-                </svg>
-                @if (file.isPlaceholder) {
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icloud-download-icon">
-                    <polyline points="8 17 12 21 16 17"/>
-                    <line x1="12" y1="12" x2="12" y2="21"/>
-                    <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/>
+        <section class="recents-section">
+          <h2 class="recents-title">Recent Projects</h2>
+          <ul class="recents-list">
+            @for (r of recents(); track r.path) {
+              <li class="recent-item" (click)="openByPath(r.path)">
+                <div class="recent-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
                   </svg>
-                }
-              </div>
-              <div class="card-title">
-                <h3>{{ file.name }}</h3>
-              </div>
-              <div class="card-dates">
-                @if (file.modifiedAt) {
-                  <span class="date-item">
-                    <span class="date-label">updated</span> {{ formatDate(file.modifiedAt) }}
-                  </span>
-                }
-                @if (file.isPlaceholder) {
-                  <span class="date-item icloud-status">Not downloaded</span>
-                } @else if (file.sizeBytes > 0) {
-                  <span class="date-item icloud-status">{{ formatBytes(file.sizeBytes) }}</span>
-                }
-              </div>
-            </div>
-          </div>
-        }
-      </div>
-    </div>
-  }
-  
-  <!-- Bottom Dock - Only show if there are archived projects -->
-  @if (shouldShowDock()) {
-    <div class="bottom-dock">
-      <!-- Archive Filter Toggle -->
-      @if (hasArchivedProjects()) {
-        <button class="dock-button" 
-                [class.active]="showArchivedProjects()"
-                (click)="toggleShowArchived()" 
-                title="Toggle archived projects">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="21 8 21 21 3 21 3 8"/>
-            <rect x="1" y="3" width="22" height="5"/>
-            <line x1="10" y1="12" x2="14" y2="12"/>
-          </svg>
-          <span>{{ showArchivedProjects() ? 'Hide Archived' : 'Show Archived' }}</span>
-        </button>
+                </div>
+                <div class="recent-info">
+                  <span class="recent-name">{{ r.name }}</span>
+                  <span class="recent-path">{{ pathDirname(r.path) }}</span>
+                </div>
+                <span class="recent-date">{{ formatDate(r.lastOpened) }}</span>
+              </li>
+            }
+          </ul>
+        </section>
       }
-    </div>
-  }
-</section>
-</main>
-
-<!-- Context Menu -->
-@if (showContextMenu() && contextMenuProjectId() !== null) {
-  <div class="context-menu-backdrop" (click)="onContextMenuClickOutside($event)">
-    <div class="context-menu" 
-         [style.left.px]="contextMenuX()"
-         [style.top.px]="contextMenuY()"
-         (click)="$event.stopPropagation()">
-      <button class="context-menu-item" (click)="contextMenuDeleteArchive()">
-        @if (archives().has(contextMenuProjectId()!)) {
-          <span>Delete</span>
-        } @else if (getStats(contextMenuProjectId()!).pageCount > 0) {
-          <span>Archive</span>
-        } @else {
-          <span>Delete</span>
-        }
-      </button>
-    </div>
+    </main>
   </div>
-}
-
-<!-- Card ellipsis (\u22ef) dropdown -->
-@if (cardMenuProjectId() !== null) {
-  <div class="card-menu-backdrop" (click)="closeCardMenu()"></div>
-  <div class="card-menu-dropdown"
-       [style.left.px]="cardMenuX()"
-       [style.top.px]="cardMenuY()"
-       (click)="$event.stopPropagation()">
-    <button class="card-menu-item" (click)="cardMenuArchive($event)">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="21 8 21 21 3 21 3 8"/>
-        <rect x="1" y="3" width="22" height="5"/>
-        <line x1="10" y1="12" x2="14" y2="12"/>
-      </svg>
-      Archive
-    </button>
-    <button class="card-menu-item" (click)="cardMenuRevealInFinder($event)">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        <polyline points="9 22 9 12 15 12 15 22"/>
-      </svg>
-      Reveal in Finder
-    </button>
-  </div>
-}
 }

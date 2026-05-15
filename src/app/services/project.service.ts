@@ -7,7 +7,8 @@ import type {
   ProjectDraft, ProjectDraftCreate, ProjectDraftUpdate,
   FolderDraft, FolderDraftCreate, FolderDraftUpdate,
   Archive, ArchiveCreate, ArchiveUpdate,
-  ExportPdfOptions
+  ExportPdfOptions,
+  RecentFile, OpenProjectInfo,
 } from "../shared/models";
 
 @Injectable({ providedIn: "root" })
@@ -414,4 +415,69 @@ export class ProjectService {
   async syncImportToProject(projectId: number, filePath: string): Promise<void> {
     return invoke<void>("sync_import_to_project", { projectId, filePath });
   }
+
+  // ─── iCloud push-sync ────────────────────────────────────────────────────
+
+  /** Register a project's iCloud file for background change detection. */
+  async icloudWatchProject(projectId: number, filePath: string): Promise<void> {
+    return invoke<void>("icloud_watch_project", { projectId, filePath });
+  }
+
+  /** Unregister a project's iCloud file from change detection. */
+  async icloudUnwatchProject(projectId: number): Promise<void> {
+    return invoke<void>("icloud_unwatch_project", { projectId });
+  }
+
+  /**
+   * Write an already-exported `.cora` file to the project's iCloud sync path
+   * via NSFileCoordinator.  The Rust side cleans up `tempPath` after writing.
+   */
+  async icloudSyncWrite(projectId: number, tempPath: string): Promise<void> {
+    return invoke<void>("icloud_sync_write", { projectId, tempPath });
+  }
+
+  /** Auto-resolve any iCloud version conflicts for the project's sync file. */
+  async icloudResolveConflicts(projectId: number): Promise<void> {
+    return invoke<void>("icloud_resolve_conflicts", { projectId });
+  }
+
+  // ─── Per-file project lifecycle ───────────────────────────────────────────
+
+  /** Create a new .cora project file at `path` with the given `name`. */
+  async fileNewProject(path: string, name: string): Promise<OpenProjectInfo> {
+    return invoke<OpenProjectInfo>("file_new_project", { path, name });
+  }
+
+  /** Open an existing .cora project file. */
+  async fileOpenProject(path: string): Promise<OpenProjectInfo> {
+    return invoke<OpenProjectInfo>("file_open_project", { path });
+  }
+
+  /** Close the currently open project (return to dashboard). */
+  async fileCloseProject(): Promise<void> {
+    return invoke<void>("file_close_project");
+  }
+
+  /** Get info about the currently open project file (or null). */
+  async fileGetOpenProject(): Promise<OpenProjectInfo | null> {
+    return invoke<OpenProjectInfo | null>("file_get_open_project");
+  }
+
+  /** Checkpoint the current project's WAL so iCloud picks up the latest data. */
+  async fileCheckpoint(): Promise<void> {
+    return invoke<void>("file_checkpoint");
+  }
+
+  // ─── Recents ──────────────────────────────────────────────────────────────
+
+  /** List recently opened project files (most-recent first). */
+  async recentsList(): Promise<RecentFile[]> {
+    return invoke<RecentFile[]>("recents_list");
+  }
+
+  /** Remove a path from the recents list. */
+  async recentsRemove(path: string): Promise<void> {
+    return invoke<void>("recents_remove", { path });
+  }
 }
+

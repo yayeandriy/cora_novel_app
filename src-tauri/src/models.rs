@@ -320,3 +320,21 @@ pub struct ExportPdfOptions {
     pub range_start: Option<i64>,
     pub range_end: Option<i64>,
 }
+
+/// A single entry in the recents list (stored in recents.db).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecentFile {
+    pub path: String,
+    pub name: String,
+    pub last_opened: String,
+}
+
+/// Info about the currently open project file.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenProjectInfo {
+    pub path: String,
+    pub project_id: i64,
+    pub name: String,
+}
