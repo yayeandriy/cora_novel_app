@@ -1,162 +1,125 @@
-use crate::db::DbPool;
-use crate::models::{FolderDraft, FolderDraftCreate, FolderDraftUpdate};
-use anyhow::Context;
-use chrono::Utc;
-use rusqlite::OptionalExtension;
+use crate::models::{FolderDraft, FolderDraftCreate, FolderDraftUpdate, ProjectFile};
+use anyhow::Result;
 
-pub fn create(pool: &DbPool, doc_group_id: i64, req: FolderDraftCreate) -> anyhow::Result<FolderDraft> {
-    let conn = pool.get()?;
-    let now = Utc::now().to_rfc3339();
-    
-    // Determine initial sort_order
-    let sort_order: i64 = if let Some(target_index) = req.insert_at_index {
-        // Make space for the new draft at the requested position
-        // Shift all drafts at or after target_index up by 1
-        conn.execute(
-            "UPDATE folder_drafts SET sort_order = sort_order + 1 WHERE doc_group_id = ?1 AND sort_order >= ?2",
-            rusqlite::params![doc_group_id, target_index as i64],
-        )?;
-        target_index as i64
+pub fn list_folder_drafts(data: &ProjectFile, doc_group_id: i64) -> Vec<FolderDraft> {
+    let mut drafts: Vec<FolderDraft> = data.folder_drafts.iter()
+        .filter(|fd| fd.doc_group_id == doc_group_id)
+        .cloned()
+        .collect();
+    drafts.sort_by_key(|fd| fd.sort_order.unwrap_or(i64::MAX));
+    drafts
+}
+
+pub fn get_folder_draft(data: &ProjectFile, id: i64) -> Option<FolderDraft> {
+    data.folder_drafts.iter().find(|fd| fd.id == id).cloned()
+}
+
+pub fn create_folder_draft(
+    data: &mut ProjectFile,
+    doc_group_id: i64,
+    payload: FolderDraftCreate,
+) -> FolderDraft {
+    let now = chrono::Utc::now().to_rfc3339();
+    let sort_order = if let Some(idx) = payload.insert_at_index {
+        // Shift existing drafts at or beyond this index
+        for fd in data.folder_drafts.iter_mut() {
+            if fd.doc_group_id == doc_group_id {
+                if let Some(so) = fd.sort_order {
+                    if so >= idx as i64 {
+                        fd.sort_order = Some(so + 1);
+                    }
+                }
+            }
+        }
+        Some(idx as i64)
     } else {
-        // Append at end
-        let max_order: i64 = conn.query_row(
-            "SELECT COALESCE(MAX(sort_order), -1) FROM folder_drafts WHERE doc_group_id = ?1",
-            rusqlite::params![doc_group_id],
-            |row| row.get(0)
-        )?;
-        max_order + 1
+        let max = data.folder_drafts.iter()
+            .filter(|fd| fd.doc_group_id == doc_group_id)
+            .filter_map(|fd| fd.sort_order)
+            .max()
+            .unwrap_or(-1);
+        Some(max + 1)
     };
 
-    conn.execute(
-        "INSERT INTO folder_drafts (doc_group_id, name, content, created_at, updated_at, sort_order) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        rusqlite::params![doc_group_id, req.name, req.content, now, now, sort_order],
-    ).context("creating part notes")?;
-    let id = conn.last_insert_rowid();
-    
-    // Drop connection before calling get
-    drop(conn);
-    
-    get(pool, id)?.context("part notes not found after creation")
+    let id = data.next_ids.folder_draft;
+    data.next_ids.folder_draft += 1;
+    let fd = FolderDraft {
+        id, doc_group_id,
+        name: payload.name,
+        content: payload.content,
+        sort_order,
+        created_at: now.clone(),
+        updated_at: now,
+    };
+    data.folder_drafts.push(fd.clone());
+    fd
 }
 
-pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<FolderDraft>> {
-    let conn = pool.get()?;
-    let mut stmt = conn.prepare("SELECT id, doc_group_id, name, content, created_at, updated_at, sort_order FROM folder_drafts WHERE id = ?1")?;
-    let draft = stmt.query_row(rusqlite::params![id], |row| {
-        Ok(FolderDraft { 
-            id: row.get(0)?, 
-            doc_group_id: row.get(1)?, 
-            name: row.get(2)?, 
-            content: row.get(3)?, 
-            created_at: row.get(4)?, 
-            updated_at: row.get(5)?,
-            sort_order: row.get(6)?
-        })
-    }).optional()?;
-    Ok(draft)
+pub fn update_folder_draft(
+    data: &mut ProjectFile,
+    id: i64,
+    payload: FolderDraftUpdate,
+) -> Result<FolderDraft> {
+    let now = chrono::Utc::now().to_rfc3339();
+    let fd = data.folder_drafts.iter_mut().find(|fd| fd.id == id)
+        .ok_or_else(|| anyhow::anyhow!("FolderDraft {} not found", id))?;
+    if let Some(name) = payload.name { fd.name = name; }
+    if let Some(content) = payload.content { fd.content = content; }
+    fd.updated_at = now;
+    Ok(fd.clone())
 }
 
-pub fn list(pool: &DbPool, doc_group_id: i64) -> anyhow::Result<Vec<FolderDraft>> {
-    let conn = pool.get()?;
-    let mut stmt = conn.prepare("SELECT id, doc_group_id, name, content, created_at, updated_at, sort_order FROM folder_drafts WHERE doc_group_id = ?1 ORDER BY sort_order ASC, id ASC")?;
-    let rows = stmt.query_map(rusqlite::params![doc_group_id], |row| {
-        Ok(FolderDraft { 
-            id: row.get(0)?, 
-            doc_group_id: row.get(1)?, 
-            name: row.get(2)?, 
-            content: row.get(3)?, 
-            created_at: row.get(4)?, 
-            updated_at: row.get(5)?,
-            sort_order: row.get(6)?
-        })
-    })?;
-    Ok(rows.collect::<Result<Vec<_>, _>>()?)
-}
-
-pub fn update(pool: &DbPool, id: i64, req: FolderDraftUpdate) -> anyhow::Result<FolderDraft> {
-    let conn = pool.get()?;
-    let now = Utc::now().to_rfc3339();
-    let current = get(pool, id)?.context("part notes not found")?;
-    let new_name = req.name.unwrap_or(current.name);
-    let new_content = req.content.unwrap_or(current.content);
-    conn.execute("UPDATE folder_drafts SET name = ?1, content = ?2, updated_at = ?3 WHERE id = ?4", rusqlite::params![new_name, new_content, now, id]).context("updating part notes")?;
-    get(pool, id)?.context("part notes not found after update")
-}
-
-pub fn delete(pool: &DbPool, id: i64) -> anyhow::Result<()> {
-    let conn = pool.get()?;
-    let n = conn.execute("DELETE FROM folder_drafts WHERE id = ?1", rusqlite::params![id]).context("deleting part notes")?;
-    if n == 0 { anyhow::bail!("part notes not found"); }
+pub fn delete_folder_draft(data: &mut ProjectFile, id: i64) -> Result<()> {
+    data.folder_drafts.iter().position(|fd| fd.id == id)
+        .ok_or_else(|| anyhow::anyhow!("FolderDraft {} not found", id))?;
+    data.folder_drafts.retain(|fd| fd.id != id);
     Ok(())
 }
 
-pub fn delete_all_for_group(pool: &DbPool, doc_group_id: i64) -> anyhow::Result<()> {
-    let conn = pool.get()?;
-    conn.execute("DELETE FROM folder_drafts WHERE doc_group_id = ?1", rusqlite::params![doc_group_id]).context("deleting part notes for part")?;
-    Ok(())
+/// Move a folder draft to a different doc group.
+pub fn move_folder_draft(data: &mut ProjectFile, id: i64, doc_group_id: i64) -> Result<FolderDraft> {
+    let max_so = data.folder_drafts.iter()
+        .filter(|fd| fd.doc_group_id == doc_group_id && fd.id != id)
+        .filter_map(|fd| fd.sort_order)
+        .max()
+        .unwrap_or(-1);
+    let fd = data.folder_drafts.iter_mut().find(|fd| fd.id == id)
+        .ok_or_else(|| anyhow::anyhow!("FolderDraft {} not found", id))?;
+    fd.doc_group_id = doc_group_id;
+    fd.sort_order = Some(max_so + 1);
+    fd.updated_at = chrono::Utc::now().to_rfc3339();
+    Ok(fd.clone())
 }
 
-pub fn reorder(pool: &DbPool, id: i64, direction: &str) -> anyhow::Result<()> {
-    let conn = pool.get()?;
-    let current = get(pool, id)?.context("part notes not found")?;
-    let current_order = current.sort_order.unwrap_or(0);
-    
-    if direction == "up" {
-        // Find the draft immediately before this one
-        let prev: Option<(i64, i64)> = conn.query_row(
-            "SELECT id, sort_order FROM folder_drafts WHERE doc_group_id = ?1 AND sort_order < ?2 ORDER BY sort_order DESC LIMIT 1",
-            rusqlite::params![current.doc_group_id, current_order],
-            |row| Ok((row.get(0)?, row.get(1)?))
-        ).optional()?;
-        
-        if let Some((prev_id, prev_order)) = prev {
-            // Swap sort orders
-            conn.execute("UPDATE folder_drafts SET sort_order = ?1 WHERE id = ?2", rusqlite::params![prev_order, id])?;
-            conn.execute("UPDATE folder_drafts SET sort_order = ?1 WHERE id = ?2", rusqlite::params![current_order, prev_id])?;
-        }
-    } else if direction == "down" {
-        // Find the draft immediately after this one
-        let next: Option<(i64, i64)> = conn.query_row(
-            "SELECT id, sort_order FROM folder_drafts WHERE doc_group_id = ?1 AND sort_order > ?2 ORDER BY sort_order ASC LIMIT 1",
-            rusqlite::params![current.doc_group_id, current_order],
-            |row| Ok((row.get(0)?, row.get(1)?))
-        ).optional()?;
-        
-        if let Some((next_id, next_order)) = next {
-            // Swap sort orders
-            conn.execute("UPDATE folder_drafts SET sort_order = ?1 WHERE id = ?2", rusqlite::params![next_order, id])?;
-            conn.execute("UPDATE folder_drafts SET sort_order = ?1 WHERE id = ?2", rusqlite::params![current_order, next_id])?;
-        }
-    }
-    Ok(())
+pub fn delete_all_for_group(data: &mut ProjectFile, doc_group_id: i64) {
+    data.folder_drafts.retain(|fd| fd.doc_group_id != doc_group_id);
 }
 
-pub fn move_to_index(pool: &DbPool, id: i64, new_index: usize) -> anyhow::Result<()> {
-    let conn = pool.get()?;
-    let current = get(pool, id)?.context("part notes not found")?;
-    
-    // Get all drafts for the group
-    let mut drafts = list(pool, current.doc_group_id)?;
-    
-    // Remove current draft
-    if let Some(pos) = drafts.iter().position(|d| d.id == id) {
-        drafts.remove(pos);
-    }
-    
-    // Insert at new index
-    if new_index >= drafts.len() {
-        drafts.push(current);
+pub fn reorder(data: &mut ProjectFile, id: i64, direction: &str) -> Result<()> {
+    let fd = data.folder_drafts.iter().find(|fd| fd.id == id)
+        .ok_or_else(|| anyhow::anyhow!("FolderDraft {} not found", id))?;
+    let group_id = fd.doc_group_id;
+    let current_so = fd.sort_order.unwrap_or(0);
+
+    let mut siblings: Vec<i64> = data.folder_drafts.iter()
+        .filter(|fd| fd.doc_group_id == group_id)
+        .filter_map(|fd| fd.sort_order)
+        .collect();
+    siblings.sort_unstable();
+
+    let target_so = if direction == "up" {
+        siblings.iter().rev().find(|&&so| so < current_so).copied()
     } else {
-        drafts.insert(new_index, current);
+        siblings.iter().find(|&&so| so > current_so).copied()
+    };
+
+    if let Some(swap_so) = target_so {
+        if let Some(other) = data.folder_drafts.iter_mut().find(|fd| fd.doc_group_id == group_id && fd.sort_order == Some(swap_so) && fd.id != id) {
+            other.sort_order = Some(current_so);
+        }
+        if let Some(me) = data.folder_drafts.iter_mut().find(|fd| fd.id == id) {
+            me.sort_order = Some(swap_so);
+        }
     }
-    
-    // Update all sort orders
-    for (i, draft) in drafts.iter().enumerate() {
-        conn.execute(
-            "UPDATE folder_drafts SET sort_order = ?1 WHERE id = ?2",
-            rusqlite::params![i as i64, draft.id],
-        )?;
-    }
-    
     Ok(())
 }

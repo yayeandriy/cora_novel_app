@@ -1,6 +1,64 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+// ─── New join / metadata structs for the JSON file format ────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocCharacter { pub doc_id: i64, pub character_id: i64 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocEvent { pub doc_id: i64, pub event_id: i64 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocPlace { pub doc_id: i64, pub place_id: i64 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocGroupCharacter { pub doc_group_id: i64, pub character_id: i64 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocGroupEvent { pub doc_group_id: i64, pub event_id: i64 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocGroupPlace { pub doc_group_id: i64, pub place_id: i64 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct NextIds {
+    pub doc_group: i64,
+    pub doc: i64,
+    pub character: i64,
+    pub event: i64,
+    pub place: i64,
+    pub draft: i64,
+    pub folder_draft: i64,
+    pub project_draft: i64,
+    pub timeline: i64,
+    pub archive: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectFile {
+    pub project: Project,
+    pub groups: Vec<DocGroup>,
+    pub docs: Vec<Doc>,
+    pub characters: Vec<Character>,
+    pub events: Vec<Event>,
+    pub places: Vec<Place>,
+    pub doc_characters: Vec<DocCharacter>,
+    pub doc_events: Vec<DocEvent>,
+    pub doc_places: Vec<DocPlace>,
+    pub doc_group_characters: Vec<DocGroupCharacter>,
+    pub doc_group_events: Vec<DocGroupEvent>,
+    pub doc_group_places: Vec<DocGroupPlace>,
+    pub drafts: Vec<Draft>,
+    pub folder_drafts: Vec<FolderDraft>,
+    pub project_drafts: Vec<ProjectDraft>,
+    pub timelines: Vec<Timeline>,
+    pub archives: Vec<Archive>,
+    pub next_ids: NextIds,
+}
+
+// ─── Existing entity structs ──────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
     pub id: i64,
     pub name: String,
@@ -14,7 +72,7 @@ pub struct Project {
     pub updated_at: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectCreate {
     pub name: String,
     pub desc: Option<String>,
@@ -23,7 +81,7 @@ pub struct ProjectCreate {
     pub grid_order: Option<i64>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DocGroup {
     pub id: i64,
     pub project_id: i64,
@@ -33,7 +91,7 @@ pub struct DocGroup {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Doc {
     pub id: i64,
     pub project_id: i64,
@@ -46,7 +104,7 @@ pub struct Doc {
     pub sort_order: Option<i64>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Character {
     pub id: i64,
     pub project_id: i64,
@@ -54,7 +112,7 @@ pub struct Character {
     pub desc: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
     pub id: i64,
     pub project_id: i64,
@@ -67,7 +125,7 @@ pub struct Event {
     pub end_date: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Place {
     pub id: i64,
     pub project_id: i64,

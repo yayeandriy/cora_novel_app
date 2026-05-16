@@ -1,204 +1,175 @@
-use crate::db::{DbPool, get_conn};
-use crate::models::{DocGroup};
+use crate::models::{DocGroup, DocSnapshot, ProjectFile};
 use anyhow::Result;
 
-pub fn list_doc_groups(pool: &DbPool, project_id: i64) -> Result<Vec<DocGroup>> {
-    let conn = get_conn(pool)?;
-    let mut stmt = conn.prepare(
-        "SELECT id, project_id, name, parent_id, sort_order, notes 
-         FROM doc_groups 
-         WHERE project_id = ?1 
-         ORDER BY COALESCE(parent_id, 0), sort_order"
-    )?;
-    
-    let groups = stmt.query_map([project_id], |row| {
-        Ok(DocGroup {
-            id: row.get(0)?,
-            project_id: row.get(1)?,
-            name: row.get(2)?,
-            parent_id: row.get(3)?,
-            sort_order: row.get(4)?,
-            notes: row.get(5)?,
-        })
-    })?
-    .collect::<std::result::Result<Vec<_>, _>>()?;
-    
-    Ok(groups)
+pub fn list_doc_groups(data: &ProjectFile, _project_id: i64) -> Vec<DocGroup> {
+    data.groups.clone()
 }
 
-pub fn create_doc_group(pool: &DbPool, project_id: i64, name: &str, parent_id: Option<i64>) -> Result<DocGroup> {
-    let conn = get_conn(pool)?;
-    
-    // Get the next sort_order for this parent
-    let next_order: i64 = conn.query_row(
-        "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM doc_groups WHERE project_id = ?1 AND parent_id IS ?2",
-        rusqlite::params![project_id, parent_id],
-        |row| row.get(0)
-    )?;
-    
-    conn.execute(
-        "INSERT INTO doc_groups (project_id, name, parent_id, sort_order) VALUES (?1, ?2, ?3, ?4)",
-        rusqlite::params![project_id, name, parent_id, next_order]
-    )?;
-    
-    let id = conn.last_insert_rowid();
-    
-    Ok(DocGroup {
-        id,
-        project_id,
-        name: name.to_string(),
-        parent_id,
-        sort_order: Some(next_order),
-        notes: None,
-    })
-}
-
-pub fn create_doc_group_after(pool: &DbPool, project_id: i64, name: &str, parent_id: Option<i64>, after_sort_order: i64) -> Result<DocGroup> {
-    let conn = get_conn(pool)?;
-    
-    // Insert after the specified position
-    // First, increment all items with sort_order > after
-    conn.execute(
-        "UPDATE doc_groups SET sort_order = sort_order + 1 
-         WHERE project_id = ?1 AND parent_id IS ?2 AND sort_order > ?3",
-        rusqlite::params![project_id, parent_id, after_sort_order]
-    )?;
-    
-    let next_order = after_sort_order + 1;
-    
-    conn.execute(
-        "INSERT INTO doc_groups (project_id, name, parent_id, sort_order) VALUES (?1, ?2, ?3, ?4)",
-        rusqlite::params![project_id, name, parent_id, next_order]
-    )?;
-    
-    let id = conn.last_insert_rowid();
-    
-    Ok(DocGroup {
-        id,
-        project_id,
-        name: name.to_string(),
-        parent_id,
-        sort_order: Some(next_order),
-        notes: None,
-    })
-}
-
-pub fn delete_doc_group(pool: &DbPool, id: i64) -> Result<()> {
-    let conn = get_conn(pool)?;
-    
-    // First, get the sort_order and parent_id of the group being deleted
-    let (sort_order, parent_id, project_id): (i64, Option<i64>, i64) = conn.query_row(
-        "SELECT sort_order, parent_id, project_id FROM doc_groups WHERE id = ?1",
-        [id],
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?))
-    )?;
-    
-    // Delete the group (CASCADE will handle children)
-    conn.execute("DELETE FROM doc_groups WHERE id = ?1", [id])?;
-    
-    // Reorder remaining groups in the same parent
-    conn.execute(
-        "UPDATE doc_groups SET sort_order = sort_order - 1 
-         WHERE project_id = ?1 AND parent_id IS ?2 AND sort_order > ?3",
-        rusqlite::params![project_id, parent_id, sort_order]
-    )?;
-    
-    Ok(())
-}
-
-pub fn reorder_doc_group(pool: &DbPool, id: i64, direction: &str) -> Result<()> {
-    let conn = get_conn(pool)?;
-    
-    // Get current group info
-    let (current_order, parent_id, project_id): (i64, Option<i64>, i64) = conn.query_row(
-        "SELECT sort_order, parent_id, project_id FROM doc_groups WHERE id = ?1",
-        [id],
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?))
-    )?;
-    
-    let new_order = match direction {
-        "up" if current_order > 0 => current_order - 1,
-        "down" => current_order + 1,
-        _ => return Ok(()), // No change
+pub fn create_doc_group(
+    data: &mut ProjectFile,
+    project_id: i64,
+    name: &str,
+    parent_id: Option<i64>,
+) -> DocGroup {
+    let max_so = data.groups.iter()
+        .filter(|g| g.parent_id == parent_id)
+        .filter_map(|g| g.sort_order)
+        .max()
+        .unwrap_or(-1);
+    let id = data.next_ids.doc_group;
+    data.next_ids.doc_group += 1;
+    let group = DocGroup {
+        id, project_id, name: name.to_string(),
+        parent_id, sort_order: Some(max_so + 1), notes: None,
     };
-    
-    // Swap with the sibling at new_order
-    conn.execute(
-        "UPDATE doc_groups SET sort_order = ?1 WHERE project_id = ?2 AND parent_id IS ?3 AND sort_order = ?4",
-        rusqlite::params![current_order, project_id, parent_id, new_order]
-    )?;
-    
-    conn.execute(
-        "UPDATE doc_groups SET sort_order = ?1 WHERE id = ?2",
-        rusqlite::params![new_order, id]
-    )?;
-    
+    data.groups.push(group.clone());
+    group
+}
+
+pub fn create_doc_group_after(
+    data: &mut ProjectFile,
+    project_id: i64,
+    name: &str,
+    parent_id: Option<i64>,
+    after_sort_order: i64,
+) -> DocGroup {
+    for g in data.groups.iter_mut() {
+        if g.parent_id == parent_id {
+            if let Some(so) = g.sort_order {
+                if so > after_sort_order {
+                    g.sort_order = Some(so + 1);
+                }
+            }
+        }
+    }
+    let id = data.next_ids.doc_group;
+    data.next_ids.doc_group += 1;
+    let group = DocGroup {
+        id, project_id, name: name.to_string(),
+        parent_id, sort_order: Some(after_sort_order + 1), notes: None,
+    };
+    data.groups.push(group.clone());
+    group
+}
+
+fn collect_descendant_ids(data: &ProjectFile, root_id: i64) -> Vec<i64> {
+    let mut ids = vec![root_id];
+    let mut i = 0;
+    while i < ids.len() {
+        let parent = ids[i];
+        let children: Vec<i64> = data.groups.iter()
+            .filter(|g| g.parent_id == Some(parent))
+            .map(|g| g.id)
+            .collect();
+        ids.extend(children);
+        i += 1;
+    }
+    ids
+}
+
+pub fn delete_doc_group(data: &mut ProjectFile, id: i64) -> Result<()> {
+    let to_delete = collect_descendant_ids(data, id);
+
+    let doc_ids: Vec<i64> = data.docs.iter()
+        .filter(|d| d.doc_group_id.map_or(false, |gid| to_delete.contains(&gid)))
+        .map(|d| d.id)
+        .collect();
+
+    for did in &doc_ids {
+        data.drafts.retain(|dr| dr.doc_id != *did);
+        data.doc_characters.retain(|dc| dc.doc_id != *did);
+        data.doc_events.retain(|de| de.doc_id != *did);
+        data.doc_places.retain(|dp| dp.doc_id != *did);
+    }
+    data.docs.retain(|d| d.doc_group_id.map_or(true, |gid| !to_delete.contains(&gid)));
+    data.folder_drafts.retain(|fd| !to_delete.contains(&fd.doc_group_id));
+    data.doc_group_characters.retain(|dgc| !to_delete.contains(&dgc.doc_group_id));
+    data.doc_group_events.retain(|dge| !to_delete.contains(&dge.doc_group_id));
+    data.doc_group_places.retain(|dgp| !to_delete.contains(&dgp.doc_group_id));
+    data.groups.retain(|g| !to_delete.contains(&g.id));
     Ok(())
 }
 
-pub fn rename_doc_group(pool: &DbPool, id: i64, new_name: &str) -> Result<()> {
-    let conn = get_conn(pool)?;
-    conn.execute("UPDATE doc_groups SET name = ?1 WHERE id = ?2", rusqlite::params![new_name, id])?;
+pub fn reorder_doc_group(data: &mut ProjectFile, id: i64, direction: &str) -> Result<()> {
+    let group = data.groups.iter().find(|g| g.id == id)
+        .ok_or_else(|| anyhow::anyhow!("DocGroup {} not found", id))?;
+    let parent_id = group.parent_id;
+    let current_so = group.sort_order.unwrap_or(0);
+
+    let sibling = match direction {
+        "up" => data.groups.iter()
+            .filter(|g| g.parent_id == parent_id && g.id != id)
+            .filter(|g| g.sort_order.unwrap_or(0) < current_so)
+            .max_by_key(|g| g.sort_order.unwrap_or(0))
+            .map(|g| (g.id, g.sort_order.unwrap_or(0))),
+        "down" => data.groups.iter()
+            .filter(|g| g.parent_id == parent_id && g.id != id)
+            .filter(|g| g.sort_order.unwrap_or(0) > current_so)
+            .min_by_key(|g| g.sort_order.unwrap_or(0))
+            .map(|g| (g.id, g.sort_order.unwrap_or(0))),
+        _ => return Err(anyhow::anyhow!("Invalid direction: {}", direction)),
+    };
+
+    if let Some((sib_id, sib_so)) = sibling {
+        for g in data.groups.iter_mut() {
+            if g.id == id { g.sort_order = Some(sib_so); }
+            else if g.id == sib_id { g.sort_order = Some(current_so); }
+        }
+    }
     Ok(())
 }
 
-pub fn update_doc_group_notes(pool: &DbPool, id: i64, notes: &str) -> Result<()> {
-    let conn = get_conn(pool)?;
-    conn.execute("UPDATE doc_groups SET notes = ?1 WHERE id = ?2", rusqlite::params![notes, id])?;
+pub fn rename_doc_group(data: &mut ProjectFile, id: i64, new_name: &str) -> Result<()> {
+    let group = data.groups.iter_mut().find(|g| g.id == id)
+        .ok_or_else(|| anyhow::anyhow!("DocGroup {} not found", id))?;
+    group.name = new_name.to_string();
     Ok(())
 }
 
-/// Restore a deleted doc group at its original sort_order position and
-/// re-insert all its child docs (in order) from the provided snapshots.
+pub fn update_doc_group_notes(data: &mut ProjectFile, id: i64, notes: &str) -> Result<()> {
+    let group = data.groups.iter_mut().find(|g| g.id == id)
+        .ok_or_else(|| anyhow::anyhow!("DocGroup {} not found", id))?;
+    group.notes = Some(notes.to_string());
+    Ok(())
+}
+
 pub fn restore_doc_group(
-    pool: &DbPool,
+    data: &mut ProjectFile,
     project_id: i64,
     parent_id: Option<i64>,
     name: &str,
     sort_order: i64,
     notes: &str,
-    docs: Vec<crate::models::DocSnapshot>,
-) -> Result<DocGroup> {
-    // --- Restore the group ---
-    let group_id = {
-        let conn = get_conn(pool)?;
-
-        // Make space at the target sort_order
-        conn.execute(
-            "UPDATE doc_groups SET sort_order = sort_order + 1 \
-             WHERE project_id = ?1 AND parent_id IS ?2 AND sort_order >= ?3",
-            rusqlite::params![project_id, parent_id, sort_order],
-        )?;
-
-        let notes_opt: Option<&str> = if notes.is_empty() { None } else { Some(notes) };
-        conn.execute(
-            "INSERT INTO doc_groups (project_id, name, parent_id, sort_order, notes) \
-             VALUES (?1, ?2, ?3, ?4, ?5)",
-            rusqlite::params![project_id, name, parent_id, sort_order, notes_opt],
-        )?;
-
-        conn.last_insert_rowid()
-    }; // connection returned to pool
-
-    // --- Restore each child doc ---
-    for snap in docs {
-        crate::services::docs::restore_doc(
-            pool,
-            project_id,
-            Some(group_id),
-            &snap.name,
-            snap.sort_order,
-            &snap.text,
-            &snap.notes,
-        )?;
+    docs: Vec<DocSnapshot>,
+) -> DocGroup {
+    for g in data.groups.iter_mut() {
+        if g.parent_id == parent_id {
+            if let Some(so) = g.sort_order {
+                if so >= sort_order {
+                    g.sort_order = Some(so + 1);
+                }
+            }
+        }
     }
-
-    Ok(DocGroup {
-        id: group_id,
-        project_id,
-        name: name.to_string(),
-        parent_id,
-        sort_order: Some(sort_order),
+    let gid = data.next_ids.doc_group;
+    data.next_ids.doc_group += 1;
+    let group = DocGroup {
+        id: gid, project_id, name: name.to_string(),
+        parent_id, sort_order: Some(sort_order),
         notes: if notes.is_empty() { None } else { Some(notes.to_string()) },
-    })
+    };
+    data.groups.push(group.clone());
+
+    for snap in docs {
+        let did = data.next_ids.doc;
+        data.next_ids.doc += 1;
+        data.docs.push(crate::models::Doc {
+            id: did, project_id, path: String::new(),
+            name: Some(snap.name), timeline_id: None,
+            text: Some(snap.text),
+            notes: Some(snap.notes),
+            doc_group_id: Some(gid), sort_order: Some(snap.sort_order),
+        });
+    }
+    group
 }

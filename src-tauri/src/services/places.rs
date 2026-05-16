@@ -1,161 +1,81 @@
-use crate::db::{DbPool, get_conn};
-use crate::models::Place;
-use rusqlite::OptionalExtension;
-use anyhow::Context;
+use crate::models::{DocGroupPlace, DocPlace, Place, ProjectFile};
+use anyhow::Result;
 
-pub fn create(pool: &DbPool, project_id: i64, name: &str, desc: Option<String>) -> anyhow::Result<Place> {
-    let mut conn = get_conn(pool)?;
+pub fn create(data: &mut ProjectFile, project_id: i64, name: &str, desc: Option<String>) -> Place {
+    let id = data.next_ids.place;
+    data.next_ids.place += 1;
+    let p = Place { id, project_id, name: name.to_string(), desc };
+    data.places.push(p.clone());
+    p
+}
 
-    if name.trim().is_empty() {
-        return Err(anyhow::anyhow!("name cannot be empty"));
+pub fn list(data: &ProjectFile, _project_id: i64) -> Vec<Place> {
+    data.places.clone()
+}
+
+pub fn update(data: &mut ProjectFile, id: i64, name: Option<String>, desc: Option<String>) -> Result<Place> {
+    let p = data.places.iter_mut().find(|p| p.id == id)
+        .ok_or_else(|| anyhow::anyhow!("Place {} not found", id))?;
+    if let Some(n) = name { p.name = n; }
+    if desc.is_some() { p.desc = desc; }
+    Ok(p.clone())
+}
+
+pub fn delete_(data: &mut ProjectFile, id: i64) -> Result<()> {
+    data.places.retain(|p| p.id != id);
+    data.doc_places.retain(|dp| dp.place_id != id);
+    data.doc_group_places.retain(|dgp| dgp.place_id != id);
+    Ok(())
+}
+
+pub fn list_for_doc(data: &ProjectFile, doc_id: i64) -> Vec<i64> {
+    data.doc_places.iter()
+        .filter(|dp| dp.doc_id == doc_id)
+        .map(|dp| dp.place_id)
+        .collect()
+}
+
+pub fn attach_to_doc(data: &mut ProjectFile, doc_id: i64, place_id: i64) -> Result<()> {
+    if !data.doc_places.iter().any(|dp| dp.doc_id == doc_id && dp.place_id == place_id) {
+        data.doc_places.push(DocPlace { doc_id, place_id });
     }
-
-    let tx = conn.transaction()?;
-    tx.execute(
-        "INSERT INTO places (project_id, name, desc) VALUES (?1, ?2, ?3)",
-        rusqlite::params![project_id, name, desc],
-    ).context("inserting place")?;
-
-    let id = tx.last_insert_rowid();
-    let place = tx.query_row("SELECT id, project_id, name, desc FROM places WHERE id = ?1", rusqlite::params![id], |row| {
-        Ok(Place {
-            id: row.get(0)?,
-            project_id: row.get(1)?,
-            name: row.get(2)?,
-            desc: row.get(3)?,
-        })
-    })?;
-
-    tx.commit()?;
-    Ok(place)
-}
-
-pub fn get(pool: &DbPool, id: i64) -> anyhow::Result<Option<Place>> {
-    let conn = get_conn(pool)?;
-    let res = conn.query_row::<Place, _, _>("SELECT id, project_id, name, desc FROM places WHERE id = ?1", rusqlite::params![id], |row| {
-        Ok(Place {
-            id: row.get(0)?,
-            project_id: row.get(1)?,
-            name: row.get(2)?,
-            desc: row.get(3)?,
-        })
-    }).optional()?;
-    Ok(res)
-}
-
-/// List all places for a project
-pub fn list(pool: &DbPool, project_id: i64) -> anyhow::Result<Vec<Place>> {
-    let conn = get_conn(pool)?;
-    let mut stmt = conn.prepare(
-        "SELECT id, project_id, name, desc FROM places WHERE project_id = ?1 ORDER BY name COLLATE NOCASE"
-    )?;
-    let items = stmt.query_map(rusqlite::params![project_id], |row| {
-        Ok(Place {
-            id: row.get(0)?,
-            project_id: row.get(1)?,
-            name: row.get(2)?,
-            desc: row.get(3)?,
-        })
-    })?.collect::<Result<Vec<_>, _>>()?;
-    Ok(items)
-}
-
-/// Update a place
-pub fn update(pool: &DbPool, id: i64, name: Option<String>, desc: Option<String>) -> anyhow::Result<Place> {
-    let conn = get_conn(pool)?;
-    // Fetch existing to preserve unspecified fields
-    let current: Place = conn.query_row(
-        "SELECT id, project_id, name, desc FROM places WHERE id = ?1",
-        rusqlite::params![id],
-        |row| Ok(Place { id: row.get(0)?, project_id: row.get(1)?, name: row.get(2)?, desc: row.get(3)? })
-    )?;
-
-    let new_name = name.unwrap_or(current.name);
-    let new_desc = desc.or(current.desc);
-
-    conn.execute(
-        "UPDATE places SET name = ?1, desc = ?2 WHERE id = ?3",
-        rusqlite::params![new_name, new_desc, id],
-    ).context("updating place")?;
-
-    get(pool, id).map(|opt| opt.expect("place must exist after update"))
-}
-
-/// Delete a place
-pub fn delete_(pool: &DbPool, id: i64) -> anyhow::Result<()> {
-    let conn = get_conn(pool)?;
-    conn.execute("DELETE FROM places WHERE id = ?1", rusqlite::params![id])?;
-    // Cascades remove from doc_places due to FK
     Ok(())
 }
 
-/// List place ids attached to a doc
-pub fn list_for_doc(pool: &DbPool, doc_id: i64) -> anyhow::Result<Vec<i64>> {
-    let conn = get_conn(pool)?;
-    let mut stmt = conn.prepare("SELECT place_id FROM doc_places WHERE doc_id = ?1 ORDER BY place_id")?;
-    let ids = stmt.query_map(rusqlite::params![doc_id], |row| row.get(0))?.collect::<Result<Vec<i64>, _>>()?;
-    Ok(ids)
-}
-
-/// Attach a place to a doc (idempotent)
-pub fn attach_to_doc(pool: &DbPool, doc_id: i64, place_id: i64) -> anyhow::Result<()> {
-    let conn = get_conn(pool)?;
-    conn.execute(
-        "INSERT OR IGNORE INTO doc_places (doc_id, place_id) VALUES (?1, ?2)",
-        rusqlite::params![doc_id, place_id],
-    )?;
+pub fn detach_from_doc(data: &mut ProjectFile, doc_id: i64, place_id: i64) -> Result<()> {
+    data.doc_places.retain(|dp| !(dp.doc_id == doc_id && dp.place_id == place_id));
     Ok(())
 }
 
-/// Detach a place from a doc (idempotent)
-pub fn detach_from_doc(pool: &DbPool, doc_id: i64, place_id: i64) -> anyhow::Result<()> {
-    let conn = get_conn(pool)?;
-    conn.execute(
-        "DELETE FROM doc_places WHERE doc_id = ?1 AND place_id = ?2",
-        rusqlite::params![doc_id, place_id],
-    )?;
+pub fn list_for_doc_group(data: &ProjectFile, group_id: i64) -> Vec<i64> {
+    data.doc_group_places.iter()
+        .filter(|dgp| dgp.doc_group_id == group_id)
+        .map(|dgp| dgp.place_id)
+        .collect()
+}
+
+pub fn list_from_docs_in_group(data: &ProjectFile, group_id: i64) -> Vec<i64> {
+    let doc_ids: Vec<i64> = data.docs.iter()
+        .filter(|d| d.doc_group_id == Some(group_id))
+        .map(|d| d.id)
+        .collect();
+    let mut ids: Vec<i64> = data.doc_places.iter()
+        .filter(|dp| doc_ids.contains(&dp.doc_id))
+        .map(|dp| dp.place_id)
+        .collect();
+    ids.sort_unstable();
+    ids.dedup();
+    ids
+}
+
+pub fn attach_to_doc_group(data: &mut ProjectFile, group_id: i64, place_id: i64) -> Result<()> {
+    if !data.doc_group_places.iter().any(|dgp| dgp.doc_group_id == group_id && dgp.place_id == place_id) {
+        data.doc_group_places.push(DocGroupPlace { doc_group_id: group_id, place_id });
+    }
     Ok(())
 }
 
-/// List place ids attached to a doc group (directly attached to the folder)
-pub fn list_for_doc_group(pool: &DbPool, doc_group_id: i64) -> anyhow::Result<Vec<i64>> {
-    let conn = get_conn(pool)?;
-    let mut stmt = conn.prepare("SELECT place_id FROM doc_group_places WHERE doc_group_id = ?1 ORDER BY place_id")?;
-    let ids = stmt.query_map(rusqlite::params![doc_group_id], |row| row.get(0))?.collect::<Result<Vec<i64>, _>>()?;
-    Ok(ids)
-}
-
-/// List all distinct place ids used in docs within a doc group (mirrored from docs)
-/// This returns places attached to any document in the folder
-pub fn list_from_docs_in_group(pool: &DbPool, doc_group_id: i64) -> anyhow::Result<Vec<i64>> {
-    let conn = get_conn(pool)?;
-    let mut stmt = conn.prepare(
-        "SELECT DISTINCT dp.place_id 
-         FROM doc_places dp
-         INNER JOIN docs d ON dp.doc_id = d.id
-         WHERE d.doc_group_id = ?1
-         ORDER BY dp.place_id"
-    )?;
-    let ids = stmt.query_map(rusqlite::params![doc_group_id], |row| row.get(0))?.collect::<Result<Vec<i64>, _>>()?;
-    Ok(ids)
-}
-
-/// Attach a place to a doc group (idempotent)
-pub fn attach_to_doc_group(pool: &DbPool, doc_group_id: i64, place_id: i64) -> anyhow::Result<()> {
-    let conn = get_conn(pool)?;
-    conn.execute(
-        "INSERT OR IGNORE INTO doc_group_places (doc_group_id, place_id) VALUES (?1, ?2)",
-        rusqlite::params![doc_group_id, place_id],
-    )?;
-    Ok(())
-}
-
-/// Detach a place from a doc group (idempotent)
-pub fn detach_from_doc_group(pool: &DbPool, doc_group_id: i64, place_id: i64) -> anyhow::Result<()> {
-    let conn = get_conn(pool)?;
-    conn.execute(
-        "DELETE FROM doc_group_places WHERE doc_group_id = ?1 AND place_id = ?2",
-        rusqlite::params![doc_group_id, place_id],
-    )?;
+pub fn detach_from_doc_group(data: &mut ProjectFile, group_id: i64, place_id: i64) -> Result<()> {
+    data.doc_group_places.retain(|dgp| !(dgp.doc_group_id == group_id && dgp.place_id == place_id));
     Ok(())
 }

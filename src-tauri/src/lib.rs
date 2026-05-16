@@ -1,6 +1,7 @@
 mod db;
 mod models;
 mod services {
+    pub mod file_store;
     pub mod projects;
     pub mod docs;
     pub mod characters;
