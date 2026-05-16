@@ -4,13 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ProjectService } from '../../services/project.service';
 import { TimelineService } from '../../services/timeline.service';
-import { SyncService } from '../../services/sync.service';
 import { ICloudService } from '../../services/icloud.service';
 import { UndoService } from '../../services/undo.service';
-import { confirm, open, save, ask, message } from '@tauri-apps/plugin-dialog';
-import { readTextFile, writeTextFile, readFile, writeFile } from '@tauri-apps/plugin-fs';
-import { tempDir, join } from '@tauri-apps/api/path';
-import { listen } from '@tauri-apps/api/event';
+import { confirm, open, save, message } from '@tauri-apps/plugin-dialog';
+import { listen, UnlistenFn, type Event as TauriEvent } from '@tauri-apps/api/event';
 import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
 import { DocumentEditorComponent } from '../../components/document-editor/document-editor.component';
 import { GroupViewComponent } from '../../components/group-view/group-view.component';
@@ -21,7 +18,7 @@ import { AppFooterComponent } from '../../components/app-footer/app-footer.compo
 import { FolderDraftsComponent } from '../../components/folder-drafts/folder-drafts.component';
 import { CommandPaletteComponent, CommandMode } from '../../components/command-palette/command-palette.component';
 import { NgClickOutsideDirective, NgClickOutsideExcludeDirective } from 'ng-click-outside2';
-import type { Timeline, FolderDraft, Sync, Draft } from '../../shared/models';
+import type { Timeline, FolderDraft, Draft } from '../../shared/models';
 
 interface DocGroup {
   id: number;
@@ -161,7 +158,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   characters: Character[] = [];
   events: Event[] = [];
   places: any[] = [];
-  drafts: any[] = [];
+  drafts: Draft[] = [];
   // Folder drafts UI state
   folderDraftsExpanded = false;
   folderDrafts: FolderDraft[] = [];
@@ -298,7 +295,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     private router: Router,
     private projectService: ProjectService,
     private timelineService: TimelineService,
-    private syncService: SyncService,
     private iCloudService: ICloudService,
     private undoService: UndoService,
     private changeDetector: ChangeDetectorRef
@@ -1171,247 +1167,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ─── removed: performSync / autoResolveConflict / isPermissionError ────────
-  // The app fully relies on native iCloud Drive sync now.
-  // The only custom sync logic that remains:
-  //   • schedulePushToICloud()  – WAL checkpoint 8 s after each edit
-  //   • loadSyncStatus()        – registers FSEvents watcher on open file
-  //   • onRemoteICloudChange()  – reopens pool + reloads UI on remote write
-  // ─────────────────────────────────────────────────────────────────────────
-
-  // (nothing here — placeholder so the comment block stays connected)
-    if (!this.projectFilePath) {
-      console.warn('No sync configuration found');
-      return;
-    }
-
-    // If we're already in a conflict state from a previous sync, auto-resolve it first
-    if (this.currentSync.sync_status === 'conflict') {
-      console.log('[Sync] Found existing conflict state, auto-resolving...');
-      try {
-        await this.autoResolveConflict();
-        // Reload sync status after resolution
-        this.currentSync = await this.syncService.getSyncByProject(this.projectId);
-        if (!this.currentSync || this.currentSync.sync_status === 'conflict') {
-          console.warn('Failed to resolve conflict');
-          return;
-        }
-      } catch (err) {
-        console.error('Failed to auto-resolve existing conflict:', err);
-        this.syncStatus = 'error';
-        return;
-      }
-    }
-
-    try {
-      this.syncStatus = 'syncing';
-      this.changeDetector.markForCheck();
-      
-      // Use the high-level bidirectional sync from service
-      // Note: .cora files are binary ZIP archives, so we use binary file operations
-      const result = await this.syncService.performSync(this.projectId, {
-        // Get database content by exporting to memory (returns Uint8Array)
-        getDbContent: async () => {
-          // Export to system temp directory with unique filename
-          // Note: exportProject adds .cora extension automatically, so we use that for reading
-          const sysTempDir = await tempDir();
-          const tempFileName = `cora-sync-${this.projectId}-${Date.now()}`;
-          const tempPath = await join(sysTempDir, tempFileName);
-          const actualFilePath = `${tempPath}.cora`; // exportProject adds .cora extension
-          
-          await this.projectService.exportProject(this.projectId, tempPath);
-          const content = await readFile(actualFilePath);
-          
-          // Clean up temp file
-          try {
-            await writeFile(actualFilePath, new Uint8Array(0)); // Clear content first
-          } catch (err) {
-            console.warn('Failed to cleanup temp file:', err);
-          }
-          
-          return content;
-        },
-        
-        // Get file content (returns Uint8Array)
-        getFileContent: async () => {
-          try {
-            const filePath = this.currentSync!.file_path;
-            // iCloud paths need eviction-check + coordinated read.
-            if (this.iCloudService.isICloudPath(filePath)) {
-              await this.iCloudService.ensureDownloaded(filePath);
-              return await this.iCloudService.readFile(filePath);
-            }
-            return await readFile(filePath);
-          } catch (err) {
-            // Check if this is a permission error (macOS sandbox)
-            if (this.isPermissionError(err)) {
-              const newPath = await this.promptReGrantFileAccess();
-              if (newPath) {
-                await this.syncService.updateSync(this.currentSync!.id, { file_path: newPath });
-                this.currentSync!.file_path = newPath;
-                return await readFile(newPath);
-              } else {
-                // User chose to disable sync
-                await this.syncService.deleteSyncByProject(this.projectId);
-                this.currentSync = null;
-                this.syncStatus = 'idle';
-                throw new Error('Sync disabled by user');
-              }
-            }
-            console.warn('File not found, will be created:', err);
-            return new Uint8Array(0); // Empty array if file doesn't exist yet
-          }
-        },
-        
-        // Write to database by importing (receives Uint8Array)
-        writeDbContent: async (content: Uint8Array) => {
-          // Write to system temp directory with unique filename
-          // Note: syncImportToProject requires .cora extension to recognize it as an archive
-          const sysTempDir = await tempDir();
-          const tempFileName = `cora-import-${this.projectId}-${Date.now()}.cora`;
-          const tempPath = await join(sysTempDir, tempFileName);
-          
-          await writeFile(tempPath, content);
-          // Import from the temp file into EXISTING project (not creating new one)
-          await this.projectService.syncImportToProject(this.projectId, tempPath);
-          // Reload the project to reflect changes
-          await this.loadProject(true);
-          
-          // Clean up temp file
-          try {
-            await writeFile(tempPath, new Uint8Array(0)); // Clear content first
-          } catch (err) {
-            console.warn('Failed to cleanup temp file:', err);
-          }
-        },
-        
-        // Write to file (receives Uint8Array)
-        writeFileContent: async (content: Uint8Array) => {
-          const filePath = this.currentSync!.file_path;
-          // Use coordinated write for iCloud paths.
-          if (this.iCloudService.isICloudPath(filePath)) {
-            await this.iCloudService.writeFile(filePath, content);
-          } else {
-            await writeFile(filePath, content);
-          }
-        }
-      });
-      
-      if (result.success) {
-        this.syncStatus = 'synced';
-        await this.loadSyncStatus(); // Refresh sync state
-      } else if (result.conflict) {
-        // Automatically resolve conflict by comparing timestamps
-        try {
-          // Reset sync status from 'conflict' to 'pending' to allow resolution
-          await this.syncService.updateSync(this.currentSync.id, { sync_status: 'pending' });
-          
-          // Get DB project timestamp
-          const dbProject = await this.projectService.getProject(this.projectId);
-          const dbTimestamp = dbProject?.updated_at ? new Date(dbProject.updated_at).getTime() : 0;
-          
-          // Get file metadata timestamp by reading the .cora file
-          const fileContent = await readFile(this.currentSync.file_path);
-          const sysTempDir = await tempDir();
-          const tempFileName = `cora-compare-${this.projectId}-${Date.now()}.cora`;
-          const tempPath = await join(sysTempDir, tempFileName);
-          await writeFile(tempPath, fileContent);
-          
-          // Extract and read metadata.json
-          const metadataText = await readTextFile(tempPath);
-          let fileTimestamp = 0;
-          try {
-            // The .cora is a ZIP, we need to extract it first
-            // For now, use a simpler approach: just compare file modification time vs DB time
-            // TODO: Extract ZIP and parse metadata.json for more accurate exported_at
-            // For now, assume file is newer if conflict exists
-            fileTimestamp = 0; // Will be overridden below
-          } catch (err) {
-            console.warn('Could not parse file metadata:', err);
-          }
-          
-          // Cleanup temp file
-          try {
-            await writeFile(tempPath, new Uint8Array(0));
-          } catch {}
-          
-          // For now, use simple heuristic: if DB has updated_at more recent than sync start, use DB
-          // Otherwise use file
-          const useDb = dbTimestamp > 0 && this.currentSync.last_sync_at 
-            ? dbTimestamp > new Date(this.currentSync.last_sync_at).getTime()
-            : false;
-          
-          if (useDb) {
-            // Database is newer - export to file
-            await this.syncService.resolveConflict(this.projectId, 'use_db');
-            await this.projectService.exportProject(this.projectId, this.currentSync.file_path);
-            const exportedContent = await readFile(this.currentSync.file_path);
-            const exportedHash = await this.syncService.calculateHash(exportedContent);
-            await this.syncService.markSyncCompleted(this.projectId, exportedHash, exportedHash);
-            this.syncStatus = 'synced';
-          } else {
-            // File is newer - import from file
-            await this.syncService.resolveConflict(this.projectId, 'use_file');
-            await this.projectService.syncImportToProject(this.projectId, this.currentSync.file_path);
-            await this.loadProject(true);
-            const fileHash = await this.syncService.calculateHash(fileContent);
-            await this.syncService.markSyncCompleted(this.projectId, fileHash, fileHash);
-            this.syncStatus = 'synced';
-          }
-          await this.loadSyncStatus();
-        } catch (err) {
-          console.error('Failed to auto-resolve conflict:', err);
-          this.syncStatus = 'error';
-          await confirm(`Sync conflict resolution failed: ${err}`, {
-            title: 'Sync Error',
-            kind: 'error',
-            okLabel: 'OK'
-          });
-        }
-      } else {
-        // Check if this is a throttle response (expected behavior, not an error)
-        const isThrottled = result.error?.includes('Throttled') || result.error?.includes('Next sync in');
-        
-        if (isThrottled) {
-          // Throttling is expected - just log and keep status as idle
-          console.debug('Sync throttled:', result.error);
-          this.syncStatus = 'idle';
-        } else {
-          // Actual sync error - show to user
-          this.syncStatus = 'error';
-          await confirm(`Sync failed: ${result.error}`, {
-            title: 'Sync Error',
-            kind: 'error',
-            okLabel: 'OK'
-          });
-        }
-      }
-      
-      this.changeDetector.markForCheck();
-    } catch (err) {
-      console.error('Sync failed:', err);
-      
-      // Check if this is a throttle error in the exception message
-      const errStr = String(err);
-      const isThrottled = errStr.includes('Throttled') || errStr.includes('Next sync in');
-      
-      if (isThrottled) {
-        // Throttling is expected - just log and keep status as idle
-        console.debug('Sync throttled:', err);
-        this.syncStatus = 'idle';
-      } else {
-        // Actual sync error - show to user
-        this.syncStatus = 'error';
-        await confirm(`Sync failed: ${err}`, {
-          title: 'Sync Error',
-          kind: 'error',
-          okLabel: 'OK'
-        });
-      }
-      
-      this.changeDetector.markForCheck();
-    }
-  }
 
   async loadSyncStatus(): Promise<void> {
     // In the per-file architecture the project file IS the sync unit.
@@ -1428,15 +1183,15 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Register the Rust FSEvents watcher for this file.
       this.projectService
         .icloudWatchProject(this.projectId, filePath)
-        .catch(err => console.warn('icloud_watch_project failed:', err));
+        .catch((err: unknown) => console.warn('icloud_watch_project failed:', err));
 
       // React when iCloud delivers a remote change.
-      listen<{ projectId: number; path: string }>('cora://icloud-file-changed', async event => {
+      listen<{ projectId: number; path: string }>('cora://icloud-file-changed', async (event: TauriEvent<{ projectId: number; path: string }>) => {
         if (event.payload.projectId !== this.projectId) return;
         await this.onRemoteICloudChange(event.payload.path);
-      }).then(unlisten => {
+      }).then((unlisten: UnlistenFn) => {
         this.unlistenICloudChange = unlisten;
-      }).catch(err => console.warn('Failed to subscribe to iCloud file changes:', err));
+      }).catch((err: unknown) => console.warn('Failed to subscribe to iCloud file changes:', err));
 
       this.syncStatus = 'synced';
     } catch (err) {
@@ -1444,147 +1199,6 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Check if an error is a macOS permission/sandbox error.
-   * After app restart, file access permissions are lost for files outside the sandbox.
-   */
-  private isPermissionError(err: any): boolean {
-    const errStr = String(err).toLowerCase();
-    return errStr.includes('operation not permitted') ||
-           errStr.includes('os error 1') ||
-           errStr.includes('permission denied') ||
-           errStr.includes('not permitted');
-  }
-
-  /**
-   * Prompt user to re-grant file access after permission was lost (e.g., after app restart).
-   * Returns the new file path if user selects a file, or null if cancelled.
-   */
-  private async promptReGrantFileAccess(): Promise<string | null> {
-    const shouldReselect = await ask(
-      'File access permission was lost (this happens after restarting the app on macOS). Would you like to re-select the sync file to restore access?',
-      {
-        title: 'File Access Required',
-        kind: 'warning',
-        okLabel: 'Select File',
-        cancelLabel: 'Disable Sync'
-      }
-    );
-
-    if (!shouldReselect) {
-      return null;
-    }
-
-    // Open file picker to re-grant access
-    const selected = await open({
-      title: 'Select the sync file to restore access',
-      filters: [{ name: 'Cora Project', extensions: ['cora'] }],
-      multiple: false,
-      directory: false
-    });
-
-    if (!selected || Array.isArray(selected)) {
-      return null;
-    }
-
-    return selected as string;
-  }
-
-  /**
-   * Auto-resolve a sync conflict by comparing timestamps and choosing the newer version.
-   * Uses DB updated_at vs last_sync_at to determine which source is newer.
-   */
-  private async autoResolveConflict(): Promise<void> {
-    if (!this.currentSync) {
-      throw new Error('No sync configuration');
-    }
-
-    // Reset sync status from 'conflict' to 'pending' to allow resolution
-    await this.syncService.updateSync(this.currentSync.id, { sync_status: 'pending' });
-
-    // Get DB project timestamp
-    const dbProject = await this.projectService.getProject(this.projectId);
-    const dbTimestamp = dbProject?.updated_at ? new Date(dbProject.updated_at).getTime() : 0;
-
-    // Try to read file content, handling permission errors
-    let fileContent: Uint8Array;
-    try {
-      fileContent = await readFile(this.currentSync.file_path);
-    } catch (err) {
-      if (this.isPermissionError(err)) {
-        // Prompt user to re-grant access
-        const newPath = await this.promptReGrantFileAccess();
-        if (newPath) {
-          // Update sync with new path and retry
-          await this.syncService.updateSync(this.currentSync.id, { file_path: newPath });
-          this.currentSync.file_path = newPath;
-          fileContent = await readFile(newPath);
-        } else {
-          // User chose to disable sync
-          await this.syncService.deleteSyncByProject(this.projectId);
-          this.currentSync = null;
-          this.syncStatus = 'idle';
-          throw new Error('Sync disabled by user');
-        }
-      } else {
-        throw err;
-      }
-    }
-
-    // Determine which source is newer using simple heuristic:
-    // If DB has updated_at more recent than last sync, use DB; otherwise use file
-    const useDb = dbTimestamp > 0 && this.currentSync.last_sync_at 
-      ? dbTimestamp > new Date(this.currentSync.last_sync_at).getTime()
-      : false;
-
-    if (useDb) {
-      // Database is newer - export to file
-      console.log('[Sync] Resolving conflict: using database (newer)');
-      await this.syncService.resolveConflict(this.projectId, 'use_db');
-      try {
-        await this.projectService.exportProject(this.projectId, this.currentSync.file_path);
-        const exportedContent = await readFile(this.currentSync.file_path);
-        const exportedHash = await this.syncService.calculateHash(exportedContent);
-        await this.syncService.markSyncCompleted(this.projectId, exportedHash, exportedHash);
-      } catch (err) {
-        if (this.isPermissionError(err)) {
-          // Prompt user to re-grant access for export
-          const newPath = await this.promptReGrantFileAccess();
-          if (newPath) {
-            await this.syncService.updateSync(this.currentSync.id, { file_path: newPath });
-            this.currentSync.file_path = newPath;
-            await this.projectService.exportProject(this.projectId, newPath);
-            const exportedContent = await readFile(newPath);
-            const exportedHash = await this.syncService.calculateHash(exportedContent);
-            await this.syncService.markSyncCompleted(this.projectId, exportedHash, exportedHash);
-          } else {
-            await this.syncService.deleteSyncByProject(this.projectId);
-            this.currentSync = null;
-            this.syncStatus = 'idle';
-            throw new Error('Sync disabled by user');
-          }
-        } else {
-          throw err;
-        }
-      }
-    } else {
-      // File is newer - import from file
-      console.log('[Sync] Resolving conflict: using file (newer)');
-      await this.syncService.resolveConflict(this.projectId, 'use_file');
-      await this.projectService.syncImportToProject(this.projectId, this.currentSync.file_path);
-      await this.loadProject(true);
-      const fileHash = await this.syncService.calculateHash(fileContent);
-      await this.syncService.markSyncCompleted(this.projectId, fileHash, fileHash);
-    }
-
-    this.syncStatus = 'synced';
-  }
-
-  /**
-   * Check if auto-sync should trigger and execute sync if conditions are met.
-   * This is called after data modification operations (saves, updates, deletes).
-   * Non-blocking - won't interrupt user workflow if sync fails.
-   */
   async exportToPdf() {
     this.showExportOptionsDialog = false;
     await this.onExportProjectToPdfRequested();
@@ -3526,7 +3140,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.setLocalDraftContent(draft.id, draftContent);
       const idx = this.drafts.findIndex(d => d.id === draft.id);
       if (idx !== -1) {
-        this.drafts[idx] = { ...this.drafts[idx], content: draftContent };
+        this.drafts[idx] = { ...this.drafts[idx]!, content: draftContent };
       }
       // Mark as pending so a blur will sync the empty content if user doesn't type
       this.draftSyncStatus[draft.id] = 'pending';
@@ -5440,8 +5054,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         const index = this.drafts.findIndex(d => d.id === draftId);
         if (index !== -1) {
           // Preserve current content from UI/local cache; update only metadata
-          this.drafts[index].name = updated.name;
-          this.drafts[index].updated_at = updated.updated_at;
+          this.drafts[index]!.name = updated.name;
+          this.drafts[index]!.updated_at = updated.updated_at;
           this.changeDetector.detectChanges();
 
           // Restore focus and cursor position after change detection
@@ -5498,7 +5112,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         const newIndex = currentIndex < this.drafts.length - 1 ? currentIndex + 1 : currentIndex - 1;
         console.log('[DEBUG] deleteDraft - currentIndex:', currentIndex, 'newIndex:', newIndex);
         if (newIndex >= 0 && newIndex < this.drafts.length) {
-          this.selectedDraftId = this.drafts[newIndex].id;
+          this.selectedDraftId = this.drafts[newIndex]!.id;
           console.log('[DEBUG] deleteDraft - new selectedDraftId:', this.selectedDraftId);
           if (this.selectedDoc) {
             try { localStorage.setItem(this.getDraftSelectionKey(this.selectedDoc.id), String(this.selectedDraftId)); } catch {}
@@ -5612,7 +5226,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Update local array
       const idx = this.drafts.findIndex(d => d.id === id);
       if (idx !== -1) {
-        this.drafts[idx] = { ...this.drafts[idx], name: updated.name, updated_at: updated.updated_at };
+        this.drafts[idx] = { ...this.drafts[idx]!, name: updated.name, updated_at: updated.updated_at };
         this.drafts = [...this.drafts];
       }
     } catch (error: any) {
