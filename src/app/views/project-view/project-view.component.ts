@@ -258,7 +258,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   exportRangeEnd = 1;
   
   // Sync state
-  currentSync: Sync | null = null;
+  /** Path of the currently open .cora file (set by loadSyncStatus). */
+  projectFilePath: string | null = null;
   showICloudSuccessDialog = false;
   iCloudSuccessFileName = '';
   iCloudSuccessFilePath = '';
@@ -1074,80 +1075,9 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   // ==================== Sync Methods ====================
 
-  async initializeSync(filePath: string): Promise<void> {
-    try {
-      this.currentSync = await this.syncService.initializeSync(this.projectId, filePath, {
-        syncDirection: 'db_to_file', // For now, only sync from DB to file
-        autoSyncEnabled: true
-      });
-      this.syncStatus = 'synced';
-      this.changeDetector.markForCheck();
-    } catch (err) {
-      console.error('Failed to initialize sync:', err);
-      throw err;
-    }
-  }
-
-  /** True when the current sync file lives inside the Cora iCloud container. */
+  /** True when the open .cora file lives inside the Cora iCloud Drive container. */
   get isICloudSync(): boolean {
-    return this.currentSync
-      ? this.iCloudService.isICloudPath(this.currentSync.file_path)
-      : false;
-  }
-
-  /**
-   * Enable iCloud Drive sync for this project.
-   *
-   * Exports the project to the iCloud container Documents folder and
-   * configures the sync state machine to use that path going forward.
-   * If iCloud is unavailable (user not signed in, container not created)
-   * a clear error message is shown.
-   */
-  async enableICloudSync(silent = false): Promise<void> {
-    try {
-      const available = await this.iCloudService.isAvailable();
-      if (!available) {
-        if (!silent) {
-          await message(
-            'iCloud Drive is not available on this device.\n\n' +
-            'Please make sure you are signed in to iCloud and iCloud Drive is enabled. ' +
-            'If you have never enabled iCloud sync for Cora, run a signed build first ' +
-            '(pnpm build:current) to create the iCloud container.',
-            { title: 'iCloud Not Available', kind: 'error' }
-          );
-        }
-        return;
-      }
-
-      // Already syncing with iCloud — nothing to do.
-      if (this.currentSync && this.isICloudSync) {
-        return;
-      }
-
-      const icloudPath = await this.iCloudService.getProjectPath(
-        this.projectName || `project-${this.projectId}`
-      );
-
-      // Export the project to the iCloud path.
-      await this.projectService.exportProject(this.projectId, icloudPath);
-
-      // Wire up the sync state machine.
-      await this.initializeSync(icloudPath);
-
-      if (!silent) {
-        this.iCloudSuccessFileName = icloudPath.split('/').pop() ?? icloudPath;
-        this.iCloudSuccessFilePath = icloudPath;
-        this.showICloudSuccessDialog = true;
-      }
-    } catch (err) {
-      console.error('Failed to enable iCloud sync:', err);
-      if (!silent) {
-        await message(
-          `Failed to enable iCloud Drive sync: ${err}`,
-          { title: 'Error', kind: 'error' }
-        );
-      }
-    }
+    return this.projectFilePath ? this.iCloudService.isICloudPath(this.projectFilePath) : false;
   }
 
   closeICloudSuccessDialog(): void {
@@ -1195,7 +1125,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   async revealICloudFileInFinder(): Promise<void> {
-    const path = this.iCloudSuccessFilePath || this.currentSync?.file_path;
+    const path = this.projectFilePath;
     if (!path) return;
     try {
       const { Command } = await import('@tauri-apps/plugin-shell');
@@ -1241,12 +1171,16 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  async performSync(): Promise<void> {
-    if (!this.currentSync) {
-      this.currentSync = await this.syncService.getSyncByProject(this.projectId);
-    }
-    
-    if (!this.currentSync) {
+  // ─── removed: performSync / autoResolveConflict / isPermissionError ────────
+  // The app fully relies on native iCloud Drive sync now.
+  // The only custom sync logic that remains:
+  //   • schedulePushToICloud()  – WAL checkpoint 8 s after each edit
+  //   • loadSyncStatus()        – registers FSEvents watcher on open file
+  //   • onRemoteICloudChange()  – reopens pool + reloads UI on remote write
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // (nothing here — placeholder so the comment block stays connected)
+    if (!this.projectFilePath) {
       console.warn('No sync configuration found');
       return;
     }
@@ -1489,6 +1423,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       const info = await this.projectService.fileGetOpenProject();
       if (!info) return;
       const filePath = info.path;
+      this.projectFilePath = filePath;
 
       // Register the Rust FSEvents watcher for this file.
       this.projectService
@@ -1771,16 +1706,8 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   // Load characters, events, and places
   await Promise.all([this.loadCharacters(), this.loadEvents(), this.loadPlaces()]);
 
-      // Load sync status; auto-enable iCloud if not yet configured
+      // Register the FSEvents watcher so we detect remote iCloud changes.
       await this.loadSyncStatus();
-      if (!this.currentSync) {
-        // First open — enable iCloud sync silently (no success dialog)
-        this.enableICloudSync(/* silent */ true).catch(err => console.warn('Auto iCloud sync setup failed:', err));
-      } else if (this.currentSync.auto_sync_enabled) {
-        // Do NOT push on open — pushing from both machines on startup causes
-        // iCloud version conflicts.  Pushes are only triggered by user edits.
-        // (loadSyncStatus still registers the FSEvents watcher below.)
-      }
 
       // Restore draft tool expansion states from localStorage
       try {
@@ -3125,8 +3052,17 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Trigger auto-sync check (non-blocking)
       this.schedulePushToICloud();
     } catch (error) {
+      const errStr = String(error);
+      // Transient DB errors (locked/busy) happen when sync is writing; the content
+      // is safe in memory — reschedule rather than alarming the user.
+      if (errStr.includes('locked') || errStr.includes('busy') || errStr.includes('timeout')) {
+        console.warn('Save temporarily failed (DB busy), retrying in 2s:', errStr);
+        if (this.autoSaveTimeout) clearTimeout(this.autoSaveTimeout);
+        this.autoSaveTimeout = setTimeout(() => this.saveDoc(), 2000);
+        return;
+      }
       console.error('Failed to save doc:', error);
-      alert('Failed to save document: ' + error);
+      alert('Failed to save document: ' + errStr);
     }
   }
 

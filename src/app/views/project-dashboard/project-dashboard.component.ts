@@ -114,6 +114,12 @@ export class ProjectDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  async onRemoveRecent(event: Event, path: string) {
+    event.stopPropagation();
+    await this.projectService.recentsRemove(path);
+    await this.loadRecents();
+  }
+
   navigateToProject() {
     this.router.navigate(['/project', 1]);
   }

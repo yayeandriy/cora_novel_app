@@ -63,6 +63,7 @@
                   <span class="recent-path">{{ pathDirname(r.path) }}</span>
                 </div>
                 <span class="recent-date">{{ formatDate(r.lastOpened) }}</span>
+                <button class="recent-remove" title="Remove from recents" (click)="onRemoveRecent($event, r.path)">✕</button>
               </li>
             }
           </ul>

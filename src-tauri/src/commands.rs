@@ -607,7 +607,7 @@ pub async fn doc_create_after(state: State<'_, AppState>, project_id: i64, name:
 pub async fn doc_update_text(state: State<'_, AppState>, id: i64, text: String) -> Result<(), String> {
     let owned_pool = state.get_project_pool()?;
     let pool = &owned_pool;
-    crate::services::docs::update_doc(pool, id, &text).map_err(|e| e.to_string())?;
+    crate::services::docs::update_doc(pool, id, &text).map_err(|e| format!("{:#}", e))?;
     if let Some(pid) = get_project_id_for_doc(pool, id) { mark_project_changed(pool, pid); }
     Ok(())
 }
@@ -616,7 +616,7 @@ pub async fn doc_update_text(state: State<'_, AppState>, id: i64, text: String) 
 pub async fn doc_update_notes(state: State<'_, AppState>, id: i64, notes: String) -> Result<(), String> {
     let owned_pool = state.get_project_pool()?;
     let pool = &owned_pool;
-    crate::services::docs::update_doc_notes(pool, id, &notes).map_err(|e| e.to_string())?;
+    crate::services::docs::update_doc_notes(pool, id, &notes).map_err(|e| format!("{:#}", e))?;
     if let Some(pid) = get_project_id_for_doc(pool, id) { mark_project_changed(pool, pid); }
     Ok(())
 }
