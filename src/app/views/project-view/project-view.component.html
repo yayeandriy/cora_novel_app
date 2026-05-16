@@ -830,7 +830,7 @@
             <img class="menu-icon" src="assets/icons/square.and.arrow.up.svg" alt="" />
             <span>Export</span>
           </button>
-          @if (currentSync) {
+          @if (projectFilePath) {
             <button class="menu-item" (click)="revealICloudFileInFinder(); projectMenuVisible = false">
               <img class="menu-icon" src="assets/icons/finder.svg" alt="" />
               <span>Reveal in Finder</span>
