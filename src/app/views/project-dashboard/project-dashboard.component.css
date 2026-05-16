@@ -184,6 +184,33 @@
   flex-shrink: 0;
 }
 
+.recent-remove {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 12px;
+  line-height: 1;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.1s, background 0.1s;
+}
+
+.recent-remove:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.recent-item:hover .recent-remove {
+  display: flex;
+}
+
 .open-progress {
   display: flex;
   align-items: center;
