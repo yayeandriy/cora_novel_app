@@ -41,6 +41,8 @@ pub fn init_recents_pool() -> anyhow::Result<DbPool> {
 
 /// Opens (or creates) a per-project `.cora` SQLite file and runs all
 /// schema migrations against it.  Returns the connection pool.
+/// NOTE: Only used by file_store::migrate_sqlite_to_json; kept for reference.
+#[allow(dead_code)]
 pub fn open_project_pool(path: &Path) -> anyhow::Result<DbPool> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).context("creating project directory")?;

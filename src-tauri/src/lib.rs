@@ -13,11 +13,9 @@ mod services {
     pub mod folder_drafts;
     pub mod timelines;
     pub mod archives;
-    pub mod sync;
     pub mod icloud;
     pub mod icloud_watcher;
     pub mod recents;
-    pub mod legacy_migrate;
 }
 mod commands;
 
