@@ -10,23 +10,31 @@ mod services {
     pub mod project_drafts;
     pub mod folder_drafts;
     pub mod timelines;
+    pub mod icloud_watcher;
 }
 mod commands;
 
 use crate::db::init_pool;
-use commands::{AppState};
+use commands::AppState;
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // initialize DB pool and run migrations
     let pool = init_pool().expect("failed to init db pool");
-    let app_state = AppState { pool };
+    let app_state = AppState {
+        pool,
+        icloud_watcher: crate::services::icloud_watcher::ICloudWatcher::new(),
+    };
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // Start the FSEvents watcher engine
+            let state = app.state::<AppState>();
+            state.icloud_watcher.start_watching(app.handle().clone());
+
             // Open the main window maximized by default (not macOS fullscreen space)
             if let Some(win) = app.get_webview_window("main") {
                 let _ = win.maximize();
@@ -101,6 +109,11 @@ pub fn run() {
             commands::import_txt_files,
             commands::import_project,
             commands::export_project,
+            commands::write_project_sync_file,
+            commands::get_project_sync_mtime,
+            commands::reload_project_from_sync_file,
+            commands::watch_project_sync_file,
+            commands::unwatch_project_sync_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

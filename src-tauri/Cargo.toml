@@ -29,5 +29,6 @@ r2d2_sqlite = "0.19"
 anyhow = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1.0"
+notify = "6"
 dirs = "4"
 

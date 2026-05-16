@@ -5,6 +5,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ProjectService } from '../../services/project.service';
 import { TimelineService } from '../../services/timeline.service';
 import { confirm, open, ask } from '@tauri-apps/plugin-dialog';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { DocTreeComponent } from '../../components/doc-tree/doc-tree.component';
 import { DocumentEditorComponent } from '../../components/document-editor/document-editor.component';
 import { GroupViewComponent } from '../../components/group-view/group-view.component';
@@ -98,6 +100,13 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private saveStatusTimeout: any;
   private autoSaveTimeout: any;
   private autoSaveNotesTimeout: any;
+
+  // iCloud live-sync state
+  projectPath: string | null = null;
+  private syncUnlisten: (() => void) | null = null;
+  private lastSyncWriteTime: number = 0;
+  private isSyncReloading: boolean = false;
+  private syncWriteTimeout: any;
   
   // Local doc state cache
   private docStateCache: Map<number, {text?: string | null, notes?: string | null}> = new Map();
@@ -292,9 +301,14 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.route.params.subscribe((params: any) => {
+    this.route.params.subscribe(async (params: any) => {
       this.projectId = +params['id'];
-      this.loadProject();
+      this.stopSyncWatcher();
+      await this.loadProject();
+      if (this.projectPath) {
+        await this.performSyncWrite();
+        await this.startSyncWatcher();
+      }
     });
     
     this.loadLayoutState();
@@ -311,6 +325,113 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     if (this.autoSaveNotesTimeout) {
       clearTimeout(this.autoSaveNotesTimeout);
     }
+    this.stopSyncWatcher();
+  }
+
+  // ========= iCloud live-sync =========
+
+  /** Schedule a debounced write of metadata.json to the project's iCloud folder. */
+  scheduleSyncWrite() {
+    if (!this.projectPath || this.isSyncReloading) return;
+    if (this.syncWriteTimeout) clearTimeout(this.syncWriteTimeout);
+    this.syncWriteTimeout = setTimeout(() => this.performSyncWrite(), 2000);
+  }
+
+  private async performSyncWrite() {
+    if (!this.projectPath) return;
+    try {
+      this.lastSyncWriteTime = Date.now();
+      await invoke<void>('write_project_sync_file', { projectId: this.projectId });
+    } catch (err) {
+      console.warn('Sync write failed:', err);
+    }
+  }
+
+  private async startSyncWatcher() {
+    if (!this.projectPath || this.syncUnlisten) return;
+    try {
+      await invoke<void>('watch_project_sync_file', { projectId: this.projectId });
+      this.syncUnlisten = await listen<{ projectId: number; path: string }>(
+        'cora://icloud-file-changed',
+        (event) => {
+          if (event.payload.projectId !== this.projectId) return;
+          if (this.isSyncReloading || this.hasUnsavedChanges) return;
+          // Ignore events caused by our own recent write (belt-and-suspenders)
+          if ((Date.now() - this.lastSyncWriteTime) < 10_000) return;
+          this.performSyncReload();
+        }
+      );
+    } catch (err) {
+      console.warn('Failed to start sync watcher:', err);
+    }
+  }
+
+  private async stopSyncWatcher() {
+    if (this.syncUnlisten) {
+      this.syncUnlisten();
+      this.syncUnlisten = null;
+      try {
+        await invoke<void>('unwatch_project_sync_file', { projectId: this.projectId });
+      } catch { /* ignore */ }
+    }
+    if (this.syncWriteTimeout) {
+      clearTimeout(this.syncWriteTimeout);
+      this.syncWriteTimeout = null;
+    }
+  }
+
+  private async performSyncReload() {
+    this.isSyncReloading = true;
+    // Save selection references by name so we can restore after IDs change
+    const prevDocName = this.selectedDoc?.name ?? null;
+    const prevGroupName = this.selectedGroup?.name ?? null;
+    try {
+      await invoke<void>('reload_project_from_sync_file', { projectId: this.projectId });
+      await this.loadProject(false, true);
+      // Restore selection by name
+      this.restoreSelectionByName(prevDocName, prevGroupName);
+    } catch (err) {
+      console.warn('Sync reload failed:', err);
+    } finally {
+      this.isSyncReloading = false;
+    }
+  }
+
+  private restoreSelectionByName(docName: string | null | undefined, groupName: string | null | undefined) {
+    if (docName) {
+      const found = this.findDocByName(docName, this.docGroups);
+      if (found) { this.selectDoc(found); return; }
+    }
+    if (groupName) {
+      const found = this.findGroupByName(this.docGroups, groupName);
+      if (found) { this.selectGroup(found); return; }
+    }
+    // Fall back to first item
+    this.restoreSelection();
+  }
+
+  private findDocByName(name: string, groups: DocGroup[]): Doc | null {
+    for (const g of groups) {
+      for (const d of g.docs) {
+        if (d.name === name) return d;
+      }
+      if (g.groups) {
+        const found = this.findDocByName(name, g.groups);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  private findGroupByName(groups: DocGroup[], name: string): DocGroup | null {
+    for (const g of groups) {
+      if (g.name === name) return g;
+      if (g.groups) {
+        const found = this.findGroupByName(g.groups, name);
+        if (found) return found;
+      }
+    }
+    return null;
   }
 
   // ========= Import .txt files =========
@@ -456,6 +577,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       const project = await this.projectService.getProject(this.projectId);
       if (project) {
         this.projectName = project.name;
+        this.projectPath = project.path ?? null;
       }
       
       // Load project timeline for parent component (needed for doc timeline click calculations)
@@ -479,6 +601,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
 
   // Load characters and events
   await Promise.all([this.loadCharacters(), this.loadEvents()]);
+
+      // Schedule a sync write whenever data is loaded from a user-triggered mutation
+      if (!this.isSyncReloading) {
+        this.scheduleSyncWrite();
+      }
 
       // Restore draft tool expansion states from localStorage
       try {
@@ -1336,6 +1463,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       this.saveStatusTimeout = setTimeout(() => {
         this.showSaveStatus = false;
       }, 3000);
+      this.scheduleSyncWrite();
     } catch (error) {
       console.error('Failed to save doc:', error);
       alert('Failed to save document: ' + error);
@@ -1397,6 +1525,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       // Reload the entire doc tree to ensure everything stays in sync
       // This preserves the current selection
       await this.loadProject(true);
+      this.scheduleSyncWrite();
     } catch (error) {
       console.error('Failed to save doc notes:', error);
     }
@@ -2174,6 +2303,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   this.characters = [...this.characters, { id: created.id, name: created.name, desc: created.desc ?? '' }];
       // Enter edit mode on the newly created card
       this.editingCharacterId = created.id;
+      this.scheduleSyncWrite();
     } catch (error) {
       console.error('Failed to create character:', error);
       alert('Failed to create character: ' + error);
@@ -2188,6 +2318,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.characters[idx] = { ...this.characters[idx], name: payload.name } as any;
         this.characters = [...this.characters];
       }
+      this.scheduleSyncWrite();
     } catch (error) {
       console.error('Failed to update character name:', error);
     }
@@ -2201,6 +2332,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.characters[idx] = { ...this.characters[idx], desc: payload.desc } as any;
         this.characters = [...this.characters];
       }
+      this.scheduleSyncWrite();
     } catch (error) {
       console.error('Failed to update character description:', error);
     }
@@ -2218,6 +2350,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.editingCharacterId === payload.id) {
         this.editingCharacterId = null;
       }
+      this.scheduleSyncWrite();
     } catch (error) {
       console.error('Failed to update character:', error);
     }
@@ -2231,6 +2364,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       const created = await this.projectService.createEvent(this.projectId, 'New Event', '', null, null);
       this.events = [...this.events, { id: created.id, name: created.name, desc: created.desc ?? '', start_date: created.start_date ?? null, end_date: created.end_date ?? null } as any];
       this.editingEventId = created.id;
+      this.scheduleSyncWrite();
     } catch (error) {
       console.error('Failed to create event:', error);
       alert('Failed to create event: ' + error);
@@ -2248,6 +2382,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       if (this.editingEventId === payload.id) {
         this.editingEventId = null;
       }
+      this.scheduleSyncWrite();
     } catch (error) {
       console.error('Failed to update event:', error);
     }
@@ -2263,6 +2398,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.docEventIds.delete(id);
         this.docEventIds = new Set(this.docEventIds);
       }
+      this.scheduleSyncWrite();
     } catch (error) {
       console.error('Failed to delete event:', error);
       alert('Failed to delete event: ' + error);
@@ -2281,6 +2417,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.docEventIds.delete(eventId);
       }
       this.docEventIds = new Set(this.docEventIds);
+      this.scheduleSyncWrite();
     } catch (error) {
       console.error('Failed to update event relation:', error);
     }
@@ -2297,6 +2434,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
         this.docCharacterIds.delete(id);
         this.docCharacterIds = new Set(this.docCharacterIds);
       }
+      this.scheduleSyncWrite();
     } catch (error) {
       console.error('Failed to delete character:', error);
       alert('Failed to delete character: ' + error);
@@ -2316,6 +2454,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }
       // Reassign to trigger OnPush consumers
       this.docCharacterIds = new Set(this.docCharacterIds);
+      this.scheduleSyncWrite();
     } catch (error) {
       console.error('Failed to update character relation:', error);
     }

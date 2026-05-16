@@ -15,6 +15,7 @@ use std::fs;
 #[derive(Clone)]
 pub struct AppState {
     pub pool: DbPool,
+    pub icloud_watcher: crate::services::icloud_watcher::ICloudWatcher,
 }
 
 #[tauri::command]
@@ -831,5 +832,366 @@ pub async fn export_project(state: State<'_, AppState>, project_id: i64, dest_pa
     let meta_path = export_root.join("metadata.json");
     fs::write(&meta_path, meta_json).map_err(|e| format!("Write metadata failed: {}", e))?;
 
+    Ok(())
+}
+
+// ── iCloud live-sync helpers ──────────────────────────────────────────────────
+
+/// Build the metadata JSON for a project (same structure as export_project).
+fn build_project_metadata(pool: &DbPool, project_id: i64) -> Result<String, String> {
+    use std::collections::HashMap;
+
+    let project = crate::services::projects::get(pool, project_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Project not found".to_string())?;
+
+    let groups = crate::services::doc_groups::list_doc_groups(pool, project_id)
+        .map_err(|e| e.to_string())?;
+    let docs = crate::services::docs::list_docs(pool, project_id)
+        .map_err(|e| e.to_string())?;
+    let characters = crate::services::characters::list(pool, project_id)
+        .map_err(|e| e.to_string())?;
+    let events = crate::services::events::list(pool, project_id)
+        .map_err(|e| e.to_string())?;
+
+    let mut doc_characters: HashMap<i64, Vec<i64>> = HashMap::new();
+    let mut doc_events: HashMap<i64, Vec<i64>> = HashMap::new();
+    for d in &docs {
+        doc_characters.insert(d.id, crate::services::characters::list_for_doc(pool, d.id).map_err(|e| e.to_string())?);
+        doc_events.insert(d.id, crate::services::events::list_for_doc(pool, d.id).map_err(|e| e.to_string())?);
+    }
+
+    let project_timeline = crate::services::timelines::get_by_entity(pool, "project", project_id)
+        .map_err(|e| e.to_string())?;
+    let mut doc_timelines: HashMap<i64, Option<crate::models::Timeline>> = HashMap::new();
+    for d in &docs {
+        doc_timelines.insert(d.id, crate::services::timelines::get_by_entity(pool, "doc", d.id).map_err(|e| e.to_string())?);
+    }
+
+    let mut drafts_by_doc: HashMap<i64, Vec<crate::models::Draft>> = HashMap::new();
+    for d in &docs {
+        let ds = crate::services::drafts::list_drafts(pool, d.id).map_err(|e| e.to_string())?;
+        if !ds.is_empty() {
+            drafts_by_doc.insert(d.id, ds);
+        }
+    }
+
+    let meta = serde_json::json!({
+        "meta": {
+            "app": "cora",
+            "version": 1,
+            "exported_at": chrono::Utc::now().to_rfc3339(),
+        },
+        "project": project,
+        "groups": groups,
+        "docs": docs,
+        "characters": characters,
+        "events": events,
+        "doc_characters": doc_characters,
+        "doc_events": doc_events,
+        "project_timeline": project_timeline,
+        "doc_timelines": doc_timelines,
+        "drafts_by_doc": drafts_by_doc,
+    });
+
+    serde_json::to_string_pretty(&meta).map_err(|e| e.to_string())
+}
+
+/// Write the project's live sync file (`metadata.json`) to `project.path/`.
+/// No-op when the project has no path set.
+#[tauri::command]
+pub async fn write_project_sync_file(state: State<'_, AppState>, project_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+
+    let project = crate::services::projects::get(pool, project_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Project not found".to_string())?;
+
+    let path = match project.path {
+        Some(ref p) if !p.is_empty() => p.clone(),
+        _ => return Ok(()),
+    };
+
+    let sync_dir = Path::new(&path);
+    if !sync_dir.exists() {
+        return Ok(());
+    }
+
+    let meta_json = build_project_metadata(pool, project_id)?;
+    let meta_path = sync_dir.join("metadata.json");
+    fs::write(&meta_path, meta_json).map_err(|e| format!("Write sync file failed: {}", e))?;
+
+    // Suppress the FSEvent we're about to receive for our own write.
+    state.icloud_watcher.record_write(project_id);
+
+    Ok(())
+}
+
+/// Return the modification time (unix seconds) of `project.path/metadata.json`,
+/// or `null` when the project has no path or the file does not exist yet.
+#[tauri::command]
+pub async fn get_project_sync_mtime(state: State<'_, AppState>, project_id: i64) -> Result<Option<u64>, String> {
+    let pool = &state.pool;
+
+    let project = crate::services::projects::get(pool, project_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Project not found".to_string())?;
+
+    let path = match project.path {
+        Some(ref p) if !p.is_empty() => p.clone(),
+        _ => return Ok(None),
+    };
+
+    let meta_path = Path::new(&path).join("metadata.json");
+    match fs::metadata(&meta_path) {
+        Ok(m) => {
+            let secs = m.modified()
+                .map_err(|e| e.to_string())?
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|e| e.to_string())?
+                .as_secs();
+            Ok(Some(secs))
+        }
+        Err(_) => Ok(None),
+    }
+}
+
+/// Reload a project from its `project.path/metadata.json` sync file.
+/// Wipes all current data for the project and re-imports from the file,
+/// keeping the same project ID and path.
+#[tauri::command]
+pub async fn reload_project_from_sync_file(state: State<'_, AppState>, project_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+
+    let project = crate::services::projects::get(pool, project_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Project not found".to_string())?;
+
+    let path = match project.path.clone() {
+        Some(p) if !p.is_empty() => p,
+        _ => return Err("Project has no sync path".to_string()),
+    };
+
+    let meta_path = Path::new(&path).join("metadata.json");
+    if !meta_path.exists() {
+        return Err("No metadata.json found in project path".to_string());
+    }
+
+    let content = fs::read_to_string(&meta_path)
+        .map_err(|e| format!("Failed to read metadata.json: {}", e))?;
+
+    #[derive(serde::Deserialize)]
+    struct MetaHeader { app: Option<String> }
+    #[derive(serde::Deserialize)]
+    struct SyncFile {
+        meta: Option<MetaHeader>,
+        project: crate::models::Project,
+        groups: Vec<crate::models::DocGroup>,
+        docs: Vec<crate::models::Doc>,
+        characters: Vec<crate::models::Character>,
+        events: Vec<crate::models::Event>,
+        doc_characters: std::collections::HashMap<i64, Vec<i64>>,
+        doc_events: std::collections::HashMap<i64, Vec<i64>>,
+        project_timeline: Option<crate::models::Timeline>,
+        doc_timelines: std::collections::HashMap<i64, Option<crate::models::Timeline>>,
+        #[serde(default)]
+        drafts_by_doc: std::collections::HashMap<i64, Vec<crate::models::Draft>>,
+    }
+
+    let parsed: SyncFile = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse metadata.json: {}", e))?;
+
+    if let Some(meta) = &parsed.meta {
+        if meta.app.as_deref() != Some("cora") {
+            return Err("metadata.json was not exported by Cora".to_string());
+        }
+    }
+
+    // Wipe existing project data (keep project row, just clear its children)
+    {
+        let mut conn = crate::db::get_conn(pool).map_err(|e| e.to_string())?;
+        let tx = conn.transaction().map_err(|e| e.to_string())?;
+
+        // Timelines (no CASCADE from docs/groups/project)
+        tx.execute(
+            "DELETE FROM timelines WHERE entity_type = 'project' AND entity_id = ?1",
+            rusqlite::params![project_id],
+        ).map_err(|e| e.to_string())?;
+        tx.execute(
+            "DELETE FROM timelines WHERE entity_type = 'doc' AND entity_id IN (SELECT id FROM docs WHERE project_id = ?1)",
+            rusqlite::params![project_id],
+        ).map_err(|e| e.to_string())?;
+        tx.execute(
+            "DELETE FROM timelines WHERE entity_type = 'folder' AND entity_id IN (SELECT id FROM doc_groups WHERE project_id = ?1)",
+            rusqlite::params![project_id],
+        ).map_err(|e| e.to_string())?;
+
+        // doc_groups (cascades folder_drafts)
+        tx.execute("DELETE FROM doc_groups WHERE project_id = ?1", rusqlite::params![project_id])
+            .map_err(|e| e.to_string())?;
+
+        // docs (cascades doc_characters, doc_events, drafts)
+        tx.execute("DELETE FROM docs WHERE project_id = ?1", rusqlite::params![project_id])
+            .map_err(|e| e.to_string())?;
+
+        // characters and events
+        tx.execute("DELETE FROM characters WHERE project_id = ?1", rusqlite::params![project_id])
+            .map_err(|e| e.to_string())?;
+        tx.execute("DELETE FROM events WHERE project_id = ?1", rusqlite::params![project_id])
+            .map_err(|e| e.to_string())?;
+
+        // project_drafts (not cascaded automatically by projects DELETE CASCADE when we only clear children)
+        tx.execute("DELETE FROM project_drafts WHERE project_id = ?1", rusqlite::params![project_id])
+            .map_err(|e| e.to_string())?;
+
+        // Update project name/desc from file
+        tx.execute(
+            "UPDATE projects SET name = ?1, desc = ?2 WHERE id = ?3",
+            rusqlite::params![parsed.project.name, parsed.project.desc, project_id],
+        ).map_err(|e| e.to_string())?;
+
+        tx.commit().map_err(|e| e.to_string())?;
+    }
+
+    // Re-import data (same logic as import_project, using project_id instead of a new project)
+    use std::collections::HashMap;
+
+    let mut groups_by_parent: HashMap<Option<i64>, Vec<&crate::models::DocGroup>> = HashMap::new();
+    for g in &parsed.groups {
+        groups_by_parent.entry(g.parent_id).or_default().push(g);
+    }
+    for v in groups_by_parent.values_mut() {
+        v.sort_by_key(|g| g.sort_order.unwrap_or(0_i64));
+    }
+
+    let mut group_id_map: HashMap<i64, i64> = HashMap::new();
+    if let Some(root) = groups_by_parent.get(&None) {
+        for g in root {
+            let created = crate::services::doc_groups::create_doc_group(pool, project_id, &g.name, None)
+                .map_err(|e| e.to_string())?;
+            group_id_map.insert(g.id, created.id);
+            let mut stack: Vec<i64> = vec![g.id];
+            while let Some(parent_old_id) = stack.pop() {
+                if let Some(children) = groups_by_parent.get(&Some(parent_old_id)) {
+                    for ch in children {
+                        let new_parent_id = *group_id_map.get(&parent_old_id).expect("parent must be created");
+                        let created_child = crate::services::doc_groups::create_doc_group(pool, project_id, &ch.name, Some(new_parent_id))
+                            .map_err(|e| e.to_string())?;
+                        group_id_map.insert(ch.id, created_child.id);
+                        stack.push(ch.id);
+                    }
+                }
+            }
+        }
+    }
+
+    let mut docs_sorted: Vec<&crate::models::Doc> = parsed.docs.iter().collect();
+    docs_sorted.sort_by_key(|d| (d.doc_group_id.unwrap_or(-1_i64), d.sort_order.unwrap_or(0_i64)));
+    let mut doc_id_map: HashMap<i64, i64> = HashMap::new();
+    for d in docs_sorted {
+        let name = d.name.clone().unwrap_or_else(|| "Untitled".to_string());
+        let new_group = d.doc_group_id.and_then(|old_gid| group_id_map.get(&old_gid).copied());
+        let created = crate::services::docs::create_doc(pool, project_id, &name, new_group)
+            .map_err(|e| e.to_string())?;
+        if let Some(t) = d.text.clone() {
+            crate::services::docs::update_doc(pool, created.id, &t).map_err(|e| e.to_string())?;
+        }
+        if let Some(n) = d.notes.clone() {
+            crate::services::docs::update_doc_notes(pool, created.id, &n).map_err(|e| e.to_string())?;
+        }
+        doc_id_map.insert(d.id, created.id);
+    }
+
+    for (old_doc_id, drafts) in parsed.drafts_by_doc.iter() {
+        if let Some(&new_doc_id) = doc_id_map.get(old_doc_id) {
+            for dr in drafts {
+                crate::services::drafts::create_draft(pool, new_doc_id, crate::models::DraftCreate {
+                    name: dr.name.clone(),
+                    content: dr.content.clone(),
+                }).map_err(|e| e.to_string())?;
+            }
+        }
+    }
+
+    let mut char_id_map: HashMap<i64, i64> = HashMap::new();
+    for c in &parsed.characters {
+        let created = crate::services::characters::create(pool, project_id, &c.name, c.desc.clone())
+            .map_err(|e| e.to_string())?;
+        char_id_map.insert(c.id, created.id);
+    }
+
+    let mut event_id_map: HashMap<i64, i64> = HashMap::new();
+    for e in &parsed.events {
+        let created = crate::services::events::create(pool, project_id, &e.name, e.desc.clone(), e.start_date.clone(), e.end_date.clone(), e.date.clone())
+            .map_err(|e| e.to_string())?;
+        event_id_map.insert(e.id, created.id);
+    }
+
+    for (old_doc_id, old_chars) in parsed.doc_characters.iter() {
+        if let Some(&new_doc_id) = doc_id_map.get(old_doc_id) {
+            for old_ch in old_chars {
+                if let Some(&new_ch_id) = char_id_map.get(old_ch) {
+                    crate::services::characters::attach_to_doc(pool, new_doc_id, new_ch_id)
+                        .map_err(|e| e.to_string())?;
+                }
+            }
+        }
+    }
+    for (old_doc_id, old_events) in parsed.doc_events.iter() {
+        if let Some(&new_doc_id) = doc_id_map.get(old_doc_id) {
+            for old_ev in old_events {
+                if let Some(&new_ev_id) = event_id_map.get(old_ev) {
+                    crate::services::events::attach_to_doc(pool, new_doc_id, new_ev_id)
+                        .map_err(|e| e.to_string())?;
+                }
+            }
+        }
+    }
+
+    if let Some(tl) = parsed.project_timeline {
+        let _ = crate::services::timelines::create(pool, crate::models::TimelineCreate {
+            entity_type: "project".into(),
+            entity_id: project_id,
+            start_date: tl.start_date,
+            end_date: tl.end_date,
+        }).map_err(|e| e.to_string())?;
+    }
+    for (old_doc_id, maybe_tl) in parsed.doc_timelines.iter() {
+        if let Some(&new_doc_id) = doc_id_map.get(old_doc_id) {
+            if let Some(tl) = maybe_tl {
+                let _ = crate::services::timelines::create(pool, crate::models::TimelineCreate {
+                    entity_type: "doc".into(),
+                    entity_id: new_doc_id,
+                    start_date: tl.start_date.clone(),
+                    end_date: tl.end_date.clone(),
+                }).map_err(|e| e.to_string())?;
+            }
+        }
+    }
+
+    Ok(())
+}
+/// Register a project's metadata.json for FSEvents-based change detection.
+/// Call this when opening a project that has an iCloud path.
+#[tauri::command]
+pub async fn watch_project_sync_file(state: State<'_, AppState>, project_id: i64) -> Result<(), String> {
+    let pool = &state.pool;
+    let project = crate::services::projects::get(pool, project_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Project not found".to_string())?;
+    let path = match project.path {
+        Some(ref p) if !p.is_empty() => p.clone(),
+        _ => return Ok(()),
+    };
+    let meta_path = std::path::PathBuf::from(path).join("metadata.json");
+    state.icloud_watcher.watch(project_id, meta_path);
+    Ok(())
+}
+
+/// Unregister a project from FSEvents change detection.
+/// Call this when navigating away from a project.
+#[tauri::command]
+pub async fn unwatch_project_sync_file(state: State<'_, AppState>, project_id: i64) -> Result<(), String> {
+    state.icloud_watcher.unwatch(project_id);
     Ok(())
 }
