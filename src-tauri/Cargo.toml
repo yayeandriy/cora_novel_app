@@ -1,6 +1,6 @@
 [package]
 name = "cora"
-version = "0.12.22"
+version = "0.12.23"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -33,11 +33,11 @@ anyhow = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 sha2 = "0.10"
 thiserror = "1.0"
+notify = "6"
 dirs = "4"
 printpdf = "0.7"
 zip = "0.6"
 docx-rs = "0.4.3"
-notify = "6"
 tempfile = "3"
 tokio = { version = "1", features = ["time", "rt"] }
 

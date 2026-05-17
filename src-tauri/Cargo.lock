@@ -608,7 +608,7 @@ dependencies = [
 
 [[package]]
 name = "cora"
-version = "0.12.22"
+version = "0.12.23"
 dependencies = [
  "anyhow",
  "block2 0.5.1",
