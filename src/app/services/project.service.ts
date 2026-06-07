@@ -468,6 +468,11 @@ export class ProjectService {
     return invoke<void>("file_checkpoint");
   }
 
+  /** Returns the modification time of the open project file in milliseconds since epoch, or null. */
+  async fileGetMtimeMs(): Promise<number | null> {
+    return invoke<number | null>("file_get_mtime_ms");
+  }
+
   /** Save the current project to a new path (Save As…). Reopens from the new location. */
   async fileSaveAs(path: string): Promise<OpenProjectInfo> {
     return invoke<OpenProjectInfo>("file_save_as", { path });

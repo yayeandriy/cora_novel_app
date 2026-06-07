@@ -1,12 +1,17 @@
-//! Native macOS FSEvents-based watcher for iCloud Drive `.cora` project files.
+//! File-system watcher for open `.cora` project files.
+//!
+//! Uses `notify` (FSEvents on macOS) to watch the **parent directory** of the
+//! registered project file, so it works for files anywhere on disk — iCloud
+//! Drive, local Documents, network shares, etc.
 //!
 //! Key design decisions:
-//! - FSEvents (via `notify`) is set up LAZILY: on app startup iCloud may not be
-//!   ready, so we retry each time `watch()` is called until it succeeds.
-//! - NO suppress window on `watch()` registration.  Suppress only after our own
-//!   coordinated write (`record_write`), for `SUPPRESS_SECS` seconds.
-//! - Events for `.icloud` evicted-placeholder paths are ignored; only `.cora`
-//!   paths are forwarded to the frontend.
+//! - Watches the file's parent directory (not just the iCloud container).
+//!   This fires for any writer: another Cora instance, iCloud daemon, Finder.
+//! - Suppresses own-write events: call `record_write` right after saving so
+//!   the next FSEvent for that file is ignored (it's our own flush).
+//! - Canonicalizes paths before lookup to handle `/private/` symlink prefix
+//!   that macOS FSEvents sometimes returns.
+//! - Events for `.icloud` placeholder files are ignored.
 
 use notify::{recommended_watcher, Event, EventKind, RecursiveMode, Watcher};
 use std::collections::HashMap;
@@ -16,25 +21,25 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
-/// How long to ignore FSEvents for a project after our own write (seconds).
-const SUPPRESS_SECS: u64 = 10;
+/// How long to suppress FSEvents after our own save (seconds).
+const SUPPRESS_SECS: u64 = 5;
 
 struct Inner {
-    /// project_id -> (watched path, suppress_until)
+    /// project_id -> (canonical file path, suppress_until)
     watched: HashMap<i64, (PathBuf, Option<Instant>)>,
-    /// canonical path string -> project_id  (O(1) lookup on event)
+    /// canonical file path string -> project_id  (O(1) lookup on event)
     path_to_project: HashMap<String, i64>,
 }
 
-/// Clone-cheap, thread-safe iCloud file watcher.
+/// Clone-cheap, thread-safe file watcher.
 #[derive(Clone)]
 pub struct ICloudWatcher {
     inner: Arc<Mutex<Inner>>,
-    /// Holds the `notify::Watcher` alive while the watcher thread lives.
+    /// Holds the `notify::Watcher` alive (keeps the OS subscription open).
     _notify_watcher: Arc<Mutex<Option<Box<dyn notify::Watcher + Send>>>>,
-    /// AppHandle stored by `start_watching`, used for lazy FSEvents setup.
+    /// AppHandle set by `start_watching`; needed to emit Tauri events.
     app_handle: Arc<Mutex<Option<AppHandle>>>,
-    /// Whether the FSEvents watcher thread is running.
+    /// Whether the background thread + notify watcher are running.
     started: Arc<AtomicBool>,
 }
 
@@ -52,27 +57,40 @@ impl ICloudWatcher {
     }
 
     /// Register (or re-register) a project file for change detection.
-    ///
-    /// Does NOT set a suppress window -- that only happens after `record_write`.
-    /// Retries FSEvents setup if iCloud was not available at startup.
+    /// Watches the file's parent directory so any writer triggers the event.
     pub fn watch(&self, project_id: i64, path: PathBuf) {
+        // Canonicalize so FSEvent paths (which macOS may prefix with /private/)
+        // match the stored key.
+        let canonical = std::fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
+        let parent = canonical.parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| canonical.clone());
+
         {
             let mut st = self.inner.lock().unwrap();
-            // Clean up old path mapping.
-            if let Some((old_path, _)) = st.watched.get(&project_id) {
-                let old_key = old_path.to_string_lossy().into_owned();
-                st.path_to_project.remove(&old_key);
+            // Remove old mapping for this project.
+            if let Some((old_path, _)) = st.watched.remove(&project_id) {
+                st.path_to_project.remove(&old_path.to_string_lossy().into_owned());
             }
-            let key = path.to_string_lossy().into_owned();
+            let key = canonical.to_string_lossy().into_owned();
             st.path_to_project.insert(key, project_id);
-            // Insert WITHOUT a suppress window (None = no suppression).
-            st.watched.insert(project_id, (path, None));
+            st.watched.insert(project_id, (canonical, None));
         }
-        // Ensure FSEvents is running -- retries if iCloud was not ready at startup.
-        self.try_ensure_fsevents();
+
+        // Start the background thread (no-op if already running).
+        self.ensure_thread();
+
+        // Register the parent directory with the OS watcher.
+        // `notify` is idempotent: re-watching the same dir is a no-op.
+        if let Some(w) = self._notify_watcher.lock().unwrap().as_mut() {
+            match w.watch(&parent, RecursiveMode::NonRecursive) {
+                Ok(_) => eprintln!("[FileWatcher] Watching {:?} for project {}", parent, project_id),
+                Err(e) => eprintln!("[FileWatcher] Could not watch {:?}: {}", parent, e),
+            }
+        }
     }
 
-    /// Unregister a project.
+    /// Unregister a project (stops emitting events for it).
     pub fn unwatch(&self, project_id: i64) {
         let mut st = self.inner.lock().unwrap();
         if let Some((path, _)) = st.watched.remove(&project_id) {
@@ -80,9 +98,9 @@ impl ICloudWatcher {
         }
     }
 
-    /// Call immediately after writing the iCloud file.
-    /// Suppresses the next FSEvents notification (which is our own write, not
-    /// a change from another device).
+    /// Call immediately after writing the project file.
+    /// Suppresses the next FSEvent for that project (our own flush is not
+    /// a change from another device/app).
     pub fn record_write(&self, project_id: i64) {
         let mut st = self.inner.lock().unwrap();
         if let Some((_, suppress)) = st.watched.get_mut(&project_id) {
@@ -90,52 +108,43 @@ impl ICloudWatcher {
         }
     }
 
-    /// Called from `lib.rs setup`. Stores the AppHandle and attempts to start
-    /// FSEvents immediately. Safe to call even if iCloud is not ready yet --
-    /// `watch()` will retry.
+    /// Called from lib.rs at startup. Stores the AppHandle and eagerly starts
+    /// the background thread so it's ready before the first file is opened.
     pub fn start_watching(&self, app_handle: AppHandle) {
         *self.app_handle.lock().unwrap() = Some(app_handle);
-        self.try_ensure_fsevents();
+        self.ensure_thread();
     }
 
-    /// Idempotent: sets up the FSEvents watcher if not already running.
-    /// Returns immediately if already started or if iCloud is not available yet.
-    fn try_ensure_fsevents(&self) {
-        if self.started.load(Ordering::Relaxed) {
+    /// Idempotent: creates the notify watcher + background thread if not
+    /// already running. Safe to call from any thread at any time.
+    fn ensure_thread(&self) {
+        // Use swap so only one caller proceeds even under concurrent calls.
+        if self.started.swap(true, Ordering::SeqCst) {
             return;
         }
 
         let app_handle = match self.app_handle.lock().unwrap().clone() {
             Some(h) => h,
-            None => return, // start_watching not called yet
-        };
-
-        let docs_path = match crate::services::icloud::get_container_documents_path() {
-            Some(p) => p,
             None => {
-                eprintln!("[iCloudWatcher] iCloud container not available yet -- will retry on next watch()");
+                // AppHandle not available yet; retry when watch() is called.
+                self.started.store(false, Ordering::SeqCst);
                 return;
             }
         };
 
         let (tx, rx) = std::sync::mpsc::channel::<notify::Result<Event>>();
 
-        let mut watcher = match recommended_watcher(tx) {
+        let watcher = match recommended_watcher(tx) {
             Ok(w) => w,
             Err(e) => {
-                eprintln!("[iCloudWatcher] Failed to create FSEvents watcher: {}", e);
+                eprintln!("[FileWatcher] Failed to create watcher: {}", e);
+                self.started.store(false, Ordering::SeqCst);
                 return;
             }
         };
 
-        if let Err(e) = watcher.watch(&docs_path, RecursiveMode::NonRecursive) {
-            eprintln!("[iCloudWatcher] Could not watch {:?}: {}", docs_path, e);
-            return;
-        }
-
         *self._notify_watcher.lock().unwrap() = Some(Box::new(watcher));
-        self.started.store(true, Ordering::Relaxed);
-        eprintln!("[iCloudWatcher] FSEvents watcher started on {:?}", docs_path);
+        eprintln!("[FileWatcher] Background thread started.");
 
         let inner = Arc::clone(&self.inner);
         std::thread::spawn(move || {
@@ -143,16 +152,13 @@ impl ICloudWatcher {
                 let event = match result {
                     Ok(e) => e,
                     Err(e) => {
-                        eprintln!("[iCloudWatcher] Event error: {}", e);
+                        eprintln!("[FileWatcher] Event error: {}", e);
                         continue;
                     }
                 };
 
-                let relevant = matches!(
-                    &event.kind,
-                    EventKind::Modify(_) | EventKind::Create(_) | EventKind::Remove(_)
-                );
-                if !relevant {
+                // Ignore pure access events (reads); everything else is relevant.
+                if matches!(&event.kind, EventKind::Access(_)) {
                     continue;
                 }
 
@@ -160,22 +166,29 @@ impl ICloudWatcher {
                 {
                     let mut st = inner.lock().unwrap();
                     let now = Instant::now();
-                    for path in &event.paths {
-                        // Only real `.cora` files -- ignore `.icloud` placeholders.
-                        if path.extension().and_then(|e| e.to_str()) != Some("cora") {
+                    for event_path in &event.paths {
+                        // Skip .icloud placeholder files.
+                        let ext = event_path.extension().and_then(|e| e.to_str());
+                        if ext == Some("icloud") {
                             continue;
                         }
-                        let key = path.to_string_lossy().into_owned();
+                        // Only .cora files.
+                        if ext != Some("cora") {
+                            continue;
+                        }
+                        // Canonicalize to match the stored key.
+                        let canonical = std::fs::canonicalize(event_path)
+                            .unwrap_or_else(|_| event_path.clone());
+                        let key = canonical.to_string_lossy().into_owned();
+
                         if let Some(&pid) = st.path_to_project.get(&key) {
                             if let Some((_, suppress)) = st.watched.get_mut(&pid) {
-                                if let Some(until) = suppress {
-                                    if now < *until {
-                                        // Own-write suppress still active.
-                                        eprintln!("[iCloudWatcher] project {} event suppressed (own write)", pid);
+                                if let Some(until) = *suppress {
+                                    if now < until {
+                                        eprintln!("[FileWatcher] project {} suppressed (own write)", pid);
                                         continue;
                                     }
-                                    // Suppress expired -- clear it.
-                                    *suppress = None;
+                                    *suppress = None; // suppress window expired
                                 }
                                 to_emit.push((pid, key));
                             }
@@ -184,7 +197,7 @@ impl ICloudWatcher {
                 }
 
                 for (pid, path) in to_emit {
-                    eprintln!("[iCloudWatcher] Remote change for project {}: {}", pid, path);
+                    eprintln!("[FileWatcher] Remote change for project {}: {}", pid, path);
                     let _ = app_handle.emit(
                         "cora://icloud-file-changed",
                         serde_json::json!({ "projectId": pid, "path": path }),

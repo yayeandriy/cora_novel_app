@@ -135,6 +135,12 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
   private unlistenICloudChange: (() => void) | null = null;
   /** Debounce timer for iCloud push — only push after 12s of inactivity. */
   private pushDebounceTimer: any = null;
+  /** Interval for polling file mtime to detect changes from other Cora instances. */
+  private mtimePollInterval: any = null;
+  /** Last known file modification time in ms (from polling). */
+  private lastKnownMtime: number | null = null;
+  /** Timestamp of our last own write, to avoid self-reload during the suppress window. */
+  private lastOwnWriteTime = 0;
   
   // Local doc state cache
   private docStateCache: Map<number, {text?: string | null, notes?: string | null}> = new Map();
@@ -947,6 +953,11 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     // Stop listening for iCloud file changes and unregister the background watcher.
     this.unlistenICloudChange?.();
     this.unlistenICloudChange = null;
+    // Stop mtime poll.
+    if (this.mtimePollInterval) {
+      clearInterval(this.mtimePollInterval);
+      this.mtimePollInterval = null;
+    }
     // Flush any pending debounced checkpoint immediately before the component tears down.
     if (this.pushDebounceTimer) {
       clearTimeout(this.pushDebounceTimer);
@@ -1174,11 +1185,20 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     this.unlistenICloudChange?.();
     this.unlistenICloudChange = null;
 
+    // Stop any existing mtime poll before starting a fresh one.
+    if (this.mtimePollInterval) {
+      clearInterval(this.mtimePollInterval);
+      this.mtimePollInterval = null;
+    }
+
     try {
       const info = await this.projectService.fileGetOpenProject();
       if (!info) return;
       const filePath = info.path;
       this.projectFilePath = filePath;
+
+      // Seed the last-known mtime so the first poll doesn't false-trigger.
+      this.lastKnownMtime = await this.projectService.fileGetMtimeMs();
 
       // Register the Rust FSEvents watcher for this file.
       this.projectService
@@ -1192,6 +1212,29 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
       }).then((unlisten: UnlistenFn) => {
         this.unlistenICloudChange = unlisten;
       }).catch((err: unknown) => console.warn('Failed to subscribe to iCloud file changes:', err));
+
+      // Polling fallback: check file mtime every 2 s. Catches changes that
+      // FSEvents misses (different parent dir, iCloud daemon atomics, etc.).
+      this.mtimePollInterval = setInterval(async () => {
+        try {
+          const mtime = await this.projectService.fileGetMtimeMs();
+          if (mtime === null) return;
+          if (this.lastKnownMtime === null) {
+            this.lastKnownMtime = mtime;
+            return;
+          }
+          if (mtime > this.lastKnownMtime) {
+            this.lastKnownMtime = mtime;
+            // Suppress if we wrote within the last 5 seconds.
+            const ownWriteAge = Date.now() - this.lastOwnWriteTime;
+            if (ownWriteAge < 5_000) return;
+            console.log('[Sync] File changed externally (mtime poll), reloading…');
+            await this.onRemoteICloudChange(filePath);
+          }
+        } catch (err) {
+          // Ignore polling errors silently.
+        }
+      }, 2_000);
 
       this.syncStatus = 'synced';
     } catch (err) {
@@ -2645,6 +2688,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     try {
       const text = this.selectedDoc.text || '';
       await this.projectService.updateDocText(this.selectedDoc.id, text);
+      this.lastOwnWriteTime = Date.now();
       console.log('Doc saved successfully');
       
       // Clear cache for this doc since it's now synced
@@ -2761,6 +2805,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     try {
       const notes = this.selectedDoc.notes || '';
       await this.projectService.updateDocNotes(this.selectedDoc.id, notes);
+      this.lastOwnWriteTime = Date.now();
       console.log('Doc notes saved successfully');
       
       // Clear cache for this doc since it's now synced
@@ -2795,6 +2840,7 @@ export class ProjectViewComponent implements OnInit, OnDestroy {
     try {
       const notes = grp.notes || '';
       await this.projectService.updateDocGroupNotes(grp.id, notes);
+      this.lastOwnWriteTime = Date.now();
       console.log('Doc group notes saved successfully');
       
       // Reload to keep in sync

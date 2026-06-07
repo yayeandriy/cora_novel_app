@@ -192,6 +192,7 @@ pub fn run() {
             commands::file_close_project,
             commands::file_get_open_project,
             commands::file_checkpoint,
+            commands::file_get_mtime_ms,
             commands::file_save_as,
             // Recents
             commands::recents_list,

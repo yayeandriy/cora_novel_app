@@ -71,6 +71,11 @@ impl AppState {
         let result = f(&mut open.data)?;
         crate::services::file_store::save_project(Path::new(&open.path), &open.data)
             .map_err(|e| e.to_string())?;
+        // Suppress the FSEvent that our own write will generate so the watcher
+        // doesn't reload the project on this machine unnecessarily.
+        let project_id = open.data.project.id;
+        drop(guard);
+        self.icloud_watcher.record_write(project_id);
         Ok(result)
     }
 }
@@ -229,6 +234,26 @@ pub async fn file_checkpoint(state: State<'_, AppState>) -> Result<(), String> {
     // In the JSON architecture, saving is done on every mutation. This is a no-op.
     let _ = &state;
     Ok(())
+}
+
+/// Returns the modification time of the currently open project file as
+/// milliseconds since the Unix epoch, or `None` if no project is open.
+/// Used by the frontend to poll for external changes (other Cora instances,
+/// iCloud daemon) without relying solely on FSEvents.
+#[tauri::command]
+pub async fn file_get_mtime_ms(state: State<'_, AppState>) -> Result<Option<u64>, String> {
+    let path = match state.project.lock().map_err(|e| e.to_string())?.as_ref() {
+        Some(p) => p.path.clone(),
+        None => return Ok(None),
+    };
+    let meta = std::fs::metadata(&path).map_err(|e| e.to_string())?;
+    let ms = meta
+        .modified()
+        .map_err(|e| e.to_string())?
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| e.to_string())?
+        .as_millis() as u64;
+    Ok(Some(ms))
 }
 
 #[tauri::command]
